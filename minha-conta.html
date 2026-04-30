@@ -17,14 +17,15 @@
             
             <div class="header-actions">
                 <div class="user-nav-wrapper" id="user-nav-wrapper">
-                    <a href="minha-conta.html" class="icon-link" id="user-nav-link" aria-label="Minha Conta">
+                    <a href="minha-conta.html" class="icon-link" id="user-nav-link" title="Minha Conta">
                         <i class="fas fa-user-circle" id="user-nav-icon"></i>
                     </a>
-                    <span class="user-tooltip" id="user-tooltip">Minha Conta</span>
                 </div>
-                <a href="javascript:void(0)" onclick="doLogout()" class="icon-link" aria-label="Sair">
-                    <i class="fas fa-sign-out-alt"></i>
-                </a>
+                <div class="user-nav-wrapper">
+                    <a href="index.html" class="icon-link" title="Voltar para a Loja">
+                        <i class="fas fa-store"></i>
+                    </a>
+                </div>
             </div>
         </div>
     </header>
@@ -42,6 +43,9 @@
                 <button class="nav-btn active" data-tab="tab-pedidos"><i class="fas fa-box-open"></i> Meus Pedidos</button>
                 <button class="nav-btn" data-tab="tab-acompanhamento"><i class="fas fa-truck-fast"></i> Acompanhamento</button>
                 <button class="nav-btn" data-tab="tab-dados"><i class="fas fa-id-card"></i> Meus Dados</button>
+                <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+                    <button class="nav-btn" onclick="doLogout()" style="color: #c0392b;"><i class="fas fa-sign-out-alt"></i> Sair da Conta</button>
+                </div>
             </nav>
         </aside>
 

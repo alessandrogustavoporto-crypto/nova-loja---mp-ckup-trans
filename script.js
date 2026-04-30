@@ -43,7 +43,14 @@ const Cart = {
         if (!product) return;
         const items = this.getItems();
         const existing = items.find(i => i.id === productId);
-        if (existing) { existing.qty += 1; } else { items.push({ id: product.id, name: product.name, price: product.price, image: product.image, qty: 1 }); }
+        const actualPrice = (product.promoActive && product.promoPrice) ? product.promoPrice : product.price;
+
+        if (existing) {
+            existing.qty += 1;
+            existing.price = actualPrice; // Update price in case it changed while in cart
+        } else {
+            items.push({ id: product.id, name: product.name, price: actualPrice, image: product.image, qty: 1 });
+        }
         this.save(items);
     },
     remove(productId) { this.save(this.getItems().filter(i => i.id !== productId)); },
@@ -257,7 +264,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const header = document.getElementById('header');
     if (header) { window.addEventListener('scroll', () => header.classList.toggle('scrolled', window.scrollY > 50)); }
 
-    renderProducts();
+    renderPromoProducts();
+    renderAllProducts();
     initCategoriesMenu();
     initHeroBanner();
     initCartPage();
@@ -270,36 +278,60 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================================
-// RENDER PRODUCTS
+// RENDER PRODUCTS (PROMO & ALL)
 // ============================================================
-function renderProducts(filterCategory = null, filterText = null) {
-    const productGrid = document.querySelector('.product-grid');
-    if (!productGrid) return;
+function renderPromoProducts(page = 1) {
+    const products = ProductStore.getAll().filter(p => p.promoActive);
     
-    productGrid.innerHTML = '';
-    const allProducts = ProductStore.getAll();
-    let productsToRender = allProducts;
+    // Se não houver promoções, esconde a seção
+    const section = document.getElementById('promo-section');
+    if (products.length === 0) {
+        if (section) section.style.display = 'none';
+        return;
+    }
+    if (section) section.style.display = 'block';
+
+    renderGrid('promo-product-grid', 'promo-pagination', products, page, 8, 'promo');
+}
+
+function renderAllProducts(page = 1, filterCategory = null, filterText = null) {
+    let products = ProductStore.getAll();
 
     if (filterCategory) {
-        productsToRender = productsToRender.filter(p => p.category === filterCategory);
+        products = products.filter(p => p.category === filterCategory);
     }
 
     if (filterText) {
         const query = filterText.toLowerCase().trim();
-        productsToRender = productsToRender.filter(p => 
+        products = products.filter(p => 
             p.name.toLowerCase().includes(query) || 
             (p.brand && p.brand.toLowerCase().includes(query))
         );
     }
 
-    if (productsToRender.length === 0) {
-        productGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><i class="fas fa-search" style="font-size: 40px; margin-bottom: 15px; display: block; opacity: 0.3;"></i>Nenhum produto encontrado. Tente outros termos.</div>';
+    renderGrid('all-product-grid', 'all-pagination', products, page, 20, 'all', filterCategory, filterText);
+}
+
+function renderGrid(gridId, paginationId, products, page, perPage, type, cat = null, text = null) {
+    const grid = document.getElementById(gridId);
+    const pag = document.getElementById(paginationId);
+    if (!grid) return;
+
+    grid.innerHTML = '';
+    const start = (page - 1) * perPage;
+    const end = start + perPage;
+    const paginated = products.slice(start, end);
+
+    if (products.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><i class="fas fa-search" style="font-size: 40px; margin-bottom: 15px; display: block; opacity: 0.3;"></i>Nenhum produto encontrado.</div>';
+        if (pag) pag.innerHTML = '';
         return;
     }
 
-    productsToRender.forEach(product => {
-        const fmt = p => 'R$ ' + p.toFixed(2).replace('.', ',');
-        productGrid.innerHTML += '<div class="product-card">' +
+    const fmt = p => 'R$ ' + p.toFixed(2).replace('.', ',');
+
+    paginated.forEach(product => {
+        grid.innerHTML += '<div class="product-card">' +
             (product.offer ? '<span class="badge-offer">' + product.offer + '</span>' : '') +
             '<img src="' + product.image + '" alt="' + product.name + '" class="product-img" onclick="openProductDetail(' + product.id + ')" style="cursor:pointer">' +
             '<span class="product-category">' + product.category + '</span>' +
@@ -308,6 +340,27 @@ function renderProducts(filterCategory = null, filterText = null) {
             '<button class="btn-buy" onclick="addToCart(' + product.id + ')"><i class="fas fa-cart-plus"></i> Comprar</button>' +
             '</div>';
     });
+
+    // Pagination
+    if (pag) {
+        const totalPages = Math.ceil(products.length / perPage);
+        pag.innerHTML = '';
+        
+        if (totalPages > 1) {
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = document.createElement('button');
+                btn.className = `pag-btn ${i === page ? 'active' : ''}`;
+                btn.textContent = i;
+                btn.onclick = () => {
+                    if (type === 'promo') renderPromoProducts(i);
+                    else renderAllProducts(i, cat, text);
+                    
+                    grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                };
+                pag.appendChild(btn);
+            }
+        }
+    }
 }
 
 // ============================================================
@@ -320,22 +373,25 @@ function initSearch() {
 
     const handleSearch = () => {
         const query = input.value;
-        renderProducts(null, query);
+        renderAllProducts(1, null, query);
         
-        // Se houver busca, esconde o banner para focar nos resultados
+        // Esconde promoções durante a busca para focar no resultado
+        const promoSec = document.getElementById('promo-section');
         const hero = document.querySelector('.hero');
+        const allTitle = document.getElementById('all-products-title');
+
         if (query.trim() !== '') {
             if (hero) hero.style.display = 'none';
-            const gridHeader = document.getElementById('grid-header');
-            if (gridHeader) gridHeader.textContent = 'Resultados para: "' + query + '"';
+            if (promoSec) promoSec.style.display = 'none';
+            if (allTitle) allTitle.innerHTML = `<i class="fas fa-search"></i> Resultados para: "${query}"`;
         } else {
             if (hero) hero.style.display = 'block';
-            const gridHeader = document.getElementById('grid-header');
-            if (gridHeader) gridHeader.textContent = 'Nossos Produtos';
+            renderPromoProducts(); // Re-exibe promos
+            if (allTitle) allTitle.innerHTML = `<i class="fas fa-th-large"></i> Todos os Produtos`;
         }
 
         // Scroll para os produtos
-        const grid = document.getElementById('main-product-grid');
+        const grid = document.getElementById('all-product-grid');
         if (grid) grid.scrollIntoView({ behavior: 'smooth' });
     };
 
@@ -377,10 +433,10 @@ function initCategoriesMenu() {
 }
 
 window.filterByCategory = function(category) {
-    renderProducts(category);
-    const title = document.querySelector('#grid-header h2');
-    if (title) {
-        title.textContent = category ? `Categoria: ${category}` : 'Destaques da Semana';
+    renderAllProducts(1, category);
+    const allTitle = document.getElementById('all-products-title');
+    if (allTitle) {
+        allTitle.innerHTML = category ? `<i class="fas fa-th-large"></i> Categoria: ${category}` : `<i class="fas fa-th-large"></i> Todos os Produtos`;
     }
     
     // Fechar o dropdown após clicar

@@ -41,12 +41,11 @@
 
             <div class="header-actions">
                 <div class="user-nav-wrapper" id="user-nav-wrapper">
-                    <a href="login.html" class="icon-link" id="user-nav-link" aria-label="Minha Conta">
+                    <a href="login.html" class="icon-link" id="user-nav-link" title="Entrar / Minha Conta">
                         <i class="far fa-user" id="user-nav-icon"></i>
                     </a>
-                    <span class="user-tooltip" id="user-tooltip">Entrar</span>
                 </div>
-                <a href="carrinho.html" class="icon-link cart-icon" aria-label="Carrinho">
+                <a href="carrinho.html" class="icon-link cart-icon" title="Meu Carrinho">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count">0</span>
                 </a>
@@ -65,22 +64,38 @@
             <button class="banner-nav next" id="banner-next" aria-label="Próximo"><i class="fas fa-chevron-right"></i></button>
         </section>
 
-        <section id="produtos" class="products-section">
+        <!-- Seção de Promoções -->
+        <section id="promo-section" class="products-section">
             <div class="container">
-                <div id="grid-header">
-                    <h2>Destaques da Semana</h2>
+                <div class="section-header">
+                    <h2><i class="fas fa-percentage"></i> Promoções</h2>
                 </div>
-                
-                <!-- Grid de Produtos -->
-                <div id="main-product-grid" class="product-grid">
-                    <!-- Produtos gerados via JS -->
+                <div id="promo-product-grid" class="product-grid">
+                    <!-- Produtos em promoção via JS -->
                 </div>
+                <div id="promo-pagination" class="pagination-container"></div>
+            </div>
+        </section>
 
-                <!-- Visualização Única do Produto (Inicialmente oculta) -->
-                <div id="single-product-view" class="hidden">
-                    <button class="btn-back" onclick="backToGrid()">
-                        <i class="fas fa-arrow-left"></i> Voltar para a loja
-                    </button>
+        <!-- Seção de Todos os Produtos -->
+        <section id="all-products-section" class="products-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 id="all-products-title"><i class="fas fa-th-large"></i> Todos os Produtos</h2>
+                </div>
+                <div id="all-product-grid" class="product-grid">
+                    <!-- Todos os produtos via JS -->
+                </div>
+                <div id="all-pagination" class="pagination-container"></div>
+            </div>
+        </section>
+
+        <!-- Visualização Única do Produto (Inicialmente oculta) -->
+        <section id="single-product-view-section" class="container hidden">
+            <div id="single-product-view">
+                <button class="btn-back" onclick="backToGrid()">
+                    <i class="fas fa-arrow-left"></i> Voltar para a loja
+                </button>
                     
                     <div class="single-product-layout">
                         <div class="single-product-img" style="flex-direction: column;">

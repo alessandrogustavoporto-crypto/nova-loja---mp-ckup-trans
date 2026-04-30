@@ -226,14 +226,14 @@ ul {
 
 /* Products Section */
 .products-section {
-    padding: 60px 0;
+    padding: 10px 0;
 }
 
 .products-section h2 {
     text-align: center;
     font-size: 32px;
     color: var(--primary-green);
-    margin-bottom: 40px;
+    margin-bottom: 5px;
 }
 
 /* Product Grid - 5 items per row on desktop */
@@ -303,7 +303,7 @@ ul {
 }
 
 .product-price {
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--primary-green);
     margin-bottom: 15px;
@@ -311,7 +311,7 @@ ul {
 }
 
 .product-price span {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-muted);
     text-decoration: line-through;
     margin-left: 8px;
@@ -614,7 +614,7 @@ ul {
 
 .auth-footer {
     border-top: 1px solid var(--border-color);
-    margin-top: 20px;
+    margin-top: 10px;
     padding-top: 20px;
     text-align: center;
     font-size: 14px;
@@ -1444,36 +1444,39 @@ input:checked + .slider:before {
 
 .user-tooltip {
     position: absolute;
-    bottom: calc(100% + 10px);
+    top: calc(100% + 12px);
     left: 50%;
-    transform: translateX(-50%) translateY(6px);
-    background: var(--dark-green);
-    color: var(--white);
+    transform: translateX(-50%) translateY(-6px);
+    background: #000000; /* Preto sólido para contraste máximo */
+    color: var(--primary-orange);
     font-size: 13px;
-    font-weight: 500;
-    padding: 6px 12px;
-    border-radius: var(--radius-full);
+    font-weight: 700; /* Texto em negrito */
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
     white-space: nowrap;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    box-shadow: var(--shadow-md);
+    visibility: hidden;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     z-index: 100;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
-/* Arrow below tooltip */
+/* Arrow above tooltip */
 .user-tooltip::after {
     content: '';
     position: absolute;
-    top: 100%;
+    bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
     border: 5px solid transparent;
-    border-top-color: var(--dark-green);
+    border-bottom-color: #000000;
 }
 
 .user-nav-wrapper:hover .user-tooltip {
     opacity: 1;
+    visibility: visible;
     transform: translateX(-50%) translateY(0);
 }
 
@@ -1655,6 +1658,7 @@ input:checked + .slider:before {
 .drawer-desc::-webkit-scrollbar-track { background: #f1f1f1; }
 .drawer-desc::-webkit-scrollbar-thumb { background: var(--primary-green); border-radius: 10px; }
 
+.has-dropdown { position: relative; }
 .dropdown-menu { position: absolute; top: 100%; left: 0; background: var(--white); min-width: 200px; box-shadow: var(--shadow-md); border-radius: var(--radius-sm); padding: 10px 0; display: none !important; z-index: 1000; margin-top: 10px; border-top: 3px solid var(--primary-orange); }
 .dropdown-menu.show { display: block !important; animation: fadeIn 0.2s ease; }
 .dropdown-menu li { width: 100%; }
@@ -1666,4 +1670,15 @@ input:checked + .slider:before {
 .banner-nav:hover { background: rgba(255, 255, 255, 0.4); transform: translateY(-50%) scale(1.1); }
 .banner-nav.prev { left: 20px; }
 .banner-nav.next { right: 20px; }
-@media (max-width: 768px) { .banner-nav { width: 32px; height: 32px; font-size: 14px; } }
+.section-header { margin-bottom: 5px; border-bottom: 2px solid var(--border-color); padding-bottom: 5px; display: flex; align-items: center; justify-content: space-between; }
+.section-header h2 { font-size: 24px; color: var(--primary-green); display: flex; align-items: center; gap: 10px; }
+.section-header h2 i { color: var(--primary-orange); }
+
+.pagination-container { display: flex; justify-content: center; gap: 8px; margin-top: 40px; }
+.pag-btn { width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: var(--white); border-radius: 5px; cursor: pointer; font-weight: 600; transition: var(--transition); }
+.pag-btn:hover { border-color: var(--primary-orange); color: var(--primary-orange); }
+.pag-btn.active { background: var(--primary-orange); color: var(--white); border-color: var(--primary-orange); }
+
+@media (max-width: 768px) {
+    .section-header h2 { font-size: 20px; }
+}
