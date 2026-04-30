@@ -715,6 +715,32 @@ function initDashboard() {
         });
     }
 
+    const editAddressForm = document.getElementById('edit-address-form');
+    if (editAddressForm) {
+        editAddressForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const user = Auth.getUser();
+            user.address = {
+                cep: document.getElementById('edit-addr-cep').value,
+                logradouro: document.getElementById('edit-addr-logradouro').value,
+                numero: document.getElementById('edit-addr-numero').value,
+                bairro: document.getElementById('edit-addr-bairro').value,
+                cidade: document.getElementById('edit-addr-cidade').value,
+                estado: document.getElementById('edit-addr-estado').value
+            };
+            localStorage.setItem('ecostore_user', JSON.stringify(user));
+            const allUsers = Auth.getAllUsers();
+            const idx = allUsers.findIndex(u => u.email === user.email);
+            if (idx > -1) {
+                allUsers[idx].address = user.address;
+                localStorage.setItem('ecostore_all_users', JSON.stringify(allUsers));
+            }
+            showToast('Endereço atualizado!');
+            closeEditAddressModal();
+            initDashboard();
+        });
+    }
+
     const navBtns = document.querySelectorAll('.nav-btn');
     const tabPanes = document.querySelectorAll('.tab-pane');
     if (navBtns.length > 0) {
@@ -742,16 +768,49 @@ function initDashboard() {
 
     const searchInput = document.getElementById('order-search');
     const statusFilter = document.getElementById('order-status-filter');
+    const dateStart = document.getElementById('order-date-start');
+    const dateEnd = document.getElementById('order-date-end');
 
     function applyFilters() {
         const searchVal = (searchInput?.value || '').toLowerCase().trim();
         const statusVal = (statusFilter?.value || '').toLowerCase().trim();
-        const filtered = allOrders.filter(o => (!searchVal || o.id.toLowerCase().includes(searchVal)) && (!statusVal || o.status === statusVal));
+        const startVal = dateStart?.value; // YYYY-MM-DD
+        const endVal = dateEnd?.value;
+
+        const filtered = allOrders.filter(o => {
+            const matchSearch = !searchVal || o.id.toLowerCase().includes(searchVal);
+            const matchStatus = !statusVal || o.status === statusVal;
+            
+            let matchDate = true;
+            if (startVal || endVal) {
+                const [d, m, y] = o.date.split('/');
+                const oDate = new Date(y, m - 1, d);
+                oDate.setHours(0,0,0,0);
+
+                if (startVal) {
+                    const sDate = new Date(startVal);
+                    sDate.setMinutes(sDate.getMinutes() + sDate.getTimezoneOffset());
+                    sDate.setHours(0,0,0,0);
+                    if (oDate < sDate) matchDate = false;
+                }
+                if (endVal) {
+                    const eDate = new Date(endVal);
+                    eDate.setMinutes(eDate.getMinutes() + eDate.getTimezoneOffset());
+                    eDate.setHours(23,59,59,999);
+                    if (oDate > eDate) matchDate = false;
+                }
+            }
+
+            return matchSearch && matchStatus && matchDate;
+        });
+
         renderOrdersList(filtered, ordersContainer);
     }
 
     if (searchInput) searchInput.addEventListener('input', applyFilters);
     if (statusFilter) statusFilter.addEventListener('change', applyFilters);
+    if (dateStart) dateStart.addEventListener('change', applyFilters);
+    if (dateEnd) dateEnd.addEventListener('change', applyFilters);
 }
 
 function renderOrdersList(orders, container) {
@@ -789,4 +848,36 @@ window.openEditUserModal = function() {
 window.closeEditUserModal = function() {
     document.getElementById('edit-user-modal').classList.remove('visible');
     setTimeout(() => document.getElementById('edit-user-modal').classList.add('hidden'), 300);
+};
+
+window.openEditAddressModal = function() {
+    const user = Auth.getUser();
+    if (!user || !user.address) return;
+    const a = user.address;
+    document.getElementById('edit-addr-cep').value = a.cep || '';
+    document.getElementById('edit-addr-logradouro').value = a.logradouro || '';
+    document.getElementById('edit-addr-numero').value = a.numero || '';
+    document.getElementById('edit-addr-bairro').value = a.bairro || '';
+    document.getElementById('edit-addr-cidade').value = a.cidade || '';
+    document.getElementById('edit-addr-estado').value = a.estado || '';
+    document.getElementById('edit-address-modal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('edit-address-modal').classList.add('visible'), 10);
+};
+
+window.closeEditAddressModal = function() {
+    document.getElementById('edit-address-modal').classList.remove('visible');
+    setTimeout(() => document.getElementById('edit-address-modal').classList.add('hidden'), 300);
+};
+
+window.buscaCepEdit = function() {
+    const cep = document.getElementById('edit-addr-cep').value.replace(/\D/g, '');
+    if (cep.length >= 8) {
+        document.getElementById('edit-addr-logradouro').value = 'Av. Paulista';
+        document.getElementById('edit-addr-bairro').value = 'Bela Vista';
+        document.getElementById('edit-addr-cidade').value = 'São Paulo';
+        document.getElementById('edit-addr-estado').value = 'SP';
+        showToast('Endereço encontrado!');
+    } else {
+        showToast('CEP inválido.', 'error');
+    }
 };

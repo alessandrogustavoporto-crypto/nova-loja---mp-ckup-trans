@@ -198,7 +198,14 @@
 
 .kpi-info { display: flex; flex-direction: column; }
 .kpi-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-.kpi-value { font-size: 22px; font-weight: 700; color: var(--text-main); }
+.kpi-value { 
+    font-size: 18px; 
+    font-weight: 700; 
+    color: var(--text-main); 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
 /* ---- Admin Cards ---- */
 .admin-card {
