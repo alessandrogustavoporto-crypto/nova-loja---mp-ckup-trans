@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrinho - EcoStore</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray">
+    <header class="header" id="header">
+        <div class="header-container">
+            <div class="logo"><a href="index.html">EcoStore</a></div>
+            <div class="header-actions">
+                <div class="user-nav-wrapper" id="user-nav-wrapper">
+                    <a href="login.html" class="icon-link" id="user-nav-link" aria-label="Minha Conta"><i class="far fa-user" id="user-nav-icon"></i></a>
+                    <span class="user-tooltip" id="user-tooltip">Entrar</span>
+                </div>
+                <a href="carrinho.html" class="icon-link cart-icon" aria-label="Carrinho">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count">0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main id="cart-page-wrapper" class="container" style="padding-top:40px; padding-bottom:60px;">
+        <h1 class="page-title">Meu Carrinho</h1>
+
+        <!-- Empty State -->
+        <div id="cart-empty" class="cart-empty-state">
+            <i class="fas fa-shopping-cart"></i>
+            <h2>Seu carrinho está vazio</h2>
+            <p>Adicione produtos para continuar.</p>
+            <a href="index.html" class="btn-primary">Continuar Comprando</a>
+        </div>
+
+        <!-- Cart Content -->
+        <div id="cart-content" class="hidden">
+            <div class="cart-layout">
+                <!-- Table -->
+                <div class="cart-table-wrapper">
+                    <table class="cart-table">
+                        <thead>
+                            <tr>
+                                <th class="th-product">Produto</th>
+                                <th>Preço Unit.</th>
+                                <th>Quantidade</th>
+                                <th>Subtotal</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cart-body"></tbody>
+                    </table>
+                    <div class="cart-table-footer">
+                        <a href="index.html" class="link-muted"><i class="fas fa-arrow-left"></i> Continuar Comprando</a>
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <aside class="cart-summary">
+                    <div class="cart-summary-card">
+                        <h2>Resumo do Pedido</h2>
+                        <div class="summary-row">
+                            <span>Subtotal</span>
+                            <span id="cart-total-value">R$ 0,00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Frete</span>
+                            <span class="frete-gratis">Grátis</span>
+                        </div>
+                        <div class="summary-divider"></div>
+                        <div class="summary-row summary-total">
+                            <strong>Total</strong>
+                            <strong id="cart-total-value2"></strong>
+                        </div>
+                        <button class="btn-primary btn-block btn-checkout" onclick="goToCheckout()">
+                            <i class="fas fa-lock"></i> Finalizar Pedido
+                        </button>
+                        <div class="secure-info">
+                            <i class="fas fa-shield-alt"></i> Compra 100% segura
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </main>
+
+    <a href="https://wa.me/5511999999999" class="floating-whatsapp" target="_blank" aria-label="WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <script src="script.js"></script>
+</body>
+</html>

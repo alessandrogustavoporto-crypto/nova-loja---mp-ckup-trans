@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - EcoStore</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray">
+    <!-- Header Simples -->
+    <header class="header">
+        <div class="header-container justify-center">
+            <div class="logo">
+                <a href="index.html">EcoStore</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="auth-main">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2>Acesse sua conta</h2>
+            </div>
+            <div class="auth-body">
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="email" id="email" placeholder="Digite seu e-mail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="senha">Senha</label>
+                        <input type="password" id="senha" placeholder="Digite sua senha" required>
+                    </div>
+                    <div class="auth-actions">
+                        <a href="#" class="link-muted">Esqueci minha senha</a>
+                    </div>
+                    <button type="submit" class="btn-primary btn-block">Entrar</button>
+                </form>
+                <div class="auth-footer">
+                    <p>Não tem uma conta? <a href="cadastro.html" class="link-orange">Criar nova conta</a></p>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>

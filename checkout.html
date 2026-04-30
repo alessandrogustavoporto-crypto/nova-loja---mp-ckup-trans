@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finalizar Pedido - EcoStore</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray">
+    <header class="header">
+        <div class="header-container justify-center">
+            <div class="logo"><a href="index.html">EcoStore</a></div>
+            <div class="checkout-steps">
+                <span class="step-crumb done"><i class="fas fa-check"></i> Carrinho</span>
+                <i class="fas fa-chevron-right step-arrow"></i>
+                <span class="step-crumb active">Pagamento</span>
+                <i class="fas fa-chevron-right step-arrow"></i>
+                <span class="step-crumb">Confirmação</span>
+            </div>
+        </div>
+    </header>
+
+    <main id="checkout-wrapper" class="container" style="padding-top:40px; padding-bottom:60px;">
+        <h1 class="page-title">Finalizar Pedido</h1>
+
+        <div class="checkout-layout">
+            <!-- Left: Payment + Address -->
+            <div class="checkout-main">
+                <!-- Address -->
+                <div class="checkout-section">
+                    <h2 class="checkout-section-title"><i class="fas fa-map-marker-alt"></i> Endereço de Entrega</h2>
+                    <div class="address-box">
+                        <i class="fas fa-home address-icon"></i>
+                        <p id="checkout-address">Av. Paulista, 1578 — Bela Vista, São Paulo/SP | CEP: 01310-200</p>
+                        <a href="minha-conta.html" class="link-orange" style="font-size:13px; margin-left:auto;">Alterar</a>
+                    </div>
+                </div>
+
+                <!-- Payment -->
+                <div class="checkout-section">
+                    <h2 class="checkout-section-title"><i class="fas fa-credit-card"></i> Forma de Pagamento</h2>
+                    <div class="payment-options">
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="pix">
+                            <span class="payment-card">
+                                <i class="fas fa-qrcode"></i>
+                                <span>PIX</span>
+                                <small>Aprovação imediata</small>
+                            </span>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="cartao_credito">
+                            <span class="payment-card">
+                                <i class="far fa-credit-card"></i>
+                                <span>Cartão de Crédito</span>
+                                <small>Até 12x sem juros</small>
+                            </span>
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="payment" value="boleto">
+                            <span class="payment-card">
+                                <i class="fas fa-barcode"></i>
+                                <span>Boleto Bancário</span>
+                                <small>Vencimento em 3 dias</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Summary -->
+            <aside class="cart-summary">
+                <div class="cart-summary-card">
+                    <h2>Resumo do Pedido</h2>
+                    <table class="checkout-summary-table">
+                        <tbody id="checkout-summary-body"></tbody>
+                    </table>
+                    <div class="summary-divider" style="margin:15px 0;"></div>
+                    <div class="summary-row summary-total">
+                        <strong>Total</strong>
+                        <strong id="checkout-total-value">R$ 0,00</strong>
+                    </div>
+                    <button id="btn-confirm-order" class="btn-primary btn-block btn-checkout" style="margin-top:20px;">
+                        <i class="fas fa-check-circle"></i> Confirmar Pedido
+                    </button>
+                    <div class="secure-info"><i class="fas fa-shield-alt"></i> Compra 100% segura</div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-success-icon"><i class="fas fa-check-circle"></i></div>
+            <h2>Pedido Realizado!</h2>
+            <p>Seu pedido <strong id="order-id-confirm"></strong> foi criado com sucesso e está sendo processado.</p>
+            <p style="color:var(--text-muted); margin-top:10px; font-size:14px;">Acompanhe o status na sua área do cliente.</p>
+            <div style="display:flex; gap:15px; justify-content:center; margin-top:25px;">
+                <a href="minha-conta.html" class="btn-primary">Ver Meus Pedidos</a>
+                <a href="index.html" class="btn-secondary">Continuar Comprando</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

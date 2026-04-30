@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Natureza & Cia - Loja Virtual</title>
+    <meta name="description" content="Sua loja virtual de produtos naturais.">
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="header" id="header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="#">EcoStore</a>
+            </div>
+            
+            <div class="search-bar">
+                <input type="text" placeholder="O que você está procurando?">
+                <button type="submit"><i class="fas fa-search"></i></button>
+            </div>
+            
+            <nav class="nav-menu">
+                <ul>
+                    <li><a href="#">Novidades</a></li>
+                    <li><a href="#">Ofertas</a></li>
+                    <li><a href="#">Mais Vendidos</a></li>
+                    <li class="has-dropdown">
+                        <a href="javascript:void(0)" id="btn-categories">Categorias <i class="fas fa-chevron-down"></i></a>
+                        <ul class="dropdown-menu" id="categories-dropdown">
+                            <!-- Categorias serão inseridas aqui via JS -->
+                        </ul>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="header-actions">
+                <div class="user-nav-wrapper" id="user-nav-wrapper">
+                    <a href="login.html" class="icon-link" id="user-nav-link" aria-label="Minha Conta">
+                        <i class="far fa-user" id="user-nav-icon"></i>
+                    </a>
+                    <span class="user-tooltip" id="user-tooltip">Entrar</span>
+                </div>
+                <a href="carrinho.html" class="icon-link cart-icon" aria-label="Carrinho">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count">0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <button class="banner-nav prev" id="banner-prev" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>
+            <div class="hero-content">
+                <h1>Sua vida mais saudável e natural</h1>
+                <p>Descubra nossa nova linha de produtos orgânicos com até 30% de desconto.</p>
+                <a href="#produtos" class="btn-primary">Comprar Agora</a>
+            </div>
+            <button class="banner-nav next" id="banner-next" aria-label="Próximo"><i class="fas fa-chevron-right"></i></button>
+        </section>
+
+        <section id="produtos" class="products-section">
+            <div class="container">
+                <div id="grid-header">
+                    <h2>Destaques da Semana</h2>
+                </div>
+                
+                <!-- Grid de Produtos -->
+                <div id="main-product-grid" class="product-grid">
+                    <!-- Produtos gerados via JS -->
+                </div>
+
+                <!-- Visualização Única do Produto (Inicialmente oculta) -->
+                <div id="single-product-view" class="hidden">
+                    <button class="btn-back" onclick="backToGrid()">
+                        <i class="fas fa-arrow-left"></i> Voltar para a loja
+                    </button>
+                    
+                    <div class="single-product-layout">
+                        <div class="single-product-img" style="flex-direction: column;">
+                            <img id="single-img" src="" alt="">
+                            
+                            <!-- Botão de Compra movido para baixo da foto -->
+                            <div class="single-product-actions" style="display:flex; gap:15px; align-items:center; background:var(--white); padding:20px; border-radius:var(--radius-md); box-shadow:var(--shadow-sm); width:100%; margin-top:20px; border:1px solid #eee;">
+                                <div class="qty-selector">
+                                    <button onclick="changeDetailQty(-1)">-</button>
+                                    <input type="number" id="single-qty" value="1" readonly>
+                                    <button onclick="changeDetailQty(1)">+</button>
+                                </div>
+                                <button id="single-add-btn" class="btn-primary" style="flex:1; height:45px; font-size:16px;">
+                                    <i class="fas fa-cart-plus"></i> Adicionar ao Carrinho
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="single-product-info">
+                            <span id="single-category" class="product-category">Categoria</span>
+                            <h2 id="single-title" class="drawer-title" style="font-size:32px; margin-bottom:15px;">Nome do Produto</h2>
+                            
+                            <div style="display:flex; align-items:center; gap:15px; margin-bottom:25px;">
+                                <span id="single-price" class="drawer-price" style="font-size:28px;">R$ 0,00</span>
+                                <span id="single-old-price" style="text-decoration:line-through; color:var(--text-muted); font-size:18px;"></span>
+                            </div>
+
+                            <div class="drawer-desc" style="background:#fff; padding:20px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                                <h4 style="color:var(--primary-green); font-size:14px; text-transform:uppercase; margin-bottom:10px;">Descrição Detalhada</h4>
+                                <p id="single-description" style="font-size:16px;">Carregando...</p>
+                            </div>
+
+                            <div class="product-detail-features" style="margin: 30px 0;">
+                                <span><i class="fas fa-truck"></i> Entrega expressa disponível para sua região</span>
+                                <span><i class="fas fa-shield-alt"></i> Garantia de satisfação EcoStore</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-col">
+                <h3>Institucional</h3>
+                <ul>
+                    <li><a href="#">Sobre Nós</a></li>
+                    <li><a href="#">Sustentabilidade</a></li>
+                    <li><a href="#">Trabalhe Conosco</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h3>Atendimento</h3>
+                <ul>
+                    <li><a href="#">Central de Ajuda</a></li>
+                    <li><a href="#">Trocas e Devoluções</a></li>
+                    <li><a href="#">Fale Conosco</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h3>Promoções</h3>
+                <p>Cadastre-se para receber ofertas exclusivas!</p>
+                <div class="newsletter">
+                    <input type="email" placeholder="Seu melhor e-mail">
+                    <button class="btn-primary btn-small">Assinar</button>
+                </div>
+            </div>
+            <div class="footer-col social-col">
+                <h3>Siga-nos</h3>
+                <div class="social-icons">
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 EcoStore. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <a href="https://wa.me/5511999999999" class="floating-whatsapp" target="_blank" aria-label="Contato via WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <script src="script.js"></script>
+</body>
+</html>

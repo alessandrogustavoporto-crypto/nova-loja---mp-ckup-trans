@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Área do Cliente - EcoStore</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray">
+    <header class="header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="index.html">EcoStore</a>
+            </div>
+            
+            <div class="header-actions">
+                <div class="user-nav-wrapper" id="user-nav-wrapper">
+                    <a href="minha-conta.html" class="icon-link" id="user-nav-link" aria-label="Minha Conta">
+                        <i class="fas fa-user-circle" id="user-nav-icon"></i>
+                    </a>
+                    <span class="user-tooltip" id="user-tooltip">Minha Conta</span>
+                </div>
+                <a href="javascript:void(0)" onclick="doLogout()" class="icon-link" aria-label="Sair">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <aside class="dashboard-sidebar">
+            <div class="user-greeting">
+                <i class="fas fa-user-circle user-avatar"></i>
+                <div class="greeting-text">
+                    <span>Olá,</span>
+                    <strong id="dash-user-name">João Silva</strong>
+                </div>
+            </div>
+            <nav class="dashboard-nav">
+                <button class="nav-btn active" data-tab="tab-pedidos"><i class="fas fa-box-open"></i> Meus Pedidos</button>
+                <button class="nav-btn" data-tab="tab-acompanhamento"><i class="fas fa-truck-fast"></i> Acompanhamento</button>
+                <button class="nav-btn" data-tab="tab-dados"><i class="fas fa-id-card"></i> Meus Dados</button>
+            </nav>
+        </aside>
+
+        <section class="dashboard-content">
+            <!-- TAB: Meus Pedidos -->
+            <div id="tab-pedidos" class="tab-pane active">
+                <h2 class="tab-title">Meus Pedidos</h2>
+                
+                <div class="filters-bar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="order-search" placeholder="Buscar por número do pedido">
+                    </div>
+                    <div class="filter-box">
+                        <select id="order-status-filter">
+                            <option value="">Todos os Status</option>
+                            <option value="processando">Processando</option>
+                            <option value="enviado">Enviado</option>
+                            <option value="entregue">Entregue</option>
+                            <option value="cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="orders-list-container" class="orders-list">
+                    <!-- Pedidos gerados dinamicamente pelo script.js -->
+                </div>
+            </div>
+
+            <!-- TAB: Acompanhamento -->
+            <div id="tab-acompanhamento" class="tab-pane">
+                <h2 class="tab-title">Acompanhamento do Pedido #10592</h2>
+                
+                <div class="stepper-container">
+                    <div class="step completed">
+                        <div class="step-icon"><i class="fas fa-check"></i></div>
+                        <div class="step-label">Pedido Realizado</div>
+                        <div class="step-date">28/04/2026 10:30</div>
+                    </div>
+                    <div class="step-line completed"></div>
+                    <div class="step completed">
+                        <div class="step-icon"><i class="fas fa-check"></i></div>
+                        <div class="step-label">Pagamento Aprovado</div>
+                        <div class="step-date">28/04/2026 10:35</div>
+                    </div>
+                    <div class="step-line completed"></div>
+                    <div class="step active">
+                        <div class="step-icon"><i class="fas fa-box"></i></div>
+                        <div class="step-label">Em Transporte</div>
+                        <div class="step-date">29/04/2026 14:20</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step">
+                        <div class="step-icon"><i class="fas fa-home"></i></div>
+                        <div class="step-label">Entregue</div>
+                        <div class="step-date">Previsto: 02/05</div>
+                    </div>
+                </div>
+                
+                <div class="tracking-details">
+                    <h3>Últimas Atualizações</h3>
+                    <ul class="tracking-list">
+                        <li><strong>29/04/2026 14:20</strong> - Pedido saiu do centro de distribuição (São Paulo/SP)</li>
+                        <li><strong>28/04/2026 18:00</strong> - Pedido embalado e pronto para envio</li>
+                        <li><strong>28/04/2026 10:35</strong> - Pagamento confirmado</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- TAB: Meus Dados -->
+            <div id="tab-dados" class="tab-pane">
+                <h2 class="tab-title">Meus Dados</h2>
+                
+                <div class="data-card">
+                    <div class="data-header">
+                        <h3>Informações Pessoais</h3>
+                    </div>
+                    <div class="data-body form-grid">
+                        <div class="info-group">
+                            <span class="info-label">Nome Completo</span>
+                            <span class="info-value" id="dash-full-name">João Silva</span>
+                        </div>
+                        <div class="info-group">
+                            <span class="info-label">CPF</span>
+                            <span class="info-value">123.456.789-00</span>
+                        </div>
+                        <div class="info-group">
+                            <span class="info-label">E-mail</span>
+                            <span class="info-value" id="dash-email">joao.silva@email.com</span>
+                        </div>
+                        <div class="info-group">
+                            <span class="info-label">Telefone Celular</span>
+                            <span class="info-value" id="dash-phone">(11) 98765-4321</span>
+                        </div>
+                    </div>
+                    <div class="data-actions">
+                        <button class="btn-primary" onclick="openEditUserModal()"><i class="fas fa-edit"></i> Editar Informações</button>
+                        <button class="btn-secondary"><i class="fas fa-key"></i> Alterar Senha</button>
+                    </div>
+                </div>
+
+                <div class="data-card mt-20">
+                    <div class="data-header">
+                        <h3>Endereço Principal</h3>
+                    </div>
+                    <div class="data-body" id="dash-address-box">
+                        <p class="info-value">Av. Paulista, 1578 - Apto 42</p>
+                        <p class="info-value">Bela Vista, São Paulo - SP</p>
+                        <p class="info-value">CEP: 01310-200</p>
+                    </div>
+                    <div class="data-actions">
+                        <button class="btn-primary"><i class="fas fa-map-marker-alt"></i> Editar Endereço</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL: Editar Informações do Cliente -->
+    <div id="edit-user-modal" class="modal-overlay hidden">
+        <div class="modal-box" style="max-width: 450px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin:0; font-size: 1.2rem;">Editar Meus Dados</h2>
+                <button onclick="closeEditUserModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: var(--text-muted);"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="edit-user-form">
+                <div class="form-group">
+                    <label>Nome Completo</label>
+                    <input type="text" id="edit-name" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius: 4px;">
+                </div>
+                <div class="form-group mt-15">
+                    <label>E-mail</label>
+                    <input type="email" id="edit-email" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius: 4px;">
+                </div>
+                <div class="form-group mt-15">
+                    <label>Telefone Celular</label>
+                    <input type="text" id="edit-phone" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius: 4px;">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 30px;">
+                    <button type="button" class="btn-secondary btn-block" onclick="closeEditUserModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary btn-block">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

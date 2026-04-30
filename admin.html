@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - EcoStore</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="admin-body">
+
+<!-- SIDEBAR -->
+<aside class="admin-sidebar" id="admin-sidebar">
+    <div class="sidebar-brand">
+        <i class="fas fa-leaf"></i>
+        <span>EcoStore</span>
+    </div>
+    <nav class="sidebar-nav">
+        <button class="sidebar-btn active" data-section="dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>
+        <button class="sidebar-btn" data-section="produtos"><i class="fas fa-box-open"></i> Produtos</button>
+        <button class="sidebar-btn" data-section="categorias"><i class="fas fa-tags"></i> Categorias</button>
+        <button class="sidebar-btn" data-section="clientes"><i class="fas fa-users"></i> Clientes</button>
+        <button class="sidebar-btn" data-section="pedidos"><i class="fas fa-file-invoice"></i> Pedidos</button>
+        <button class="sidebar-btn" data-section="banners"><i class="fas fa-image"></i> Banners</button>
+    </nav>
+    <div class="sidebar-footer">
+        <button class="sidebar-btn sidebar-logout" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
+        <a href="index.html" class="sidebar-btn" target="_blank"><i class="fas fa-store"></i> Ver Loja</a>
+    </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<div class="admin-main">
+    <!-- Top Bar -->
+    <header class="admin-topbar">
+        <button class="sidebar-toggle" onclick="document.getElementById('admin-sidebar').classList.toggle('collapsed')">
+            <i class="fas fa-bars"></i>
+        </button>
+        <h1 class="admin-page-title" id="admin-page-title">Dashboard</h1>
+        <div class="topbar-right">
+            <span class="admin-badge"><i class="fas fa-shield-alt"></i> Admin</span>
+            <span id="admin-name-display" class="admin-user-name"></span>
+        </div>
+    </header>
+
+    <!-- SECTION: Dashboard -->
+    <section id="section-dashboard" class="admin-section active">
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-green">
+                <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Vendas no Mês</span>
+                    <strong class="kpi-value" id="kpi-sales">R$ 0,00</strong>
+                </div>
+            </div>
+            <div class="kpi-card kpi-orange">
+                <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Pedidos Pendentes</span>
+                    <strong class="kpi-value" id="kpi-pending">0</strong>
+                </div>
+            </div>
+            <div class="kpi-card kpi-blue">
+                <div class="kpi-icon"><i class="fas fa-user-plus"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Novos Clientes</span>
+                    <strong class="kpi-value" id="kpi-clients">0</strong>
+                </div>
+            </div>
+            <div class="kpi-card kpi-blue" onclick="document.querySelector('[data-section=\'banners\']').click()" style="cursor:pointer">
+                <div class="kpi-icon"><i class="fas fa-image"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Banners Ativos</span>
+                    <strong class="kpi-value" id="kpi-banners">0</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <div class="admin-card-header"><h2>Pedidos Recentes</h2></div>
+            <div class="admin-card-body">
+                <table class="admin-table">
+                    <thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Ação</th></tr></thead>
+                    <tbody id="dashboard-orders-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Produtos -->
+    <section id="section-produtos" class="admin-section">
+        <div class="section-toolbar">
+            <input type="text" id="product-search" placeholder="Buscar produto..." class="admin-search">
+            <button class="btn-primary btn-sm" onclick="openProductModal()"><i class="fas fa-plus"></i> Novo Produto</button>
+        </div>
+        <div class="admin-card">
+            <div class="admin-card-header"><h2>Catálogo de Produtos</h2></div>
+            <div class="admin-card-body">
+                <table class="admin-table">
+                    <thead><tr><th>Img</th><th>Nome</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Promoção</th><th>Ações</th></tr></thead>
+                    <tbody id="products-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Categorias -->
+    <section id="section-categorias" class="admin-section">
+        <div class="section-toolbar">
+            <button class="btn-primary btn-sm" onclick="openCatModal()"><i class="fas fa-plus"></i> Nova Categoria</button>
+        </div>
+        <div class="admin-card">
+            <div class="admin-card-header"><h2>Categorias</h2></div>
+            <div class="admin-card-body">
+                <table class="admin-table">
+                    <thead><tr><th>#</th><th>Nome</th><th>Produtos</th><th>Ações</th></tr></thead>
+                    <tbody id="categories-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Clientes -->
+    <section id="section-clientes" class="admin-section">
+        <div class="section-toolbar">
+            <input type="text" id="client-search" placeholder="Buscar por nome ou e-mail..." class="admin-search">
+            <select id="client-type-filter" class="admin-select">
+                <option value="">Todos (PF/PJ)</option>
+                <option value="PF">Pessoa Física</option>
+                <option value="PJ">Pessoa Jurídica</option>
+            </select>
+        </div>
+        <div class="admin-card">
+            <div class="admin-card-header"><h2>Clientes Cadastrados</h2></div>
+            <div class="admin-card-body">
+                <table class="admin-table">
+                    <thead><tr><th>Nome</th><th>E-mail</th><th>Tipo</th><th>Pedidos</th><th>Status</th><th>Ações</th></tr></thead>
+                    <tbody id="clients-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Pedidos -->
+    <section id="section-pedidos" class="admin-section">
+        <div class="section-toolbar">
+            <input type="text" id="order-admin-search" placeholder="Buscar pedido..." class="admin-search">
+            <select id="order-admin-status" class="admin-select">
+                <option value="">Todos os Status</option>
+                <option value="aguardando">Aguardando Pagamento</option>
+                <option value="separacao">Em Separação</option>
+                <option value="saiu">Saiu para Entrega</option>
+                <option value="entregue">Entregue</option>
+                <option value="cancelado">Cancelado</option>
+            </select>
+        </div>
+        <div class="admin-card">
+            <div class="admin-card-header"><h2>Gestão de Pedidos</h2></div>
+            <div class="admin-card-body">
+                <table class="admin-table">
+                    <thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
+                    <tbody id="orders-admin-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Banners -->
+    <section id="section-banners" class="admin-section">
+        <div class="section-toolbar">
+            <div style="flex:1;">
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">
+                    <i class="fas fa-info-circle"></i> <strong>Proporção recomendada:</strong> 1920x450px para melhor visualização.
+                </p>
+            </div>
+            <button class="btn-primary" onclick="openBannerModal()" style="padding: 12px 24px; font-weight: 700;">
+                <i class="fas fa-plus-circle"></i> INSERIR NOVO BANNER
+            </button>
+        </div>
+        <div class="admin-card">
+            <div class="admin-card-header"><h2>Gestão de Banners (Hero)</h2></div>
+            <div class="admin-card-body">
+                <table class="admin-table">
+                    <thead><tr><th>Miniatura</th><th>Título</th><th>Subtítulo</th><th>Status</th><th>Ações</th></tr></thead>
+                    <tbody id="banners-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- MODAL: Produto -->
+<div id="product-modal" class="admin-modal-overlay hidden">
+    <div class="admin-modal">
+        <div class="admin-modal-header">
+            <h3 id="product-modal-title">Novo Produto</h3>
+            <button class="modal-close" onclick="closeProductModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="admin-modal-body">
+            <input type="hidden" id="prod-id">
+            <div class="form-grid">
+                <div class="form-group col-span-2">
+                    <label>Nome do Produto *</label>
+                    <input type="text" id="prod-name" placeholder="Ex: Óleo Essencial de Lavanda">
+                </div>
+                <div class="form-group">
+                    <label>Categoria</label>
+                    <select id="prod-category"></select>
+                </div>
+                <div class="form-group">
+                    <label>Estoque</label>
+                    <input type="number" id="prod-stock" placeholder="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Preço Normal (R$)</label>
+                    <input type="number" id="prod-price" placeholder="0.00" step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Preço Promocional (R$)</label>
+                    <input type="number" id="prod-promo-price" placeholder="0.00" step="0.01" min="0">
+                </div>
+                <div class="form-group col-span-2">
+                    <label>Imagem do Produto (Upload)</label>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <input type="file" id="prod-image-file" accept="image/*" style="padding: 5px 0;">
+                        <img id="prod-img-preview" src="" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; display: none; border: 1px solid var(--border-color);">
+                    </div>
+                    <input type="hidden" id="prod-image-base64">
+                </div>
+                <div class="form-group col-span-2">
+                    <label>Descrição</label>
+                    <textarea id="prod-desc" rows="3" placeholder="Descrição técnica do produto..." style="padding:12px 15px;border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:var(--font-family);font-size:15px;width:100%;resize:vertical;outline:none;"></textarea>
+                </div>
+            </div>
+            <div class="promo-toggle-row">
+                <span><i class="fas fa-tag"></i> Ativar Promoção</span>
+                <label class="switch">
+                    <input type="checkbox" id="prod-promo-active">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+        <div class="admin-modal-footer">
+            <button class="btn-secondary" onclick="closeProductModal()">Cancelar</button>
+            <button class="btn-primary" onclick="saveProduct()"><i class="fas fa-save"></i> Salvar Produto</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Categoria -->
+<div id="cat-modal" class="admin-modal-overlay hidden">
+    <div class="admin-modal" style="max-width:400px;">
+        <div class="admin-modal-header">
+            <h3>Nova Categoria</h3>
+            <button class="modal-close" onclick="closeCatModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="admin-modal-body">
+            <input type="hidden" id="cat-id">
+            <div class="form-group">
+                <label>Nome da Categoria *</label>
+                <input type="text" id="cat-name" placeholder="Ex: Suplementos">
+            </div>
+        </div>
+        <div class="admin-modal-footer">
+            <button class="btn-secondary" onclick="closeCatModal()">Cancelar</button>
+            <button class="btn-primary" onclick="saveCategory()"><i class="fas fa-save"></i> Salvar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Detalhes do Pedido -->
+<div id="order-detail-modal" class="admin-modal-overlay hidden">
+    <div class="admin-modal" style="max-width:700px;">
+        <div class="admin-modal-header">
+            <h3 id="order-detail-title">Detalhes do Pedido</h3>
+            <button class="modal-close" onclick="closeOrderModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="admin-modal-body" id="order-detail-body"></div>
+        <div class="admin-modal-footer">
+            <button class="btn-secondary" onclick="closeOrderModal()">Fechar</button>
+            <button class="btn-primary" onclick="printOrder()"><i class="fas fa-print"></i> Imprimir Pedido</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Banner -->
+<div id="banner-modal" class="admin-modal-overlay hidden">
+    <div class="admin-modal" style="max-width:550px;">
+        <div class="admin-modal-header">
+            <h3 id="banner-modal-title">Configurar Banner</h3>
+            <button class="modal-close" onclick="closeBannerModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="admin-modal-body">
+            <input type="hidden" id="banner-id">
+            <div class="form-group">
+                <label>Título do Banner</label>
+                <input type="text" id="banner-title" placeholder="Ex: Sua vida mais saudável">
+            </div>
+            <div class="form-group">
+                <label>Subtítulo / Descrição</label>
+                <input type="text" id="banner-subtitle" placeholder="Ex: Confira nossa linha de orgânicos">
+            </div>
+            <div class="form-group">
+                <label>Texto do Botão</label>
+                <input type="text" id="banner-btn-text" placeholder="Ex: Comprar Agora">
+            </div>
+            <div class="form-group">
+                <label>Link do Botão</label>
+                <input type="text" id="banner-btn-link" placeholder="Ex: #produtos ou carrinho.html">
+            </div>
+            <div class="form-group">
+                <label>Imagem do Banner (Upload)</label>
+                <p style="font-size:11px; color:var(--primary-orange); margin-bottom:8px;">Sugestão: 1920x450px</p>
+                <div style="display: flex; flex-direction: column; gap: 15px; align-items: flex-start; background: #f9f9f9; padding: 15px; border-radius: var(--radius-sm); border: 1px dashed #ddd;">
+                    <input type="file" id="banner-image-file" accept="image/*" style="width: 100%;">
+                    <div id="banner-preview-container" style="width: 100%; text-align: center;">
+                        <img id="banner-img-preview" src="" style="max-width: 100%; height: 150px; object-fit: cover; border-radius: 4px; display: none; border: 2px solid var(--primary-green); box-shadow: var(--shadow-sm);">
+                        <p id="preview-placeholder" style="color: var(--text-muted); font-size: 13px; margin: 20px 0;">Nenhuma imagem selecionada</p>
+                    </div>
+                </div>
+                <input type="hidden" id="banner-image-base64">
+            </div>
+            <div class="promo-toggle-row" style="background: #e8f5e9; padding: 15px; border-radius: var(--radius-sm); border: 1px solid #c8e6c9; color: var(--primary-green);">
+                <span><i class="fas fa-check-circle"></i> DEFINIR COMO BANNER ATIVO</span>
+                <label class="switch">
+                    <input type="checkbox" id="banner-active" checked>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+        <div class="admin-modal-footer">
+            <button class="btn-secondary" onclick="closeBannerModal()">Cancelar</button>
+            <button class="btn-primary" onclick="saveBanner()"><i class="fas fa-save"></i> Salvar Banner</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Editar Cliente -->
+<div id="client-modal" class="admin-modal-overlay hidden">
+    <div class="admin-modal" style="max-width:500px;">
+        <div class="admin-modal-header">
+            <h3>Editar Cliente</h3>
+            <button class="modal-close" onclick="closeClientModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="admin-modal-body">
+            <input type="hidden" id="client-modal-id">
+            <div class="form-group">
+                <label>Nome Completo</label>
+                <input type="text" id="client-modal-name">
+            </div>
+            <div class="form-group">
+                <label>E-mail</label>
+                <input type="email" id="client-modal-email">
+            </div>
+            <div class="form-group">
+                <label>Telefone</label>
+                <input type="text" id="client-modal-phone">
+            </div>
+            <div class="form-group">
+                <label>Status da Conta</label>
+                <select id="client-modal-status" class="admin-select" style="width:100%">
+                    <option value="ativo">Ativo</option>
+                    <option value="bloqueado">Bloqueado</option>
+                </select>
+            </div>
+        </div>
+        <div class="admin-modal-footer">
+            <button class="btn-secondary" onclick="closeClientModal()">Cancelar</button>
+            <button class="btn-primary" onclick="saveClient()"><i class="fas fa-save"></i> Salvar Alterações</button>
+        </div>
+    </div>
+</div>
+
+<!-- PRINT AREA -->
+<div id="print-area" class="hidden"></div>
+
+<script src="admin.js"></script>
+</body>
+</html>
