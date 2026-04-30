@@ -21,6 +21,7 @@
         <button class="sidebar-btn active" data-section="dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>
         <button class="sidebar-btn" data-section="produtos"><i class="fas fa-box-open"></i> Produtos</button>
         <button class="sidebar-btn" data-section="categorias"><i class="fas fa-tags"></i> Categorias</button>
+        <button class="sidebar-btn" data-section="marcas"><i class="fas fa-copyright"></i> Marcas</button>
         <button class="sidebar-btn" data-section="clientes"><i class="fas fa-users"></i> Clientes</button>
         <button class="sidebar-btn" data-section="pedidos"><i class="fas fa-file-invoice"></i> Pedidos</button>
         <button class="sidebar-btn" data-section="banners"><i class="fas fa-image"></i> Banners</button>
@@ -99,7 +100,7 @@
             <div class="admin-card-header"><h2>Catálogo de Produtos</h2></div>
             <div class="admin-card-body">
                 <table class="admin-table">
-                    <thead><tr><th>Img</th><th>Nome</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Promoção</th><th>Ações</th></tr></thead>
+                    <thead><tr><th>Img</th><th>Nome</th><th>Categoria</th><th>Marca</th><th>Preço</th><th>Estoque</th><th>Promoção</th><th>Ações</th></tr></thead>
                     <tbody id="products-table"></tbody>
                 </table>
             </div>
@@ -167,6 +168,22 @@
         </div>
     </section>
 
+    <!-- SECTION: Marcas -->
+    <section id="section-marcas" class="admin-section">
+        <div class="section-toolbar">
+            <button class="btn-primary" onclick="openBrandModal()"><i class="fas fa-plus"></i> Nova Marca</button>
+        </div>
+        <div class="admin-card">
+            <div class="admin-card-header"><h2>Gestão de Marcas</h2></div>
+            <div class="admin-card-body">
+                <table class="admin-table">
+                    <thead><tr><th>Nome da Marca</th><th>Ações</th></tr></thead>
+                    <tbody id="marcas-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
     <!-- SECTION: Banners -->
     <section id="section-banners" class="admin-section">
         <div class="section-toolbar">
@@ -207,7 +224,11 @@
                 </div>
                 <div class="form-group">
                     <label>Categoria</label>
-                    <select id="prod-category"></select>
+                    <select id="prod-category" class="admin-select" style="width:100%"></select>
+                </div>
+                <div class="form-group">
+                    <label>Marca</label>
+                    <select id="prod-brand" class="admin-select" style="width:100%"></select>
                 </div>
                 <div class="form-group">
                     <label>Estoque</label>
@@ -285,7 +306,28 @@
     </div>
 </div>
 
-<!-- MODAL: Banner -->
+    <!-- MODAL: Marca -->
+    <div id="brand-modal" class="admin-modal-overlay hidden">
+        <div class="admin-modal" style="max-width: 400px;">
+            <div class="admin-modal-header">
+                <h3 id="brand-modal-title">Nova Marca</h3>
+                <button class="modal-close" onclick="closeBrandModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <input type="hidden" id="brand-id">
+                <div class="form-group">
+                    <label>Nome da Marca</label>
+                    <input type="text" id="brand-name" placeholder="Ex: Nike, Samsung, etc.">
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button class="btn-secondary" onclick="closeBrandModal()">Cancelar</button>
+                <button class="btn-primary" onclick="saveBrand()">Salvar Marca</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Banner -->
 <div id="banner-modal" class="admin-modal-overlay hidden">
     <div class="admin-modal" style="max-width:550px;">
         <div class="admin-modal-header">

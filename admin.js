@@ -76,6 +76,12 @@ const AdminData = {
     },
     saveCategories(cats) { localStorage.setItem('ecostore_categories', JSON.stringify(cats)); },
 
+    // Brands
+    getBrands() {
+        return JSON.parse(localStorage.getItem('ecostore_brands') || '[]');
+    },
+    saveBrands(brands) { localStorage.setItem('ecostore_brands', JSON.stringify(brands)); },
+
     // Clients
     getClients() {
         const mock = [
@@ -228,6 +234,7 @@ function initAdminDashboard() {
     loadDashboard();
     loadProducts();
     loadCategories();
+    loadBrands();
     loadClients();
     loadOrders();
     loadBanners();
@@ -274,6 +281,7 @@ function loadProducts(filter) {
             '<td><img src="' + (p.image || '') + '" class="product-thumb-sm" alt=""></td>' +
             '<td><strong>' + p.name + '</strong></td>' +
             '<td>' + (p.category || '—') + '</td>' +
+            '<td>' + (p.brand || '—') + '</td>' +
             '<td>' + fmt(p.price) + '</td>' +
             '<td>' + (p.stock || 0) + ' un</td>' +
             '<td><span class="badge ' + (p.promoActive ? 'badge-ativo' : '') + '">' + (p.promoActive ? 'Ativa' : '—') + '</span></td>' +
@@ -290,14 +298,16 @@ function loadProducts(filter) {
         search.addEventListener('input', () => loadProducts(search.value));
     }
 
-    // Populate category select in modal
+    // Populate category and brand selects in modal
     populateCategorySelect();
+    populateBrandSelect();
 }
 
 window.openProductModal = function(id) {
     const modal = document.getElementById('product-modal');
     modal.classList.remove('hidden');
     populateCategorySelect();
+    populateBrandSelect();
     
     // Preview Reset
     const preview = document.getElementById('prod-img-preview');
@@ -323,6 +333,7 @@ window.openProductModal = function(id) {
     document.getElementById('prod-image-base64').value = prod.image || '';
     document.getElementById('prod-desc').value = prod.description || '';
     document.getElementById('prod-category').value = prod.category || '';
+    document.getElementById('prod-brand').value = prod.brand || '';
     document.getElementById('prod-promo-active').checked = !!prod.promoActive;
 
     if (prod.image && preview) {
@@ -345,6 +356,7 @@ window.saveProduct = function() {
         image: document.getElementById('prod-image-base64').value,
         description: document.getElementById('prod-desc').value,
         category: document.getElementById('prod-category').value,
+        brand: document.getElementById('prod-brand').value,
         promoActive: document.getElementById('prod-promo-active').checked
     };
 
@@ -751,3 +763,80 @@ document.addEventListener('DOMContentLoaded', () => {
     initAdminLogin();
     initAdminDashboard();
 });
+
+// ============================================================
+// MARCAS
+// ============================================================
+function loadBrands() {
+    const brands = AdminData.getBrands();
+    const tbody = document.getElementById('marcas-table');
+    if (!tbody) return;
+
+    tbody.innerHTML = brands.length === 0 ? '<tr><td colspan="2" style="text-align:center;padding:20px;color:var(--text-muted)">Nenhuma marca cadastrada.</td></tr>' :
+        brands.map(b =>
+            '<tr>' +
+            '<td><strong>' + b.name + '</strong></td>' +
+            '<td>' +
+            '<button class="btn-icon btn-icon-edit" onclick="openBrandModal(' + b.id + ')" title="Editar"><i class="fas fa-edit"></i></button> ' +
+            '<button class="btn-icon btn-icon-delete" onclick="deleteBrand(' + b.id + ')" title="Excluir"><i class="fas fa-trash"></i></button>' +
+            '</td></tr>'
+        ).join('');
+}
+
+function populateBrandSelect() {
+    const select = document.getElementById('prod-brand');
+    if (!select) return;
+    const brands = AdminData.getBrands();
+    select.innerHTML = '<option value="">Sem Marca</option>' + brands.map(b => '<option value="' + b.name + '">' + b.name + '</option>').join('');
+}
+
+window.openBrandModal = function(id) {
+    const modal = document.getElementById('brand-modal');
+    modal.classList.remove('hidden');
+
+    if (!id) {
+        document.getElementById('brand-modal-title').textContent = 'Nova Marca';
+        document.getElementById('brand-id').value = '';
+        document.getElementById('brand-name').value = '';
+        return;
+    }
+
+    const b = AdminData.getBrands().find(item => item.id == id);
+    if (b) {
+        document.getElementById('brand-modal-title').textContent = 'Editar Marca';
+        document.getElementById('brand-id').value = b.id;
+        document.getElementById('brand-name').value = b.name;
+    }
+};
+
+window.closeBrandModal = function() {
+    document.getElementById('brand-modal').classList.add('hidden');
+};
+
+window.saveBrand = function() {
+    const id = document.getElementById('brand-id').value;
+    const name = document.getElementById('brand-name').value.trim();
+
+    if (!name) { adminToast('O nome da marca é obrigatório!', 'error'); return; }
+
+    const brands = AdminData.getBrands();
+    if (id) {
+        const idx = brands.findIndex(b => b.id == id);
+        if (idx > -1) brands[idx].name = name;
+    } else {
+        brands.push({ id: Date.now(), name });
+    }
+
+    AdminData.saveBrands(brands);
+    adminToast('Marca salva com sucesso!');
+    closeBrandModal();
+    loadBrands();
+};
+
+window.deleteBrand = function(id) {
+    if (!confirm('Deseja excluir esta marca?')) return;
+    const brands = AdminData.getBrands().filter(b => b.id != id);
+    AdminData.saveBrands(brands);
+    adminToast('Marca excluída!');
+    loadBrands();
+};

@@ -118,7 +118,17 @@ function initHeroBanner() {
     const banners = JSON.parse(localStorage.getItem('ecostore_banners') || '[]');
     const activeBanners = banners.filter(b => b.active);
 
-    if (activeBanners.length === 0) return;
+    if (activeBanners.length === 0) {
+        // Fallback caso não existam banners no localStorage
+        hero.style.background = "linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1501854140801-50d01674aa3e?auto=format&fit=crop&w=1600&q=80') center/cover";
+        const title = hero.querySelector('h1');
+        const subtitle = hero.querySelector('p');
+        const btn = hero.querySelector('.hero-content a.btn-primary');
+        if (title) title.textContent = "Bem-vindo à EcoStore";
+        if (subtitle) subtitle.textContent = "Sua vida mais saudável e natural começa aqui.";
+        if (btn) btn.textContent = "Ver Produtos";
+        return;
+    }
 
     const renderBanner = (index) => {
         const b = activeBanners[index];
@@ -254,6 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCheckoutPage();
     initAuthPages();
     initDashboard();
+    initSearch();
     updateHeaderAuth();
     syncCurrentToAllUsers();
 });
@@ -261,18 +272,28 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 // RENDER PRODUCTS
 // ============================================================
-function renderProducts(filterCategory = null) {
+function renderProducts(filterCategory = null, filterText = null) {
     const productGrid = document.querySelector('.product-grid');
     if (!productGrid) return;
     
     productGrid.innerHTML = '';
     const allProducts = ProductStore.getAll();
-    const productsToRender = filterCategory 
-        ? allProducts.filter(p => p.category === filterCategory)
-        : allProducts;
+    let productsToRender = allProducts;
+
+    if (filterCategory) {
+        productsToRender = productsToRender.filter(p => p.category === filterCategory);
+    }
+
+    if (filterText) {
+        const query = filterText.toLowerCase().trim();
+        productsToRender = productsToRender.filter(p => 
+            p.name.toLowerCase().includes(query) || 
+            (p.brand && p.brand.toLowerCase().includes(query))
+        );
+    }
 
     if (productsToRender.length === 0) {
-        productGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">Nenhum produto encontrado nesta categoria.</div>';
+        productGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><i class="fas fa-search" style="font-size: 40px; margin-bottom: 15px; display: block; opacity: 0.3;"></i>Nenhum produto encontrado. Tente outros termos.</div>';
         return;
     }
 
@@ -286,6 +307,41 @@ function renderProducts(filterCategory = null) {
             '<div class="product-price">' + (product.promoActive && product.promoPrice ? fmt(product.promoPrice) : fmt(product.price)) + (product.promoActive && product.promoPrice ? '<span>' + fmt(product.price) + '</span>' : '') + '</div>' +
             '<button class="btn-buy" onclick="addToCart(' + product.id + ')"><i class="fas fa-cart-plus"></i> Comprar</button>' +
             '</div>';
+    });
+}
+
+// ============================================================
+// SEARCH LOGIC
+// ============================================================
+function initSearch() {
+    const input = document.getElementById('main-search-input');
+    const btn = document.getElementById('main-search-btn');
+    if (!input || !btn) return;
+
+    const handleSearch = () => {
+        const query = input.value;
+        renderProducts(null, query);
+        
+        // Se houver busca, esconde o banner para focar nos resultados
+        const hero = document.querySelector('.hero');
+        if (query.trim() !== '') {
+            if (hero) hero.style.display = 'none';
+            const gridHeader = document.getElementById('grid-header');
+            if (gridHeader) gridHeader.textContent = 'Resultados para: "' + query + '"';
+        } else {
+            if (hero) hero.style.display = 'block';
+            const gridHeader = document.getElementById('grid-header');
+            if (gridHeader) gridHeader.textContent = 'Nossos Produtos';
+        }
+
+        // Scroll para os produtos
+        const grid = document.getElementById('main-product-grid');
+        if (grid) grid.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    btn.addEventListener('click', handleSearch);
+    input.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') handleSearch();
     });
 }
 
