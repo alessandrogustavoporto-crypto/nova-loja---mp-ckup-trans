@@ -126,13 +126,26 @@ const Cart = {
         const product = ProductStore.getById(productId);
         if (!product) return;
         const items = this.getItems();
-        const existing = items.find(i => i.id === productId);
+        const existing = items.find(i => i.id === productId && !i.isVariation);
         const actualPrice = (product.promoActive && product.promoPrice) ? product.promoPrice : product.price;
         if (existing) {
             existing.qty += 1;
             existing.price = actualPrice;
         } else {
             items.push({ id: product.id, name: product.name, price: actualPrice, image: product.image, qty: 1 });
+        }
+        this.save(items);
+    },
+    addCustom(productId, customName, customPrice) {
+        const product = ProductStore.getById(productId);
+        if (!product) return;
+        const items = this.getItems();
+        const existing = items.find(i => i.id === productId && i.name === customName);
+        if (existing) {
+            existing.qty += 1;
+            existing.price = customPrice;
+        } else {
+            items.push({ id: product.id, name: customName, price: customPrice, image: product.image, qty: 1, isVariation: true });
         }
         this.save(items);
     },
@@ -690,12 +703,13 @@ window.filterByCategory = function(category) {
 // PRODUCT DETAIL MODAL
 // ============================================================
 let currentDetailProductId = null;
-
 window.openProductDetail = function(id) {
     const product = ProductStore.getById(id);
     if (!product) return;
 
     const fmt = v => 'R$ ' + v.toFixed(2).replace('.', ',');
+    let selectedPrice = (product.promoActive && product.promoPrice) ? product.promoPrice : product.price;
+    let selectedOption = null;
 
     // Hide Grid and Hero
     const hero = document.querySelector('.hero');
@@ -712,18 +726,44 @@ window.openProductDetail = function(id) {
     document.getElementById('single-img').src = product.image;
     document.getElementById('single-category').textContent = product.category;
     document.getElementById('single-title').textContent = product.name;
-    document.getElementById('single-description').textContent = product.description || 'Este produto premium foi selecionado especialmente para você, garantindo a máxima qualidade e benefícios para sua rotina de bem-estar.';
+    document.getElementById('single-description').textContent = product.description || 'Este produto premium foi selecionado especialmente para você.';
     
     const priceEl = document.getElementById('single-price');
     const oldPriceEl = document.getElementById('single-old-price');
     
-    if (product.promoActive && product.promoPrice) {
-        priceEl.textContent = fmt(product.promoPrice);
-        oldPriceEl.textContent = fmt(product.price);
-        oldPriceEl.style.display = 'inline';
+    function updateDisplayPrice(price) {
+        priceEl.textContent = fmt(price);
+        if (product.promoActive && product.promoPrice && !selectedOption) {
+            oldPriceEl.textContent = fmt(product.price);
+            oldPriceEl.style.display = 'inline';
+        } else {
+            oldPriceEl.style.display = 'none';
+        }
+    }
+
+    updateDisplayPrice(selectedPrice);
+
+    // Variations Logic
+    const varContainer = document.getElementById('single-variations-container');
+    const varList = document.getElementById('single-variations-list');
+    if (product.variations && product.variations.length > 0) {
+        varContainer.classList.remove('hidden');
+        varList.innerHTML = product.variations.map((v, idx) => 
+            `<button class="variation-btn" onclick="selectVariation(${idx}, ${v.price || selectedPrice}, '${v.name}')" style="padding: 10px 18px; border: 2px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-weight: 500; transition: all 0.2s;">${v.name}</button>`
+        ).join('');
+
+        window.selectVariation = (idx, price, name) => {
+            selectedPrice = price;
+            selectedOption = name;
+            updateDisplayPrice(price);
+            document.querySelectorAll('.variation-btn').forEach((b, i) => {
+                b.style.borderColor = (i === idx) ? 'var(--primary-green)' : '#ddd';
+                b.style.background = (i === idx) ? '#eef7f2' : '#fff';
+                b.style.color = (i === idx) ? 'var(--primary-green)' : 'inherit';
+            });
+        };
     } else {
-        priceEl.textContent = fmt(product.price);
-        oldPriceEl.style.display = 'none';
+        varContainer.classList.add('hidden');
     }
 
     document.getElementById('single-qty').value = 1;
@@ -732,8 +772,16 @@ window.openProductDetail = function(id) {
     const addBtn = document.getElementById('single-add-btn');
     addBtn.onclick = () => {
         const qty = parseInt(document.getElementById('single-qty').value);
-        for(let i=0; i<qty; i++) Cart.add(id);
-        showToast(qty + 'x "' + product.name.substring(0, 20) + '..." adicionado!');
+        const cartItemName = selectedOption ? `${product.name} - ${selectedOption}` : product.name;
+        
+        for(let i=0; i<qty; i++) {
+            if (selectedOption) {
+                Cart.addCustom(id, cartItemName, selectedPrice);
+            } else {
+                Cart.add(id);
+            }
+        }
+        showToast(qty + 'x "' + cartItemName.substring(0, 20) + '..." adicionado!');
     };
 
     window.scrollTo({ top: 0, behavior: 'smooth' });

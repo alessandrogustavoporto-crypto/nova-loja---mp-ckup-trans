@@ -358,7 +358,43 @@ window.openProductModal = async function(id) {
         preview.src = prod.image;
         preview.style.display = 'block';
     }
+
+    // Render variations
+    renderVariations(prod.variations || []);
 };
+
+window.addVariationRow = function(name = '', price = '') {
+    const list = document.getElementById('variations-list');
+    const div = document.createElement('div');
+    div.className = 'variation-row';
+    div.style = 'display: flex; gap: 10px; align-items: center;';
+    div.innerHTML = `
+        <input type="text" placeholder="Ex: Azul" class="v-name" value="${name}" style="flex: 2; padding: 8px;">
+        <input type="number" placeholder="Preço" class="v-price" value="${price}" step="0.01" style="flex: 1; padding: 8px;">
+        <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: #e74c3c; cursor: pointer; padding: 5px;">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    list.appendChild(div);
+};
+
+function renderVariations(variations) {
+    const list = document.getElementById('variations-list');
+    list.innerHTML = '';
+    variations.forEach(v => window.addVariationRow(v.name, v.price));
+}
+
+function getVariationsData() {
+    const list = document.getElementById('variations-list');
+    const rows = list.querySelectorAll('.variation-row');
+    const data = [];
+    rows.forEach(row => {
+        const name = row.querySelector('.v-name').value.trim();
+        const price = parseFloat(row.querySelector('.v-price').value) || null;
+        if (name) data.push({ name, price });
+    });
+    return data;
+}
 
 window.closeProductModal = function() { document.getElementById('product-modal').classList.add('hidden'); };
 
@@ -373,7 +409,8 @@ window.saveProduct = async function() {
         description: document.getElementById('prod-desc').value,
         category: document.getElementById('prod-category').value,
         brand: document.getElementById('prod-brand').value,
-        promo_active: document.getElementById('prod-promo-active').checked
+        promo_active: document.getElementById('prod-promo-active').checked,
+        variations: getVariationsData()
     };
 
     if (!product.name || isNaN(product.price)) { adminToast('Preencha nome e preço.', 'error'); return; }
