@@ -26,15 +26,28 @@ window.APP_DATA = {
 // PRODUCT STORE MODULE
 // ============================================================
 const ProductStore = {
+    _cacheKey: 'ecostore_cache_products',
+    loadCache() {
+        try {
+            const cached = localStorage.getItem(this._cacheKey);
+            if (cached) window.APP_DATA.products = JSON.parse(cached);
+        } catch (e) { console.error('Cache load error', e); }
+    },
     async fetchAll() {
         const { data, error } = await supabase.from('products').select('*').order('id', { ascending: false });
         if (!error && data && data.length > 0) {
-            window.APP_DATA.products = data.map(p => ({
+            const newProducts = data.map(p => ({
                 ...p,
                 oldPrice: p.old_price,
                 promoActive: p.promo_active,
                 promoPrice: p.promo_price
             }));
+            const cacheStr = JSON.stringify(newProducts);
+            if (localStorage.getItem(this._cacheKey) !== cacheStr) {
+                window.APP_DATA.products = newProducts;
+                localStorage.setItem(this._cacheKey, cacheStr);
+                return true; // Mudou
+            }
         } else if (!error && data && data.length === 0) {
             if (typeof PRODUCTS !== 'undefined') {
                 const { data: inserted, error: insertErr } = await supabase.from('products').insert(PRODUCTS.map(p => {
@@ -46,15 +59,20 @@ const ProductStore = {
                     return obj;
                 })).select();
                 if (!insertErr && inserted) {
-                    window.APP_DATA.products = inserted.map(p => ({
+                    const newProducts = inserted.map(p => ({
                         ...p,
                         oldPrice: p.old_price,
                         promoActive: p.promo_active,
                         promoPrice: p.promo_price
                     }));
+                    const cacheStr = JSON.stringify(newProducts);
+                    window.APP_DATA.products = newProducts;
+                    localStorage.setItem(this._cacheKey, cacheStr);
+                    return true;
                 }
             }
         }
+        return false;
     },
     getAll() { return window.APP_DATA.products; },
     getById(id) { return this.getAll().find(p => p.id == id); }
@@ -64,15 +82,29 @@ const ProductStore = {
 // BANNERS STORE MODULE
 // ============================================================
 const BannerStore = {
+    _cacheKey: 'ecostore_cache_banners',
+    loadCache() {
+        try {
+            const cached = localStorage.getItem(this._cacheKey);
+            if (cached) window.APP_DATA.banners = JSON.parse(cached);
+        } catch (e) {}
+    },
     async fetchAll() {
         const { data, error } = await supabase.from('banners').select('*');
         if (!error && data) {
-            window.APP_DATA.banners = data.map(b => ({
+            const newBanners = data.map(b => ({
                 ...b,
                 btnText: b.btn_text,
                 btnLink: b.btn_link
             }));
+            const cacheStr = JSON.stringify(newBanners);
+            if (localStorage.getItem(this._cacheKey) !== cacheStr) {
+                window.APP_DATA.banners = newBanners;
+                localStorage.setItem(this._cacheKey, cacheStr);
+                return true;
+            }
         }
+        return false;
     },
     getAll() { return window.APP_DATA.banners; }
 };
@@ -418,32 +450,51 @@ window.addToCart = function(productId) {
 // ============================================================
 // DOMCONTENTLOADED
 // ============================================================
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     updateCartBadge();
-    updateHeaderAuth(); // ← Lê localStorage, sem esperar Supabase
-    initCartPage();     // ← Carrinho também usa localStorage, renderiza imediato
+    updateHeaderAuth(); // -> Lê localStorage, sem esperar Supabase
+    initCartPage();     // -> Carrinho também usa localStorage, renderiza imediato
 
     // Sticky header
     const header = document.getElementById('header');
     if (header) { window.addEventListener('scroll', () => header.classList.toggle('scrolled', window.scrollY > 50)); }
 
-    // FETCH FROM SUPABASE (produtos, usuários, pedidos, banners)
-    if (window.supabase) {
-        await ProductStore.fetchAll();
-        await Auth.fetchAllUsers();
-        await Orders.fetchAll();
-        await BannerStore.fetchAll();
-    }
+    // CARGA IMEDIATA VIA CACHE (localStorage)
+    ProductStore.loadCache();
+    BannerStore.loadCache();
 
+    // Renderiza a interface instantaneamente com o que tiver no cache
     renderPromoProducts();
     renderAllProducts();
     initCategoriesMenu();
     initHeroBanner();
+
     initCheckoutPage();
     if (typeof initAuthPages === 'function') initAuthPages();
     if (typeof initDashboard === 'function') initDashboard();
     initSearch();
     syncCurrentToAllUsers();
+
+    // FETCH EM BACKGROUND DO SUPABASE
+    if (window.supabase) {
+        // Não bloqueia o resto da execução
+        Promise.all([
+            ProductStore.fetchAll(),
+            BannerStore.fetchAll(),
+            Auth.fetchAllUsers(),
+            Orders.fetchAll() // Carrega pro cache local, mas a tela de pedidos tem seu próprio polling
+        ]).then(([productsChanged, bannersChanged]) => {
+            // Se houve mudança no banco, atualiza a UI
+            if (productsChanged) {
+                renderPromoProducts();
+                renderAllProducts();
+                initCategoriesMenu();
+            }
+            if (bannersChanged) {
+                initHeroBanner();
+            }
+        });
+    }
 });
 
 
