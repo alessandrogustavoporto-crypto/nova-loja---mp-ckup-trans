@@ -209,12 +209,41 @@ const Auth = {
 // ============================================================
 // ORDERS MODULE
 // ============================================================
+// Mapa de status → label legível (espelha o admin)
+const ORDER_STATUS_MAP = {
+    aguardando:  'Aguardando Pagamento',
+    separacao:   'Em Separação',
+    saiu:        'Saiu para Entrega',
+    entregue:    'Entregue',
+    cancelado:   'Cancelado',
+    processando: 'Processando',
+    enviado:     'Enviado'
+};
+
 const Orders = {
     async fetchAll() {
         const { data, error } = await supabase.from('orders').select('*').order('id', { ascending: false });
-        if (!error && data) window.APP_DATA.orders = data;
+        if (!error && data) {
+            // Normaliza campos para o padrão usado no front-end
+            window.APP_DATA.orders = data.map(o => ({
+                ...o,
+                // ID formatado com #
+                id: '#' + String(o.id).padStart(5, '0'),
+                // Garante statusLabel sempre preenchido (usa status_label do banco ou gera pelo map)
+                statusLabel: o.status_label || ORDER_STATUS_MAP[o.status] || o.status,
+                // Data formatada para pt-BR
+                date: o.created_at ? new Date(o.created_at).toLocaleDateString('pt-BR') : '—',
+                // items e address já vêm como JSON do Supabase
+                items: o.items || [],
+                address: (typeof o.address === 'string') ? (() => { try { return JSON.parse(o.address); } catch(e) { return {}; } })() : (o.address || {})
+            }));
+        }
     },
     getAll() { return window.APP_DATA.orders; },
+    // Retorna somente os pedidos do usuário logado
+    getByUser(email) {
+        return this.getAll().filter(o => o.client_email === email);
+    },
     async create(items, total, address) {
         const user = Auth.getUser();
         const newOrder = {
@@ -228,8 +257,17 @@ const Orders = {
         };
         const { data, error } = await supabase.from('orders').insert([newOrder]).select().single();
         if (data) {
-            window.APP_DATA.orders.unshift(data);
-            return data;
+            // Normaliza o pedido recém-criado antes de adicionar ao cache
+            const normalized = {
+                ...data,
+                id: '#' + String(data.id).padStart(5, '0'),
+                statusLabel: data.status_label || ORDER_STATUS_MAP[data.status] || data.status,
+                date: data.created_at ? new Date(data.created_at).toLocaleDateString('pt-BR') : '—',
+                items: data.items || [],
+                address: data.address || {}
+            };
+            window.APP_DATA.orders.unshift(normalized);
+            return normalized;
         }
         return newOrder;
     }
@@ -834,8 +872,8 @@ function initCheckoutPage() {
         const order = await Orders.create(Cart.getItems(), Cart.total(), addr);
         Cart.clear();
         
-        // Supabase returns an ID integer, we format it with #
-        document.getElementById('order-id-confirm').textContent = '#' + String(order.id).padStart(5, '0');
+        // order.id já vem normalizado como '#00001' pelo Orders.create()
+        document.getElementById('order-id-confirm').textContent = order.id;
         document.getElementById('confirm-modal').classList.remove('hidden');
         setTimeout(() => document.getElementById('confirm-modal').classList.add('visible'), 10);
     });
@@ -1122,14 +1160,33 @@ function initDashboard() {
     const ordersContainer = document.getElementById('orders-list-container');
     if (!ordersContainer) return;
 
-    const staticOrders = [
-        { id: '#10592', date: '28/04/2026', status: 'enviado', statusLabel: 'Enviado', total: 159.80, items: [{ name: 'Whey Protein Sabor Baunilha 900g', qty: 1, price: 159.90 }, { name: 'Chá Verde Orgânico', qty: 1, price: 22.50 }], address: { logradouro: 'Av. Paulista', numero: '1578', bairro: 'Bela Vista', cidade: 'São Paulo', estado: 'SP', cep: '01310-200' } },
-        { id: '#09884', date: '10/04/2026', status: 'entregue', statusLabel: 'Entregue', total: 89.00, items: [{ name: 'Creme Hidratante Vegano Facial Noturno', qty: 1, price: 89.00 }], address: { logradouro: 'Av. Paulista', numero: '1578', bairro: 'Bela Vista', cidade: 'São Paulo', estado: 'SP', cep: '01310-200' } }
-    ];
+    // Somente pedidos reais do banco — filtrados pelo e-mail do cliente logado
+    const user = Auth.getUser();
+    const userEmail = user ? user.email : null;
+    // Busca atualizada do Supabase para garantir status mais recente
+    if (userEmail && window.supabase) {
+        supabase.from('orders')
+            .select('*')
+            .eq('client_email', userEmail)
+            .order('id', { ascending: false })
+            .then(({ data, error }) => {
+                const userOrders = (!error && data) ? data.map(o => ({
+                    ...o,
+                    id: '#' + String(o.id).padStart(5, '0'),
+                    statusLabel: o.status_label || ORDER_STATUS_MAP[o.status] || o.status,
+                    date: o.created_at ? new Date(o.created_at).toLocaleDateString('pt-BR') : '—',
+                    items: o.items || [],
+                    address: (typeof o.address === 'string') ? (() => { try { return JSON.parse(o.address); } catch(e) { return {}; } })() : (o.address || {})
+                })) : [];
+                renderOrdersList(userOrders, ordersContainer);
+                bindOrderFilters(userOrders, ordersContainer);
+            });
+    } else {
+        renderOrdersList([], ordersContainer);
+    }
+}
 
-    const allOrders = [...Orders.getAll(), ...staticOrders];
-    renderOrdersList(allOrders, ordersContainer);
-
+function bindOrderFilters(allOrders, ordersContainer) {
     const searchInput = document.getElementById('order-search');
     const statusFilter = document.getElementById('order-status-filter');
     const dateStart = document.getElementById('order-date-start');
@@ -1144,7 +1201,7 @@ function initDashboard() {
         const filtered = allOrders.filter(o => {
             const matchSearch = !searchVal || o.id.toLowerCase().includes(searchVal);
             const matchStatus = !statusVal || o.status === statusVal;
-            
+
             let matchDate = true;
             if (startVal || endVal) {
                 const [d, m, y] = o.date.split('/');
@@ -1171,10 +1228,10 @@ function initDashboard() {
         renderOrdersList(filtered, ordersContainer);
     }
 
-    if (searchInput) searchInput.addEventListener('input', applyFilters);
-    if (statusFilter) statusFilter.addEventListener('change', applyFilters);
-    if (dateStart) dateStart.addEventListener('change', applyFilters);
-    if (dateEnd) dateEnd.addEventListener('change', applyFilters);
+    if (searchInput && !searchInput._boundFilters) { searchInput._boundFilters = true; searchInput.addEventListener('input', applyFilters); }
+    if (statusFilter && !statusFilter._boundFilters) { statusFilter._boundFilters = true; statusFilter.addEventListener('change', applyFilters); }
+    if (dateStart && !dateStart._boundFilters) { dateStart._boundFilters = true; dateStart.addEventListener('change', applyFilters); }
+    if (dateEnd && !dateEnd._boundFilters) { dateEnd._boundFilters = true; dateEnd.addEventListener('change', applyFilters); }
 }
 
 function renderOrdersList(orders, container) {
