@@ -1160,30 +1160,103 @@ function initDashboard() {
     const ordersContainer = document.getElementById('orders-list-container');
     if (!ordersContainer) return;
 
-    // Somente pedidos reais do banco — filtrados pelo e-mail do cliente logado
     const user = Auth.getUser();
     const userEmail = user ? user.email : null;
-    // Busca atualizada do Supabase para garantir status mais recente
-    if (userEmail && window.supabase) {
-        supabase.from('orders')
+
+    // ---- Estado de filtros compartilhado entre o polling e os inputs ----
+    const filterState = { search: '', status: '', dateStart: '', dateEnd: '' };
+
+    // ---- Função de busca e renderização (chamada a cada poll) ----
+    async function fetchAndRenderUserOrders() {
+        if (!userEmail || !window.supabase) { renderOrdersList([], ordersContainer); return; }
+
+        const { data, error } = await supabase
+            .from('orders')
             .select('*')
             .eq('client_email', userEmail)
-            .order('id', { ascending: false })
-            .then(({ data, error }) => {
-                const userOrders = (!error && data) ? data.map(o => ({
-                    ...o,
-                    id: '#' + String(o.id).padStart(5, '0'),
-                    statusLabel: o.status_label || ORDER_STATUS_MAP[o.status] || o.status,
-                    date: o.created_at ? new Date(o.created_at).toLocaleDateString('pt-BR') : '—',
-                    items: o.items || [],
-                    address: (typeof o.address === 'string') ? (() => { try { return JSON.parse(o.address); } catch(e) { return {}; } })() : (o.address || {})
-                })) : [];
-                renderOrdersList(userOrders, ordersContainer);
-                bindOrderFilters(userOrders, ordersContainer);
-            });
-    } else {
-        renderOrdersList([], ordersContainer);
+            .order('id', { ascending: false });
+
+        const allOrders = (!error && data) ? data.map(o => ({
+            ...o,
+            id: '#' + String(o.id).padStart(5, '0'),
+            statusLabel: o.status_label || ORDER_STATUS_MAP[o.status] || o.status,
+            date: o.created_at ? new Date(o.created_at).toLocaleDateString('pt-BR') : '—',
+            items: o.items || [],
+            address: (typeof o.address === 'string') ? (() => { try { return JSON.parse(o.address); } catch(e) { return {}; } })() : (o.address || {})
+        })) : [];
+
+        // Aplica os filtros ativos sem zerar inputs do usuário
+        applyCurrentFilters(allOrders);
+        return allOrders;
     }
+
+    // ---- Aplica filtros aos pedidos e renderiza ----
+    function applyCurrentFilters(allOrders) {
+        const filtered = allOrders.filter(o => {
+            const matchSearch = !filterState.search || o.id.toLowerCase().includes(filterState.search);
+            const matchStatus = !filterState.status || o.status === filterState.status;
+            let matchDate = true;
+            if (filterState.dateStart || filterState.dateEnd) {
+                const [d, m, y] = o.date.split('/');
+                const oDate = new Date(y, m - 1, d);
+                oDate.setHours(0,0,0,0);
+                if (filterState.dateStart) {
+                    const sDate = new Date(filterState.dateStart);
+                    sDate.setMinutes(sDate.getMinutes() + sDate.getTimezoneOffset());
+                    sDate.setHours(0,0,0,0);
+                    if (oDate < sDate) matchDate = false;
+                }
+                if (filterState.dateEnd) {
+                    const eDate = new Date(filterState.dateEnd);
+                    eDate.setMinutes(eDate.getMinutes() + eDate.getTimezoneOffset());
+                    eDate.setHours(23,59,59,999);
+                    if (oDate > eDate) matchDate = false;
+                }
+            }
+            return matchSearch && matchStatus && matchDate;
+        });
+        renderOrdersList(filtered, ordersContainer);
+    }
+
+    // ---- Bind dos filtros (feito UMA vez) ----
+    const searchInput  = document.getElementById('order-search');
+    const statusFilter = document.getElementById('order-status-filter');
+    const dateStart    = document.getElementById('order-date-start');
+    const dateEnd      = document.getElementById('order-date-end');
+
+    // Guarda os pedidos mais recentes para filtrar localmente sem nova query
+    let _latestOrders = [];
+
+    const onFilter = () => {
+        filterState.search    = (searchInput?.value  || '').toLowerCase().trim();
+        filterState.status    = (statusFilter?.value || '').toLowerCase().trim();
+        filterState.dateStart = dateStart?.value || '';
+        filterState.dateEnd   = dateEnd?.value   || '';
+        applyCurrentFilters(_latestOrders);
+    };
+
+    if (searchInput  && !searchInput._ordersFilterBound)  { searchInput._ordersFilterBound  = true; searchInput.addEventListener('input',  onFilter); }
+    if (statusFilter && !statusFilter._ordersFilterBound) { statusFilter._ordersFilterBound = true; statusFilter.addEventListener('change', onFilter); }
+    if (dateStart    && !dateStart._ordersFilterBound)    { dateStart._ordersFilterBound    = true; dateStart.addEventListener('change',   onFilter); }
+    if (dateEnd      && !dateEnd._ordersFilterBound)      { dateEnd._ordersFilterBound      = true; dateEnd.addEventListener('change',     onFilter); }
+
+    // ---- Carga inicial + indicador visual sutil ----
+    ordersContainer.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i><p style="margin-top:12px;font-size:14px;">Carregando pedidos...</p></div>';
+    fetchAndRenderUserOrders().then(orders => { if (orders) _latestOrders = orders; });
+
+    // ---- Polling silencioso a cada 10 s ----
+    // Atualiza apenas os dados sem piscar a tela
+    const _ordersPollingInterval = setInterval(async () => {
+        // Só executa se a aba de pedidos estiver visível
+        const tabPedidos = document.getElementById('tab-pedidos');
+        if (!tabPedidos || !tabPedidos.classList.contains('active')) return;
+
+        const orders = await fetchAndRenderUserOrders();
+        if (orders) _latestOrders = orders;
+    }, 10000);
+
+    // Limpa o intervalo ao sair da página
+    window.addEventListener('beforeunload', () => clearInterval(_ordersPollingInterval), { once: true });
 }
 
 function bindOrderFilters(allOrders, ordersContainer) {

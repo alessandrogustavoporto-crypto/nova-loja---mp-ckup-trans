@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     /* Color Palette */
     --primary-green: #1a5c38; /* Predominant Green */
     --light-green: #2a8a55;
@@ -948,10 +948,13 @@ input:checked + .slider:before {
     font-weight: 600;
 }
 
-.status-enviado { background: #e3f2fd; color: #1976d2; }
-.status-entregue { background: #e8f5e9; color: #388e3c; }
 .status-processando { background: #fff3e0; color: #f57c00; }
-.status-cancelado { background: #ffebee; color: #d32f2f; }
+.status-aguardando  { background: #fef9e7; color: #f39c12; }
+.status-separacao   { background: #eaf4fe; color: #2980b9; }
+.status-saiu        { background: #f0f7f3; color: var(--primary-green); }
+.status-enviado     { background: #e3f2fd; color: #1976d2; }
+.status-entregue    { background: #e8f5e9; color: #388e3c; }
+.status-cancelado   { background: #ffebee; color: #d32f2f; }
 
 .order-toggle-icon {
     color: var(--text-muted);
