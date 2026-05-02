@@ -258,6 +258,7 @@ async function initAdminDashboard() {
 // ---- Dashboard KPIs ----
 async function loadDashboard() {
     const orders   = await AdminData.getOrders();
+    allAdminOrders = orders; // Garante que os dados estejam disponíveis para o modal de detalhes
     const products = await AdminData.getProducts();
     const clients  = await AdminData.getClients();
     const banners  = await AdminData.getBanners();
@@ -584,7 +585,7 @@ window.updateOrderStatus = async function(id, newStatus) {
 };
 
 window.viewOrder = function(id) {
-    const o = allAdminOrders.find(o => o.id === id);
+    const o = allAdminOrders.find(o => o.id == id);
     if (!o) return;
     document.getElementById('order-detail-title').textContent = 'Pedido ' + o.id;
     document.getElementById('order-detail-body').innerHTML =
