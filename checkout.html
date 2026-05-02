@@ -40,32 +40,11 @@
 
                 <!-- Payment -->
                 <div class="checkout-section">
-                    <h2 class="checkout-section-title"><i class="fas fa-credit-card"></i> Forma de Pagamento</h2>
-                    <div class="payment-options">
-                        <label class="payment-option">
-                            <input type="radio" name="payment" value="pix">
-                            <span class="payment-card">
-                                <i class="fas fa-qrcode"></i>
-                                <span>PIX</span>
-                                <small>Aprovação imediata</small>
-                            </span>
-                        </label>
-                        <label class="payment-option">
-                            <input type="radio" name="payment" value="cartao_credito">
-                            <span class="payment-card">
-                                <i class="far fa-credit-card"></i>
-                                <span>Cartão de Crédito</span>
-                                <small>Até 12x sem juros</small>
-                            </span>
-                        </label>
-                        <label class="payment-option">
-                            <input type="radio" name="payment" value="boleto">
-                            <span class="payment-card">
-                                <i class="fas fa-barcode"></i>
-                                <span>Boleto Bancário</span>
-                                <small>Vencimento em 3 dias</small>
-                            </span>
-                        </label>
+                    <h2 class="checkout-section-title"><i class="fas fa-lock"></i> Pagamento Seguro</h2>
+                    <div class="payment-options" style="display: block; text-align: center; padding: 20px;">
+                        <img src="https://logospng.org/download/mercado-pago/logo-mercado-pago-icone-1024.png" alt="Mercado Pago" style="width: 60px; margin-bottom: 15px;">
+                        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.5;">Você será redirecionado para o ambiente 100% seguro do <strong>Mercado Pago</strong> para escolher pagar com PIX, Cartão de Crédito ou Boleto.</p>
+                        <input type="radio" name="payment" value="mercadopago" checked style="display:none;">
                     </div>
                 </div>
             </div>
