@@ -496,10 +496,10 @@ async function loadClients(nameFilter, typeFilter) {
         '<td>' + c.orders + ' pedidos</td>' +
         '<td><span class="badge ' + (c.status === 'ativo' ? 'badge-entregue' : 'badge-cancelado') + '">' + c.status + '</span></td>' +
         '<td>' +
-        '<button class="btn-icon btn-icon-view" title="Ver pedidos"><i class="fas fa-history"></i></button> ' +
+        '<button class="btn-icon btn-icon-view" onclick="document.querySelector(\'[data-section=pedidos]\').click(); document.getElementById(\'order-admin-search\').value=\'' + c.email + '\'; document.getElementById(\'order-admin-search\').dispatchEvent(new Event(\'input\'));" title="Ver pedidos"><i class="fas fa-history"></i></button> ' +
         '<button class="btn-icon btn-icon-edit" onclick="openClientModal(\'' + c.email + '\')" title="Editar"><i class="fas fa-edit"></i></button> ' +
-        '<button class="btn-icon btn-icon-block" title="Bloquear/Desbloquear"><i class="fas fa-ban"></i></button> ' +
-        '<button class="btn-icon btn-icon-delete" title="Excluir"><i class="fas fa-trash"></i></button>' +
+        '<button class="btn-icon btn-icon-block" onclick="toggleClientBlock(\'' + c.email + '\', \'' + c.status + '\')" title="Bloquear/Desbloquear"><i class="fas fa-ban"></i></button> ' +
+        '<button class="btn-icon btn-icon-delete" onclick="deleteClient(\'' + c.email + '\')" title="Excluir"><i class="fas fa-trash"></i></button>' +
         '</td></tr>'
     ).join('');
 
@@ -540,6 +540,28 @@ window.saveClient = async function() {
     closeClientModal();
     await loadClients();
     await loadDashboard();
+};
+
+window.toggleClientBlock = async function(email, currentStatus) {
+    const newStatus = currentStatus === 'ativo' ? 'bloqueado' : 'ativo';
+    const msg = newStatus === 'bloqueado' ? 'Deseja bloquear este cliente?' : 'Deseja desbloquear este cliente?';
+    if (!confirm(msg)) return;
+
+    const { error } = await supabase.from('customers').update({ status: newStatus }).eq('email', email);
+    if (error) { adminToast('Erro: ' + error.message, 'error'); return; }
+
+    adminToast('Status do cliente atualizado para ' + newStatus);
+    await loadClients();
+};
+
+window.deleteClient = async function(email) {
+    if (!confirm('AVISO: Esta ação é irreversível. Deseja excluir permanentemente este cliente e seus dados?')) return;
+
+    const { error } = await supabase.from('customers').delete().eq('email', email);
+    if (error) { adminToast('Erro ao excluir: ' + error.message, 'error'); return; }
+
+    adminToast('Cliente excluído com sucesso!', 'error');
+    await loadClients();
 };
 
 // ---- Orders ----
