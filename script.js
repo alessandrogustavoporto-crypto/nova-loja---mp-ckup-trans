@@ -45,7 +45,7 @@ const ProductStore = {
             const cacheStr = JSON.stringify(newProducts);
             if (localStorage.getItem(this._cacheKey) !== cacheStr) {
                 window.APP_DATA.products = newProducts;
-                localStorage.setItem(this._cacheKey, cacheStr);
+                try { localStorage.setItem(this._cacheKey, cacheStr); } catch(e) { console.warn('Cache cheio'); }
                 return true; // Mudou
             }
         } else if (!error && data && data.length === 0) {
@@ -67,7 +67,7 @@ const ProductStore = {
                     }));
                     const cacheStr = JSON.stringify(newProducts);
                     window.APP_DATA.products = newProducts;
-                    localStorage.setItem(this._cacheKey, cacheStr);
+                    try { localStorage.setItem(this._cacheKey, cacheStr); } catch(e) { console.warn('Cache cheio'); }
                     return true;
                 }
             }
@@ -100,7 +100,7 @@ const BannerStore = {
             const cacheStr = JSON.stringify(newBanners);
             if (localStorage.getItem(this._cacheKey) !== cacheStr) {
                 window.APP_DATA.banners = newBanners;
-                localStorage.setItem(this._cacheKey, cacheStr);
+                try { localStorage.setItem(this._cacheKey, cacheStr); } catch(e) { console.warn('Cache cheio'); }
                 return true;
             }
         }
