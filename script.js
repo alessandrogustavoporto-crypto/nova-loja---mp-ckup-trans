@@ -538,10 +538,16 @@ function renderAllProducts(page = 1, filterCategory = null, filterText = null, f
 
     if (filterPromo) {
         products = products.filter(p => p.promoActive);
-        // Order by highest discount percentage
+        // Robust order by highest discount percentage
         products.sort((a, b) => {
-            const discA = ((a.price - a.promoPrice) / a.price);
-            const discB = ((b.price - b.promoPrice) / b.price);
+            const pA = parseFloat(a.price) || 0;
+            const ppA = parseFloat(a.promoPrice) || pA;
+            const pB = parseFloat(b.price) || 0;
+            const ppB = parseFloat(b.promoPrice) || pB;
+            
+            const discA = pA > 0 ? (pA - ppA) / pA : 0;
+            const discB = pB > 0 ? (pB - ppB) / pB : 0;
+            
             return discB - discA;
         });
     }
