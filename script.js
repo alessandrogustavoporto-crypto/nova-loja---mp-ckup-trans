@@ -707,10 +707,22 @@ function initCategoriesMenu() {
 window.filterByCategory = function(category) {
     renderAllProducts(1, category);
     const allTitle = document.getElementById('all-products-title');
+    const hero = document.querySelector('.hero');
+    const promoSec = document.getElementById('promo-section');
+
     if (allTitle) {
         allTitle.innerHTML = category ? `<i class="fas fa-th-large"></i> Categoria: ${category}` : `<i class="fas fa-th-large"></i> Todos os Produtos`;
     }
     
+    // Hide/Show sections based on filter
+    if (category) {
+        if (hero) hero.style.display = 'none';
+        if (promoSec) promoSec.style.display = 'none';
+    } else {
+        if (hero) hero.style.display = 'block';
+        renderPromoProducts(); // This handles showing the promo section if there are products
+    }
+
     // Fechar o dropdown após clicar
     const dropdown = document.getElementById('categories-dropdown');
     if (dropdown) dropdown.classList.remove('show');
@@ -722,7 +734,7 @@ window.filterByCategory = function(category) {
     }
 
     // Scroll to products
-    const section = document.getElementById('produtos');
+    const section = document.getElementById('all-products-section');
     if (section) {
         const headerOffset = 80;
         const elementPosition = section.getBoundingClientRect().top;
