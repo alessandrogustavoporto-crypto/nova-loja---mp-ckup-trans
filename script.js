@@ -933,16 +933,12 @@ function initCheckoutPage() {
             
             const data = await response.json();
 
-            if (data.preferenceId) {
-                // Inicia o checkout do Mercado Pago
-                const mp = new MercadoPago('COLOQUE_SUA_PUBLIC_KEY_AQUI', { locale: 'pt-BR' });
-                mp.checkout({
-                    preference: { id: data.preferenceId },
-                    autoOpen: true // Abre automaticamente o modal/redirecionamento do Mercado Pago
-                });
+            if (data.initPoint) {
+                // Redireciona diretamente para o Mercado Pago (mais confiável e seguro)
+                window.location.href = data.initPoint;
             } else {
                 console.error('Erro na API do MP:', data);
-                throw new Error(data.error || 'Erro ao gerar pagamento');
+                throw new Error(data.error || 'Erro ao gerar link de pagamento');
             }
         } catch (err) {
             console.error(err);
