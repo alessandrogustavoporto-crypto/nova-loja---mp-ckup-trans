@@ -571,7 +571,11 @@ async function loadOrders(statusFilter, searchFilter) {
     allAdminOrders = await AdminData.getOrders();
     let orders = allAdminOrders;
     if (statusFilter) orders = orders.filter(o => o.status === statusFilter);
-    if (searchFilter) orders = orders.filter(o => String(o.id).toLowerCase().includes(searchFilter.toLowerCase()) || (o.clientName || '').toLowerCase().includes(searchFilter.toLowerCase()));
+    if (searchFilter) orders = orders.filter(o => 
+        String(o.id).toLowerCase().includes(searchFilter.toLowerCase()) || 
+        (o.clientName || '').toLowerCase().includes(searchFilter.toLowerCase()) ||
+        (o.clientEmail || '').toLowerCase().includes(searchFilter.toLowerCase())
+    );
 
     const tbody = document.getElementById('orders-admin-table');
     if (!tbody) return;
