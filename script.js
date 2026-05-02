@@ -571,8 +571,15 @@ function renderGrid(gridId, paginationId, products, page, perPage, type, cat = n
         const btnAction = hasVariations ? `openProductDetail(${product.id})` : `addToCart(${product.id})`;
         const btnIcon = hasVariations ? 'fa-list-ul' : 'fa-cart-plus';
 
+        // Calculate discount percentage if not provided but promo is active
+        let offerBadge = product.offer || '';
+        if (!offerBadge && product.promoActive && product.promoPrice && product.price > product.promoPrice) {
+            const discount = Math.round(((product.price - product.promoPrice) / product.price) * 100);
+            if (discount > 0) offerBadge = `-${discount}%`;
+        }
+
         grid.innerHTML += '<div class="product-card">' +
-            (product.offer ? '<span class="badge-offer">' + product.offer + '</span>' : '') +
+            (offerBadge ? '<span class="badge-offer">' + offerBadge + '</span>' : '') +
             '<img src="' + product.image + '" alt="' + product.name + '" class="product-img" onclick="openProductDetail(' + product.id + ')" style="cursor:pointer">' +
             '<span class="product-category">' + product.category + '</span>' +
             '<h3 class="product-title" onclick="openProductDetail(' + product.id + ')" style="cursor:pointer">' + product.name + '</h3>' +
