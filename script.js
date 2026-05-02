@@ -529,11 +529,15 @@ function renderPromoProducts(page = 1) {
     renderGrid('promo-product-grid', 'promo-pagination', products, page, 10, 'promo');
 }
 
-function renderAllProducts(page = 1, filterCategory = null, filterText = null) {
+function renderAllProducts(page = 1, filterCategory = null, filterText = null, filterPromo = false) {
     let products = ProductStore.getAll();
 
     if (filterCategory) {
         products = products.filter(p => p.category === filterCategory);
+    }
+
+    if (filterPromo) {
+        products = products.filter(p => p.promoActive);
     }
 
     if (filterText) {
@@ -546,6 +550,22 @@ function renderAllProducts(page = 1, filterCategory = null, filterText = null) {
 
     renderGrid('all-product-grid', 'all-pagination', products, page, 20, 'all', filterCategory, filterText);
 }
+
+window.filterByPromo = function() {
+    renderAllProducts(1, null, null, true);
+    const allTitle = document.getElementById('all-products-title');
+    if (allTitle) allTitle.innerHTML = `<i class="fas fa-tag"></i> Produtos em Oferta`;
+    
+    // Hide hero and promo section to focus on results
+    const hero = document.querySelector('.hero');
+    if (hero) hero.style.display = 'none';
+    const promoSec = document.getElementById('promo-section');
+    if (promoSec) promoSec.style.display = 'none';
+
+    // Scroll to products
+    const section = document.getElementById('all-products-section');
+    if (section) section.scrollIntoView({ behavior: 'smooth' });
+};
 
 function renderGrid(gridId, paginationId, products, page, perPage, type, cat = null, text = null) {
     const grid = document.getElementById(gridId);
