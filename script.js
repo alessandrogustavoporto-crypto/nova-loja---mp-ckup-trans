@@ -917,13 +917,39 @@ function initCheckoutPage() {
         document.getElementById('btn-confirm-order').disabled = true;
         document.getElementById('btn-confirm-order').textContent = 'Processando...';
 
+        // Cria pedido no banco como "Processando"
         const order = await Orders.create(Cart.getItems(), Cart.total(), addr);
-        Cart.clear();
         
-        // order.id já vem normalizado como '#00001' pelo Orders.create()
-        document.getElementById('order-id-confirm').textContent = order.id;
-        document.getElementById('confirm-modal').classList.remove('hidden');
-        setTimeout(() => document.getElementById('confirm-modal').classList.add('visible'), 10);
+        // ----------------------------------------------------
+        // INTEGRAÇÃO MERCADO PAGO
+        // ----------------------------------------------------
+        try {
+            // Chamada para a Função do Cloudflare (API Backend)
+            const response = await fetch('/api/mp-preference', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: Cart.getItems(), orderId: order.id, payer: user })
+            });
+            
+            const data = await response.json();
+
+            if (data.preferenceId) {
+                // Inicia o checkout do Mercado Pago
+                const mp = new MercadoPago('COLOQUE_SUA_PUBLIC_KEY_AQUI', { locale: 'pt-BR' });
+                mp.checkout({
+                    preference: { id: data.preferenceId },
+                    autoOpen: true // Abre automaticamente o modal/redirecionamento do Mercado Pago
+                });
+            } else {
+                console.error('Erro na API do MP:', data);
+                throw new Error(data.error || 'Erro ao gerar pagamento');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Erro ao conectar com o Mercado Pago. Tente novamente.', 'error');
+            document.getElementById('btn-confirm-order').disabled = false;
+            document.getElementById('btn-confirm-order').textContent = 'Confirmar Pedido';
+        }
     });
 }
 
