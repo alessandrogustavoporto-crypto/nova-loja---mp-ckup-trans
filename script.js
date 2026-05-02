@@ -538,6 +538,12 @@ function renderAllProducts(page = 1, filterCategory = null, filterText = null, f
 
     if (filterPromo) {
         products = products.filter(p => p.promoActive);
+        // Order by highest discount percentage
+        products.sort((a, b) => {
+            const discA = ((a.price - a.promoPrice) / a.price);
+            const discB = ((b.price - b.promoPrice) / b.price);
+            return discB - discA;
+        });
     }
 
     if (filterText) {
@@ -548,13 +554,13 @@ function renderAllProducts(page = 1, filterCategory = null, filterText = null, f
         );
     }
 
-    renderGrid('all-product-grid', 'all-pagination', products, page, 20, 'all', filterCategory, filterText);
+    renderGrid('all-product-grid', 'all-pagination', products, page, 20, 'all', filterCategory, filterText, filterPromo);
 }
 
 window.filterByPromo = function() {
     renderAllProducts(1, null, null, true);
     const allTitle = document.getElementById('all-products-title');
-    if (allTitle) allTitle.innerHTML = `<i class="fas fa-tag"></i> Produtos em Oferta`;
+    if (allTitle) allTitle.innerHTML = `<i class="fas fa-tag"></i> Melhores Ofertas (Maior Desconto)`;
     
     // Hide hero and promo section to focus on results
     const hero = document.querySelector('.hero');
@@ -567,7 +573,7 @@ window.filterByPromo = function() {
     if (section) section.scrollIntoView({ behavior: 'smooth' });
 };
 
-function renderGrid(gridId, paginationId, products, page, perPage, type, cat = null, text = null) {
+function renderGrid(gridId, paginationId, products, page, perPage, type, cat = null, text = null, promo = false) {
     const grid = document.getElementById(gridId);
     const pag = document.getElementById(paginationId);
     if (!grid) return;
@@ -620,7 +626,7 @@ function renderGrid(gridId, paginationId, products, page, perPage, type, cat = n
                 btn.textContent = i;
                 btn.onclick = () => {
                     if (type === 'promo') renderPromoProducts(i);
-                    else renderAllProducts(i, cat, text);
+                    else renderAllProducts(i, cat, text, promo);
                     
                     grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 };
