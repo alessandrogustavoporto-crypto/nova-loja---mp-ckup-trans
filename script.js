@@ -538,24 +538,31 @@ function renderAllProducts(page = 1, filterCategory = null, filterText = null, f
 
     if (filterPromo) {
         products = products.filter(p => p.promoActive);
-        // Stricter order by highest discount percentage
-        products.sort((a, b) => {
+        
+        const getDiscountPct = (p) => {
+            // 1. Try to extract from 'offer' string (e.g. "-20%" -> 20)
+            if (p.offer) {
+                const match = p.offer.match(/(\d+)/);
+                if (match) return parseInt(match[1]);
+            }
+            
+            // 2. Math fallback
             const getPrice = (v) => {
                 if (typeof v === 'number') return v;
                 if (!v) return 0;
                 return parseFloat(String(v).replace(',', '.').replace(/[^\d.]/g, '')) || 0;
             };
 
-            const pA = getPrice(a.price);
-            const ppA = getPrice(a.promoPrice) || pA;
-            const pB = getPrice(b.price);
-            const ppB = getPrice(b.promoPrice) || pB;
-            
-            const discA = pA > 0 ? Math.round(((pA - ppA) / pA) * 100) : 0;
-            const discB = pB > 0 ? Math.round(((pB - ppB) / pB) * 100) : 0;
-            
-            return discB - discA;
-        });
+            const price = getPrice(p.price);
+            const promo = getPrice(p.promoPrice);
+            if (price > 0 && promo > 0 && price > promo) {
+                return Math.round(((price - promo) / price) * 100);
+            }
+            return 0;
+        };
+
+        // Order by extracted/calculated percentage
+        products.sort((a, b) => getDiscountPct(b) - getDiscountPct(a));
     }
 
     if (filterText) {
