@@ -336,6 +336,7 @@ window.openProductModal = async function(id) {
         ['prod-id','prod-name','prod-image-base64','prod-desc'].forEach(f => { const el = document.getElementById(f); if(el) el.value = ''; });
         ['prod-price','prod-promo-price','prod-stock'].forEach(f => { const el = document.getElementById(f); if(el) el.value = ''; });
         document.getElementById('prod-promo-active').checked = false;
+        renderVariations([]);
         return;
     }
     
