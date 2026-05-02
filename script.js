@@ -925,7 +925,7 @@ function initCheckoutPage() {
         // ----------------------------------------------------
         try {
             // Chamada para a Função do Cloudflare (API Backend)
-            const response = await fetch('/api/mp-preference', {
+            const response = await fetch('https://api-pagamentos.alessandrogustavoporto.workers.dev', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ items: Cart.getItems(), orderId: order.id, payer: user })
