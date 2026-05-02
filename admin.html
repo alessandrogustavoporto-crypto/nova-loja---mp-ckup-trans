@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -52,7 +52,7 @@
             <div class="kpi-card kpi-green">
                 <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
                 <div class="kpi-info">
-                    <span class="kpi-label">Vendas no Mês</span>
+                    <span class="kpi-label">Vendas no MÃªs</span>
                     <strong class="kpi-value" id="kpi-sales">R$ 0,00</strong>
                 </div>
             </div>
@@ -83,7 +83,7 @@
             <div class="admin-card-header"><h2>Pedidos Recentes</h2></div>
             <div class="admin-card-body">
                 <table class="admin-table">
-                    <thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Ação</th></tr></thead>
+                    <thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>AÃ§Ã£o</th></tr></thead>
                     <tbody id="dashboard-orders-table"></tbody>
                 </table>
             </div>
@@ -97,10 +97,10 @@
             <button class="btn-primary btn-sm" onclick="openProductModal()"><i class="fas fa-plus"></i> Novo Produto</button>
         </div>
         <div class="admin-card">
-            <div class="admin-card-header"><h2>Catálogo de Produtos</h2></div>
+            <div class="admin-card-header"><h2>CatÃ¡logo de Produtos</h2></div>
             <div class="admin-card-body">
                 <table class="admin-table">
-                    <thead><tr><th>Img</th><th>Nome</th><th>Categoria</th><th>Marca</th><th>Preço</th><th>Estoque</th><th>Promoção</th><th>Ações</th></tr></thead>
+                    <thead><tr><th>Img</th><th>Nome</th><th>Categoria</th><th>Marca</th><th>PreÃ§o</th><th>Estoque</th><th>PromoÃ§Ã£o</th><th>AÃ§Ãµes</th></tr></thead>
                     <tbody id="products-table"></tbody>
                 </table>
             </div>
@@ -116,7 +116,7 @@
             <div class="admin-card-header"><h2>Categorias</h2></div>
             <div class="admin-card-body">
                 <table class="admin-table">
-                    <thead><tr><th>#</th><th>Nome</th><th>Produtos</th><th>Ações</th></tr></thead>
+                    <thead><tr><th>#</th><th>Nome</th><th>Produtos</th><th>AÃ§Ãµes</th></tr></thead>
                     <tbody id="categories-table"></tbody>
                 </table>
             </div>
@@ -129,15 +129,15 @@
             <input type="text" id="client-search" placeholder="Buscar por nome ou e-mail..." class="admin-search">
             <select id="client-type-filter" class="admin-select">
                 <option value="">Todos (PF/PJ)</option>
-                <option value="PF">Pessoa Física</option>
-                <option value="PJ">Pessoa Jurídica</option>
+                <option value="PF">Pessoa FÃ­sica</option>
+                <option value="PJ">Pessoa JurÃ­dica</option>
             </select>
         </div>
         <div class="admin-card">
             <div class="admin-card-header"><h2>Clientes Cadastrados</h2></div>
             <div class="admin-card-body">
                 <table class="admin-table">
-                    <thead><tr><th>Nome</th><th>E-mail</th><th>Tipo</th><th>Pedidos</th><th>Status</th><th>Ações</th></tr></thead>
+                    <thead><tr><th>Nome</th><th>E-mail</th><th>Tipo</th><th>Pedidos</th><th>Status</th><th>AÃ§Ãµes</th></tr></thead>
                     <tbody id="clients-table"></tbody>
                 </table>
             </div>
@@ -151,17 +151,17 @@
             <select id="order-admin-status" class="admin-select">
                 <option value="">Todos os Status</option>
                 <option value="aguardando">Aguardando Pagamento</option>
-                <option value="separacao">Em Separação</option>
+                <option value="separacao">Em SeparaÃ§Ã£o</option>
                 <option value="saiu">Saiu para Entrega</option>
                 <option value="entregue">Entregue</option>
                 <option value="cancelado">Cancelado</option>
             </select>
         </div>
         <div class="admin-card">
-            <div class="admin-card-header"><h2>Gestão de Pedidos</h2></div>
+            <div class="admin-card-header"><h2>GestÃ£o de Pedidos</h2></div>
             <div class="admin-card-body">
                 <table class="admin-table">
-                    <thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
+                    <thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>AÃ§Ãµes</th></tr></thead>
                     <tbody id="orders-admin-table"></tbody>
                 </table>
             </div>
@@ -174,10 +174,10 @@
             <button class="btn-primary" onclick="openBrandModal()"><i class="fas fa-plus"></i> Nova Marca</button>
         </div>
         <div class="admin-card">
-            <div class="admin-card-header"><h2>Gestão de Marcas</h2></div>
+            <div class="admin-card-header"><h2>GestÃ£o de Marcas</h2></div>
             <div class="admin-card-body">
                 <table class="admin-table">
-                    <thead><tr><th>Nome da Marca</th><th>Ações</th></tr></thead>
+                    <thead><tr><th>Nome da Marca</th><th>AÃ§Ãµes</th></tr></thead>
                     <tbody id="marcas-table"></tbody>
                 </table>
             </div>
@@ -189,7 +189,7 @@
         <div class="section-toolbar">
             <div style="flex:1;">
                 <p style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">
-                    <i class="fas fa-info-circle"></i> <strong>Proporção recomendada:</strong> 1920x450px para melhor visualização.
+                    <i class="fas fa-info-circle"></i> <strong>ProporÃ§Ã£o recomendada:</strong> 1920x450px para melhor visualizaÃ§Ã£o.
                 </p>
             </div>
             <button class="btn-primary" onclick="openBannerModal()" style="padding: 12px 24px; font-weight: 700;">
@@ -197,10 +197,10 @@
             </button>
         </div>
         <div class="admin-card">
-            <div class="admin-card-header"><h2>Gestão de Banners (Hero)</h2></div>
+            <div class="admin-card-header"><h2>GestÃ£o de Banners (Hero)</h2></div>
             <div class="admin-card-body">
                 <table class="admin-table">
-                    <thead><tr><th>Miniatura</th><th>Título</th><th>Subtítulo</th><th>Status</th><th>Ações</th></tr></thead>
+                    <thead><tr><th>Miniatura</th><th>TÃ­tulo</th><th>SubtÃ­tulo</th><th>Status</th><th>AÃ§Ãµes</th></tr></thead>
                     <tbody id="banners-table"></tbody>
                 </table>
             </div>
@@ -220,7 +220,7 @@
             <div class="form-grid">
                 <div class="form-group col-span-2">
                     <label>Nome do Produto *</label>
-                    <input type="text" id="prod-name" placeholder="Ex: Óleo Essencial de Lavanda">
+                    <input type="text" id="prod-name" placeholder="Ex: Ã“leo Essencial de Lavanda">
                 </div>
                 <div class="form-group">
                     <label>Categoria</label>
@@ -235,11 +235,11 @@
                     <input type="number" id="prod-stock" placeholder="0" min="0">
                 </div>
                 <div class="form-group">
-                    <label>Preço Normal (R$)</label>
+                    <label>PreÃ§o Normal (R$)</label>
                     <input type="number" id="prod-price" placeholder="0.00" step="0.01" min="0">
                 </div>
                 <div class="form-group">
-                    <label>Preço Promocional (R$)</label>
+                    <label>PreÃ§o Promocional (R$)</label>
                     <input type="number" id="prod-promo-price" placeholder="0.00" step="0.01" min="0">
                 </div>
                 <div class="form-group col-span-2">
@@ -251,12 +251,12 @@
                     <input type="hidden" id="prod-image-base64">
                 </div>
                 <div class="form-group col-span-2">
-                    <label>Descrição</label>
-                    <textarea id="prod-desc" rows="3" placeholder="Descrição técnica do produto..." style="padding:12px 15px;border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:var(--font-family);font-size:15px;width:100%;resize:vertical;outline:none;"></textarea>
+                    <label>DescriÃ§Ã£o</label>
+                    <textarea id="prod-desc" rows="3" placeholder="DescriÃ§Ã£o tÃ©cnica do produto..." style="padding:12px 15px;border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:var(--font-family);font-size:15px;width:100%;resize:vertical;outline:none;"></textarea>
                 </div>
             </div>
             <div class="promo-toggle-row">
-                <span><i class="fas fa-tag"></i> Ativar Promoção</span>
+                <span><i class="fas fa-tag"></i> Ativar PromoÃ§Ã£o</span>
                 <label class="switch">
                     <input type="checkbox" id="prod-promo-active">
                     <span class="slider round"></span>
@@ -337,24 +337,24 @@
         <div class="admin-modal-body">
             <input type="hidden" id="banner-id">
             <div class="form-group">
-                <label>Título do Banner</label>
-                <input type="text" id="banner-title" placeholder="Ex: Sua vida mais saudável">
+                <label>TÃ­tulo do Banner</label>
+                <input type="text" id="banner-title" placeholder="Ex: Sua vida mais saudÃ¡vel">
             </div>
             <div class="form-group">
-                <label>Subtítulo / Descrição</label>
-                <input type="text" id="banner-subtitle" placeholder="Ex: Confira nossa linha de orgânicos">
+                <label>SubtÃ­tulo / DescriÃ§Ã£o</label>
+                <input type="text" id="banner-subtitle" placeholder="Ex: Confira nossa linha de orgÃ¢nicos">
             </div>
             <div class="form-group">
-                <label>Texto do Botão</label>
+                <label>Texto do BotÃ£o</label>
                 <input type="text" id="banner-btn-text" placeholder="Ex: Comprar Agora">
             </div>
             <div class="form-group">
-                <label>Link do Botão</label>
+                <label>Link do BotÃ£o</label>
                 <input type="text" id="banner-btn-link" placeholder="Ex: #produtos ou carrinho.html">
             </div>
             <div class="form-group">
                 <label>Imagem do Banner (Upload)</label>
-                <p style="font-size:11px; color:var(--primary-orange); margin-bottom:8px;">Sugestão: 1920x450px</p>
+                <p style="font-size:11px; color:var(--primary-orange); margin-bottom:8px;">SugestÃ£o: 1920x450px</p>
                 <div style="display: flex; flex-direction: column; gap: 15px; align-items: flex-start; background: #f9f9f9; padding: 15px; border-radius: var(--radius-sm); border: 1px dashed #ddd;">
                     <input type="file" id="banner-image-file" accept="image/*" style="width: 100%;">
                     <div id="banner-preview-container" style="width: 100%; text-align: center;">
@@ -410,7 +410,7 @@
         </div>
         <div class="admin-modal-footer">
             <button class="btn-secondary" onclick="closeClientModal()">Cancelar</button>
-            <button class="btn-primary" onclick="saveClient()"><i class="fas fa-save"></i> Salvar Alterações</button>
+            <button class="btn-primary" onclick="saveClient()"><i class="fas fa-save"></i> Salvar AlteraÃ§Ãµes</button>
         </div>
     </div>
 </div>
@@ -418,6 +418,8 @@
 <!-- PRINT AREA -->
 <div id="print-area" class="hidden"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>

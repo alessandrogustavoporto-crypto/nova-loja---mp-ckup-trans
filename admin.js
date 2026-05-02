@@ -1,26 +1,55 @@
 // ============================================================
 // ADMIN MODULE — EcoStore
 // ============================================================
+function logErrorToDOM(msg) {
+    const div = document.createElement('div');
+    div.style.position = 'fixed'; div.style.top = '0'; div.style.left = '0'; div.style.right = '0'; div.style.background = 'red'; div.style.color = 'white'; div.style.padding = '20px'; div.style.zIndex = '999999'; div.style.fontSize = '24px'; div.style.fontWeight = 'bold';
+    div.textContent = 'ERRO CRÍTICO: ' + msg;
+    if(document.body) document.body.prepend(div); else window.onload = () => document.body.prepend(div);
+}
+window.addEventListener('error', function(e) { logErrorToDOM(e.message); });
+window.addEventListener('unhandledrejection', function(e) { logErrorToDOM(e.reason ? e.reason.message || e.reason : 'Rejeição de promessa'); });
+
 
 // ---- Auth ----
 const AdminAuth = {
     _sessionKey: 'ecostore_admin_session',
-    _masterKey: 'ecostore_admin_master',
     
     isLoggedIn() { return !!sessionStorage.getItem(this._sessionKey); },
-    hasMaster() { return !!localStorage.getItem(this._masterKey); },
+    async hasMaster() { 
+        try {
+            const { data, error } = await supabase.from('admins').select('*').limit(1);
+            if (error) {
+                console.error("Supabase Error in hasMaster:", error);
+                return false; // Assume no master if there's an error
+            }
+            return data && data.length > 0;
+        } catch (err) {
+            console.error("JS Error in hasMaster:", err);
+            return false;
+        }
+    },
     
-    register(name, email, password) {
-        if (this.hasMaster()) return false;
-        const admin = { name, email, password };
-        localStorage.setItem(this._masterKey, JSON.stringify(admin));
+    async register(name, email, password) {
+        if (await this.hasMaster()) { alert('Já existe um master'); return false; }
+        const { error } = await supabase.from('admins').insert([{ name, email, password }]);
+        if (error) {
+            alert('Falha ao cadastrar: ' + error.message);
+            console.error('Insert error:', error);
+            return false;
+        }
         return true;
     },
     
-    login(email, pass) {
-        const master = JSON.parse(localStorage.getItem(this._masterKey) || 'null');
-        if (master && email === master.email && pass === master.password) {
-            sessionStorage.setItem(this._sessionKey, JSON.stringify({ email: master.email, name: master.name }));
+    async login(email, pass) {
+        const { data, error } = await supabase.from('admins').select('*').eq('email', email).eq('password', pass).single();
+        if (error) {
+            alert('Falha ao logar: ' + error.message);
+            console.error('Login error:', error);
+            return false;
+        }
+        if (data) {
+            sessionStorage.setItem(this._sessionKey, JSON.stringify({ email: data.email, name: data.name }));
             return true;
         }
         return false;
@@ -34,95 +63,56 @@ window.adminLogout = function() { AdminAuth.logout(); };
 
 // ---- Data Store ----
 const AdminData = {
-    // Shared orders from customer localStorage
-    getOrders() {
-        const stored = JSON.parse(localStorage.getItem('ecostore_orders') || '[]');
-        const mock = [
-            { id: '#10592', clientName: 'João Silva', clientEmail: 'joao@email.com', clientPhone: '11987654321', date: '28/04/2026', status: 'saiu', total: 159.80, items: [{ name: 'Whey Protein Baunilha 900g', qty: 1, price: 159.90 }, { name: 'Chá Verde Orgânico', qty: 1, price: 22.50 }], address: 'Av. Paulista, 1578 - Bela Vista - São Paulo/SP - CEP: 01310-200' },
-            { id: '#09884', clientName: 'Maria Costa', clientEmail: 'maria@email.com', clientPhone: '11912345678', date: '10/04/2026', status: 'entregue', total: 89.00, items: [{ name: 'Creme Hidratante Vegano', qty: 1, price: 89.00 }], address: 'Rua das Flores, 210 - Jardins - São Paulo/SP - CEP: 01452-000' },
-            { id: '#08501', clientName: 'Carlos Mendes', clientEmail: 'carlos@empresa.com.br', clientPhone: '11933221100', date: '02/04/2026', status: 'aguardando', total: 320.00, items: [{ name: 'Colágeno Hidrolisado 300g', qty: 2, price: 95.00 }, { name: 'Vitamina C 1000mg', qty: 2, price: 69.90 }], address: 'Av. Brasil, 500 - Centro - Rio de Janeiro/RJ - CEP: 20040-002' }
-        ];
-        // Merge stored orders (from checkout) with mocks
-        const storedWithInfo = stored.map(o => ({
+    async getOrders() {
+        const { data } = await supabase.from('orders').select('*').order('id', { ascending: false });
+        return (data || []).map(o => ({
             ...o,
-            clientName: o.clientName || 'Cliente Online',
-            clientEmail: o.clientEmail || 'cliente@email.com',
-            clientPhone: o.clientPhone || '11999999999',
-            address: typeof o.address === 'object'
-                ? (o.address.logradouro + ', ' + o.address.numero + ' - ' + o.address.bairro + ' - ' + o.address.cidade + '/' + o.address.estado + ' - CEP: ' + o.address.cep)
-                : (o.address || '')
+            clientName: o.client_name,
+            clientEmail: o.client_email,
+            clientPhone: (o.address && o.address.phone) ? o.address.phone : (o.clientPhone || '11999999999'),
+            date: new Date(o.created_at).toLocaleDateString('pt-BR'),
+            address: typeof o.address === 'object' ? (o.address.logradouro + ', ' + o.address.numero + ' - ' + o.address.cidade) : o.address
         }));
-        return [...storedWithInfo, ...mock];
-    },
-    saveOrders(orders) {
-        const lsOrders = orders.filter(o => !['#10592','#09884','#08501'].includes(o.id));
-        localStorage.setItem('ecostore_orders', JSON.stringify(lsOrders));
     },
 
-    // Products (extends window PRODUCTS if available, else local)
-    getProducts() {
-        const stored = JSON.parse(localStorage.getItem('ecostore_products') || 'null');
-        if (stored) return stored;
-        // Seed from global PRODUCTS if available
-        const base = typeof PRODUCTS !== 'undefined' ? PRODUCTS.map(p => ({ ...p, stock: Math.floor(Math.random() * 50) + 5, description: 'Produto natural de alta qualidade.', promoActive: !!p.offer, promoPrice: p.oldPrice || null })) : [];
-        return base;
-    },
-    saveProducts(prods) { localStorage.setItem('ecostore_products', JSON.stringify(prods)); },
-
-    // Categories
-    getCategories() {
-        const def = ['Bem-estar', 'Suplementos', 'Cosméticos', 'Alimentos', 'Nutrição Esportiva'];
-        return JSON.parse(localStorage.getItem('ecostore_categories') || JSON.stringify(def.map((n, i) => ({ id: i + 1, name: n }))));
-    },
-    saveCategories(cats) { localStorage.setItem('ecostore_categories', JSON.stringify(cats)); },
-
-    // Brands
-    getBrands() {
-        return JSON.parse(localStorage.getItem('ecostore_brands') || '[]');
-    },
-    saveBrands(brands) { localStorage.setItem('ecostore_brands', JSON.stringify(brands)); },
-
-    // Clients
-    getClients() {
-        const mock = [
-            { name: 'João Silva', email: 'joao@email.com', type: 'PF', orders: 2, status: 'ativo' },
-            { name: 'Maria Costa', email: 'maria@email.com', type: 'PF', orders: 1, status: 'ativo' },
-            { name: 'Carlos Mendes LTDA', email: 'carlos@empresa.com.br', type: 'PJ', orders: 3, status: 'ativo' },
-            { name: 'Ana Paula Ramos', email: 'ana@email.com', type: 'PF', orders: 0, status: 'bloqueado' }
-        ];
-        const real = JSON.parse(localStorage.getItem('ecostore_all_users') || '[]');
-        const orders = this.getOrders();
-
-        const processedReal = real.map(u => ({
-            name: u.name,
-            email: u.email,
-            phone: u.phone || '',
-            type: u.cnpj ? 'PJ' : 'PF',
-            // Count actual orders for this email
-            orders: orders.filter(o => o.clientEmail === u.email).length,
-            status: u.status || 'ativo'
+    async getProducts() {
+        const { data } = await supabase.from('products').select('*').order('id', { ascending: false });
+        return (data || []).map(p => ({
+            ...p,
+            oldPrice: p.old_price,
+            promoActive: p.promo_active,
+            promoPrice: p.promo_price
         }));
-        return [...processedReal, ...mock];
     },
 
-    // Banners
-    getBanners() {
-        const stored = JSON.parse(localStorage.getItem('ecostore_banners') || '[]');
-        if (stored.length === 0) {
-            // Default banner
-            return [{
-                id: 1,
-                title: 'Sua vida mais saudável e natural',
-                subtitle: 'Descubra nossa nova linha de produtos orgânicos com até 30% de desconto.',
-                btnText: 'Comprar Agora',
-                btnLink: '#produtos',
-                image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=80',
-                active: true
-            }];
-        }
-        return stored;
+    async getCategories() {
+        const { data } = await supabase.from('categories').select('*').order('id', { ascending: true });
+        return data || [];
     },
-    saveBanners(banners) { localStorage.setItem('ecostore_banners', JSON.stringify(banners)); }
+
+    async getBrands() {
+        const { data } = await supabase.from('brands').select('*').order('id', { ascending: true });
+        return data || [];
+    },
+
+    async getClients() {
+        const { data } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
+        const orders = await this.getOrders();
+        return (data || []).map(u => ({
+            ...u,
+            type: u.is_pj ? 'PJ' : 'PF',
+            orders: orders.filter(o => o.clientEmail === u.email).length
+        }));
+    },
+
+    async getBanners() {
+        const { data } = await supabase.from('banners').select('*').order('id', { ascending: true });
+        return (data || []).map(b => ({
+            ...b,
+            btnText: b.btn_text,
+            btnLink: b.btn_link
+        }));
+    }
 };
 
 // ---- Formatters ----
@@ -151,7 +141,7 @@ function adminToast(msg, type) {
 // ============================================================
 // PAGE: Admin Login
 // ============================================================
-function initAdminLogin() {
+async function initAdminLogin() {
     const isLoginPage = !!document.getElementById('admin-login-form');
     if (!isLoginPage) return;
 
@@ -163,55 +153,80 @@ function initAdminLogin() {
     if (!loginForm || !regForm) return;
 
     // Determine which form to show
-    if (!AdminAuth.hasMaster()) {
+    const hasMaster = await AdminAuth.hasMaster();
+    if (!hasMaster) {
         regForm.classList.remove('hidden');
+        regForm.style.display = 'block';
         if (msgEl) {
             msgEl.textContent = 'Olá! Crie seu primeiro acesso de Administrador.';
             msgEl.style.background = '#e8f5e9';
             msgEl.style.color = '#27ae60';
             msgEl.classList.remove('hidden');
+            msgEl.style.display = 'block';
         }
     } else {
         loginForm.classList.remove('hidden');
+        loginForm.style.display = 'block';
     }
 
     // Handle Registration
-    regForm.addEventListener('submit', e => {
-        e.preventDefault();
-        const name  = document.getElementById('reg-admin-name').value;
-        const email = document.getElementById('reg-admin-email').value;
-        const pass  = document.getElementById('reg-admin-pass').value;
+    window.submitAdminRegister = async function(e) {
+        if (e) e.preventDefault();
+        const name  = document.getElementById('reg-admin-name').value.trim();
+        const email = document.getElementById('reg-admin-email').value.trim();
+        const pass  = document.getElementById('reg-admin-pass').value.trim();
+        if (!name || !email || !pass) { alert('Preencha todos os campos!'); return; }
         
-        if (AdminAuth.register(name, email, pass)) {
-            msgEl.textContent = 'Cadastro realizado! Agora faça seu primeiro login.';
-            msgEl.style.background = '#e8f5e9';
-            msgEl.style.color = '#27ae60';
-            regForm.classList.add('hidden');
+        const btn = regForm.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = true; btn.textContent = 'Cadastrando...'; }
+
+        const success = await AdminAuth.register(name, email, pass);
+        if (success) {
+            if (msgEl) {
+                msgEl.textContent = 'Cadastro realizado! Agora faça seu login.';
+                msgEl.style.background = '#e8f5e9';
+                msgEl.style.color = '#27ae60';
+                msgEl.classList.remove('hidden');
+                msgEl.style.display = 'block';
+            }
+            regForm.style.display = 'none';
             loginForm.classList.remove('hidden');
+            loginForm.style.display = 'block';
+        } else {
+            if (btn) { btn.disabled = false; btn.textContent = 'Criar Conta Administrador'; }
         }
-    });
+    };
 
     // Handle Login
-    loginForm.addEventListener('submit', e => {
-        e.preventDefault();
-        const email = document.getElementById('admin-email').value;
-        const pass  = document.getElementById('admin-pass').value;
-        
-        if (AdminAuth.login(email, pass)) {
+    window.submitAdminLogin = async function(e) {
+        if (e) e.preventDefault();
+        const email = document.getElementById('admin-email').value.trim();
+        const pass  = document.getElementById('admin-pass').value.trim();
+        if (!email || !pass) { alert('Preencha e-mail e senha!'); return; }
+
+        const btn = loginForm.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
+
+        const success = await AdminAuth.login(email, pass);
+        if (success) {
             window.location.href = 'admin.html';
         } else {
-            msgEl.textContent = 'Credenciais inválidas. Verifique seu usuário e senha.';
-            msgEl.style.background = '#ffeaea';
-            msgEl.style.color = '#c0392b';
-            msgEl.classList.remove('hidden');
+            if (btn) { btn.disabled = false; btn.textContent = 'Entrar no Painel'; }
+            if (msgEl) {
+                msgEl.textContent = 'Credenciais inválidas. Verifique e-mail e senha.';
+                msgEl.style.background = '#ffeaea';
+                msgEl.style.color = '#c0392b';
+                msgEl.classList.remove('hidden');
+                msgEl.style.display = 'block';
+            }
         }
-    });
+    };
 }
 
 // ============================================================
 // PAGE: Admin Dashboard
 // ============================================================
-function initAdminDashboard() {
+async function initAdminDashboard() {
     if (!document.getElementById('admin-page-title')) return;
     if (!AdminAuth.isLoggedIn()) { window.location.href = 'admin-login.html'; return; }
 
@@ -231,21 +246,21 @@ function initAdminDashboard() {
         document.getElementById('admin-page-title').textContent = btn.textContent.trim();
     }));
 
-    loadDashboard();
-    loadProducts();
-    loadCategories();
-    loadBrands();
-    loadClients();
-    loadOrders();
-    loadBanners();
+    await loadDashboard();
+    await loadProducts();
+    await loadCategories();
+    await loadBrands();
+    await loadClients();
+    await loadOrders();
+    await loadBanners();
 }
 
 // ---- Dashboard KPIs ----
-function loadDashboard() {
-    const orders   = AdminData.getOrders();
-    const products = AdminData.getProducts();
-    const clients  = AdminData.getClients();
-    const banners  = AdminData.getBanners();
+async function loadDashboard() {
+    const orders   = await AdminData.getOrders();
+    const products = await AdminData.getProducts();
+    const clients  = await AdminData.getClients();
+    const banners  = await AdminData.getBanners();
 
     const salesTotal = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
     const pending = orders.filter(o => ['aguardando','separacao','processando'].includes(o.status)).length;
@@ -270,8 +285,9 @@ function loadDashboard() {
 }
 
 // ---- Products ----
-function loadProducts(filter) {
-    let prods = AdminData.getProducts();
+async function loadProducts(filter) {
+    const fmt = v => 'R$ ' + (isNaN(v) ? '0,00' : v.toFixed(2).replace('.', ','));
+    let prods = await AdminData.getProducts();
     if (filter) prods = prods.filter(p => p.name.toLowerCase().includes(filter.toLowerCase()));
     const tbody = document.getElementById('products-table');
     if (!tbody) return;
@@ -298,16 +314,15 @@ function loadProducts(filter) {
         search.addEventListener('input', () => loadProducts(search.value));
     }
 
-    // Populate category and brand selects in modal
-    populateCategorySelect();
-    populateBrandSelect();
+    await populateCategorySelect();
+    await populateBrandSelect();
 }
 
-window.openProductModal = function(id) {
+window.openProductModal = async function(id) {
     const modal = document.getElementById('product-modal');
     modal.classList.remove('hidden');
-    populateCategorySelect();
-    populateBrandSelect();
+    await populateCategorySelect();
+    await populateBrandSelect();
     
     // Preview Reset
     const preview = document.getElementById('prod-img-preview');
@@ -322,7 +337,9 @@ window.openProductModal = function(id) {
         document.getElementById('prod-promo-active').checked = false;
         return;
     }
-    const prod = AdminData.getProducts().find(p => p.id === id);
+    
+    const prods = await AdminData.getProducts();
+    const prod = prods.find(p => p.id === id);
     if (!prod) return;
     document.getElementById('product-modal-title').textContent = 'Editar Produto';
     document.getElementById('prod-id').value = prod.id;
@@ -344,35 +361,40 @@ window.openProductModal = function(id) {
 
 window.closeProductModal = function() { document.getElementById('product-modal').classList.add('hidden'); };
 
-window.saveProduct = function() {
+window.saveProduct = async function() {
     const id = document.getElementById('prod-id').value;
-    const prods = AdminData.getProducts();
     const product = {
-        id: id ? parseInt(id) : Date.now(),
         name: document.getElementById('prod-name').value,
         price: parseFloat(document.getElementById('prod-price').value),
-        promoPrice: parseFloat(document.getElementById('prod-promo-price').value) || 0,
+        promo_price: parseFloat(document.getElementById('prod-promo-price').value) || null,
         stock: parseInt(document.getElementById('prod-stock').value) || 0,
         image: document.getElementById('prod-image-base64').value,
         description: document.getElementById('prod-desc').value,
         category: document.getElementById('prod-category').value,
         brand: document.getElementById('prod-brand').value,
-        promoActive: document.getElementById('prod-promo-active').checked
+        promo_active: document.getElementById('prod-promo-active').checked
     };
 
     if (!product.name || isNaN(product.price)) { adminToast('Preencha nome e preço.', 'error'); return; }
 
+    let error;
     if (id) {
-        const idx = prods.findIndex(p => p.id === parseInt(id));
-        if (idx > -1) prods[idx] = product;
+        const res = await supabase.from('products').update(product).eq('id', id);
+        error = res.error;
     } else {
-        prods.push(product);
+        const res = await supabase.from('products').insert([product]);
+        error = res.error;
     }
 
-    AdminData.saveProducts(prods);
+    if (error) {
+        adminToast('Erro ao salvar: ' + error.message, 'error');
+        console.error('saveProduct error:', error);
+        return;
+    }
+
     closeProductModal();
-    loadProducts();
     adminToast('Produto salvo com sucesso!');
+    await loadProducts();
 };
 
 // Handle Image File Upload to Base64
@@ -395,18 +417,17 @@ document.addEventListener('change', e => {
     }
 });
 
-window.deleteProduct = function(id) {
+window.deleteProduct = async function(id) {
     if (!confirm('Confirmar exclusão deste produto?')) return;
-    const prods = AdminData.getProducts().filter(p => p.id !== id);
-    AdminData.saveProducts(prods);
-    loadProducts();
+    await supabase.from('products').delete().eq('id', id);
+    await loadProducts();
     adminToast('Produto excluído.', 'error');
 };
 
 // ---- Categories ----
-function loadCategories() {
-    const cats = AdminData.getCategories();
-    const prods = AdminData.getProducts();
+async function loadCategories() {
+    const cats = await AdminData.getCategories();
+    const prods = await AdminData.getProducts();
     const tbody = document.getElementById('categories-table');
     if (!tbody) return;
     tbody.innerHTML = cats.map((c, i) => {
@@ -422,48 +443,46 @@ function loadCategories() {
     }).join('');
 }
 
-function populateCategorySelect() {
+async function populateCategorySelect() {
     const sel = document.getElementById('prod-category');
     if (!sel) return;
-    const cats = AdminData.getCategories();
+    const cats = await AdminData.getCategories();
     sel.innerHTML = cats.map(c => '<option value="' + c.name + '">' + c.name + '</option>').join('');
 }
 
-window.openCatModal = function(id) {
+window.openCatModal = async function(id) {
     document.getElementById('cat-modal').classList.remove('hidden');
     if (!id) { document.getElementById('cat-id').value = ''; document.getElementById('cat-name').value = ''; return; }
-    const cat = AdminData.getCategories().find(c => c.id === id);
+    const cats = await AdminData.getCategories();
+    const cat = cats.find(c => c.id === id);
     if (cat) { document.getElementById('cat-id').value = cat.id; document.getElementById('cat-name').value = cat.name; }
 };
 
 window.closeCatModal = function() { document.getElementById('cat-modal').classList.add('hidden'); };
 
-window.saveCategory = function() {
-    const cats = AdminData.getCategories();
+window.saveCategory = async function() {
     const id = document.getElementById('cat-id').value;
     const name = document.getElementById('cat-name').value.trim();
     if (!name) { adminToast('Digite um nome.', 'error'); return; }
     if (id) {
-        const c = cats.find(c => c.id === parseInt(id));
-        if (c) c.name = name;
+        await supabase.from('categories').update({name}).eq('id', id);
     } else {
-        cats.push({ id: Date.now(), name });
+        await supabase.from('categories').insert([{name}]);
     }
-    AdminData.saveCategories(cats);
     closeCatModal();
-    loadCategories();
+    await loadCategories();
     adminToast('Categoria salva!');
 };
 
-window.deleteCategory = function(id) {
+window.deleteCategory = async function(id) {
     if (!confirm('Excluir esta categoria?')) return;
-    AdminData.saveCategories(AdminData.getCategories().filter(c => c.id !== id));
-    loadCategories();
+    await supabase.from('categories').delete().eq('id', id);
+    await loadCategories();
 };
 
 // ---- Clients ----
-function loadClients(nameFilter, typeFilter) {
-    let clients = AdminData.getClients();
+async function loadClients(nameFilter, typeFilter) {
+    let clients = await AdminData.getClients();
     if (nameFilter) clients = clients.filter(c => c.name.toLowerCase().includes(nameFilter.toLowerCase()) || c.email.toLowerCase().includes(nameFilter.toLowerCase()));
     if (typeFilter) clients = clients.filter(c => c.type === typeFilter);
     const tbody = document.getElementById('clients-table');
@@ -489,8 +508,8 @@ function loadClients(nameFilter, typeFilter) {
     if (typeF && !typeF._bound)   { typeF._bound = true;  typeF.addEventListener('change', () => loadClients(search.value, typeF.value)); }
 }
 
-window.openClientModal = function(email) {
-    const clients = AdminData.getClients();
+window.openClientModal = async function(email) {
+    const clients = await AdminData.getClients();
     const client = clients.find(c => c.email === email);
     if (!client) return;
 
@@ -507,52 +526,41 @@ window.closeClientModal = function() {
     document.getElementById('client-modal').classList.add('hidden');
 };
 
-window.saveClient = function() {
+window.saveClient = async function() {
     const emailId = document.getElementById('client-modal-id').value;
     const name = document.getElementById('client-modal-name').value;
     const email = document.getElementById('client-modal-email').value;
     const phone = document.getElementById('client-modal-phone').value;
     const status = document.getElementById('client-modal-status').value;
 
-    const allUsers = JSON.parse(localStorage.getItem('ecostore_all_users') || '[]');
-    const userIdx = allUsers.findIndex(u => u.email === emailId);
+    await supabase.from('customers').update({name, email, phone, status}).eq('email', emailId);
 
-    if (userIdx > -1) {
-        allUsers[userIdx].name = name;
-        allUsers[userIdx].email = email;
-        allUsers[userIdx].phone = phone;
-        allUsers[userIdx].status = status;
-        localStorage.setItem('ecostore_all_users', JSON.stringify(allUsers));
-        adminToast('Dados do cliente atualizados!');
-    } else {
-        adminToast('Erro ao encontrar cliente real para editar.', 'error');
-    }
-
+    adminToast('Dados do cliente atualizados!');
     closeClientModal();
-    loadClients();
-    loadDashboard();
+    await loadClients();
+    await loadDashboard();
 };
 
 // ---- Orders ----
 let allAdminOrders = [];
 
-function loadOrders(statusFilter, searchFilter) {
-    allAdminOrders = AdminData.getOrders();
+async function loadOrders(statusFilter, searchFilter) {
+    allAdminOrders = await AdminData.getOrders();
     let orders = allAdminOrders;
     if (statusFilter) orders = orders.filter(o => o.status === statusFilter);
-    if (searchFilter) orders = orders.filter(o => o.id.toLowerCase().includes(searchFilter.toLowerCase()) || (o.clientName || '').toLowerCase().includes(searchFilter.toLowerCase()));
+    if (searchFilter) orders = orders.filter(o => String(o.id).toLowerCase().includes(searchFilter.toLowerCase()) || (o.clientName || '').toLowerCase().includes(searchFilter.toLowerCase()));
 
     const tbody = document.getElementById('orders-admin-table');
     if (!tbody) return;
     tbody.innerHTML = orders.map(o =>
         '<tr>' +
-        '<td><strong>' + o.id + '</strong></td>' +
+        '<td><strong>#' + String(o.id).padStart(5, '0') + '</strong></td>' +
         '<td>' + (o.clientName || '—') + '</td>' +
         '<td>' + o.date + '</td>' +
         '<td>' + fmt(o.total) + '</td>' +
         '<td>' +
         '<select class="status-select" onchange="updateOrderStatus(\'' + o.id + '\', this.value)">' +
-        ['aguardando','separacao','saiu','entregue','cancelado'].map(s =>
+        ['aguardando','separacao','saiu','entregue','cancelado','processando'].map(s =>
             '<option value="' + s + '"' + (o.status === s ? ' selected' : '') + '>' + statusInfo[s].label + '</option>'
         ).join('') +
         '</select>' +
@@ -569,10 +577,10 @@ function loadOrders(statusFilter, searchFilter) {
     if (status && !status._bound) { status._bound = true; status.addEventListener('change', () => loadOrders(status.value, search.value)); }
 }
 
-window.updateOrderStatus = function(id, newStatus) {
-    const orders = AdminData.getOrders();
-    const o = orders.find(o => o.id === id);
-    if (o) { o.status = newStatus; AdminData.saveOrders(orders); adminToast('Status atualizado: ' + statusInfo[newStatus].label); loadDashboard(); }
+window.updateOrderStatus = async function(id, newStatus) {
+    await supabase.from('orders').update({status: newStatus, status_label: statusInfo[newStatus].label}).eq('id', id);
+    adminToast('Status atualizado: ' + statusInfo[newStatus].label);
+    await loadDashboard();
 };
 
 window.viewOrder = function(id) {
@@ -624,8 +632,8 @@ window.printOrder = function() {
 };
 
 // ---- Banners ----
-function loadBanners() {
-    const banners = AdminData.getBanners();
+async function loadBanners() {
+    const banners = await AdminData.getBanners();
     const tbody = document.getElementById('banners-table');
     if (!tbody) return;
 
@@ -647,19 +655,17 @@ function loadBanners() {
         ).join('');
 }
 
-window.toggleBannerActive = function(id) {
-    const banners = AdminData.getBanners();
-    const banner = banners.find(b => b.active); // This line in previous logic was weirdly named, let's fix the whole function
+window.toggleBannerActive = async function(id) {
+    const banners = await AdminData.getBanners();
     const b = banners.find(item => item.id === id);
     if (b) {
-        b.active = !b.active;
-        AdminData.saveBanners(banners);
-        loadBanners();
+        await supabase.from('banners').update({active: !b.active}).eq('id', id);
+        await loadBanners();
         adminToast('Status do banner atualizado!');
     }
 };
 
-window.openBannerModal = function(id) {
+window.openBannerModal = async function(id) {
     const modal = document.getElementById('banner-modal');
     modal.classList.remove('hidden');
 
@@ -678,7 +684,8 @@ window.openBannerModal = function(id) {
         return;
     }
 
-    const banner = AdminData.getBanners().find(b => b.id === id);
+    const banners = await AdminData.getBanners();
+    const banner = banners.find(b => b.id === id);
     if (!banner) return;
 
     document.getElementById('banner-modal-title').textContent = 'Editar Banner';
@@ -701,16 +708,14 @@ window.closeBannerModal = function() {
     document.getElementById('banner-modal').classList.add('hidden');
 };
 
-window.saveBanner = function() {
+window.saveBanner = async function() {
     const id = document.getElementById('banner-id').value;
-    const banners = AdminData.getBanners();
     
     const banner = {
-        id: id ? parseInt(id) : Date.now(),
         title: document.getElementById('banner-title').value,
         subtitle: document.getElementById('banner-subtitle').value,
-        btnText: document.getElementById('banner-btn-text').value,
-        btnLink: document.getElementById('banner-btn-link').value,
+        btn_text: document.getElementById('banner-btn-text').value,
+        btn_link: document.getElementById('banner-btn-link').value,
         image: document.getElementById('banner-image-base64').value,
         active: document.getElementById('banner-active').checked
     };
@@ -718,23 +723,20 @@ window.saveBanner = function() {
     if (!banner.image) { adminToast('É necessário fazer o upload de uma imagem.', 'error'); return; }
 
     if (id) {
-        const idx = banners.findIndex(b => b.id === parseInt(id));
-        if (idx > -1) banners[idx] = banner;
+        await supabase.from('banners').update(banner).eq('id', id);
     } else {
-        banners.push(banner);
+        await supabase.from('banners').insert([banner]);
     }
 
-    AdminData.saveBanners(banners);
     closeBannerModal();
-    loadBanners();
+    await loadBanners();
     adminToast('Banner salvo com sucesso!');
 };
 
-window.deleteBanner = function(id) {
+window.deleteBanner = async function(id) {
     if (!confirm('Excluir este banner permanentemente?')) return;
-    const banners = AdminData.getBanners().filter(b => b.id !== id);
-    AdminData.saveBanners(banners);
-    loadBanners();
+    await supabase.from('banners').delete().eq('id', id);
+    await loadBanners();
     adminToast('Banner removido.', 'error');
 };
 
@@ -759,16 +761,19 @@ document.addEventListener('change', e => {
 // ============================================================
 // BOOT
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
-    initAdminLogin();
-    initAdminDashboard();
+document.addEventListener('DOMContentLoaded', async () => {
+    await initAdminLogin();
+    await initAdminDashboard();
 });
 
 // ============================================================
 // MARCAS
 // ============================================================
-function loadBrands() {
-    const brands = AdminData.getBrands();
+// ============================================================
+// MARCAS
+// ============================================================
+async function loadBrands() {
+    const brands = await AdminData.getBrands();
     const tbody = document.getElementById('marcas-table');
     if (!tbody) return;
 
@@ -783,14 +788,14 @@ function loadBrands() {
         ).join('');
 }
 
-function populateBrandSelect() {
+async function populateBrandSelect() {
     const select = document.getElementById('prod-brand');
     if (!select) return;
-    const brands = AdminData.getBrands();
+    const brands = await AdminData.getBrands();
     select.innerHTML = '<option value="">Sem Marca</option>' + brands.map(b => '<option value="' + b.name + '">' + b.name + '</option>').join('');
 }
 
-window.openBrandModal = function(id) {
+window.openBrandModal = async function(id) {
     const modal = document.getElementById('brand-modal');
     modal.classList.remove('hidden');
 
@@ -801,7 +806,8 @@ window.openBrandModal = function(id) {
         return;
     }
 
-    const b = AdminData.getBrands().find(item => item.id == id);
+    const brands = await AdminData.getBrands();
+    const b = brands.find(item => item.id == id);
     if (b) {
         document.getElementById('brand-modal-title').textContent = 'Editar Marca';
         document.getElementById('brand-id').value = b.id;
@@ -813,30 +819,26 @@ window.closeBrandModal = function() {
     document.getElementById('brand-modal').classList.add('hidden');
 };
 
-window.saveBrand = function() {
+window.saveBrand = async function() {
     const id = document.getElementById('brand-id').value;
     const name = document.getElementById('brand-name').value.trim();
 
     if (!name) { adminToast('O nome da marca é obrigatório!', 'error'); return; }
 
-    const brands = AdminData.getBrands();
     if (id) {
-        const idx = brands.findIndex(b => b.id == id);
-        if (idx > -1) brands[idx].name = name;
+        await supabase.from('brands').update({name}).eq('id', id);
     } else {
-        brands.push({ id: Date.now(), name });
+        await supabase.from('brands').insert([{name}]);
     }
 
-    AdminData.saveBrands(brands);
     adminToast('Marca salva com sucesso!');
     closeBrandModal();
-    loadBrands();
+    await loadBrands();
 };
 
-window.deleteBrand = function(id) {
+window.deleteBrand = async function(id) {
     if (!confirm('Deseja excluir esta marca?')) return;
-    const brands = AdminData.getBrands().filter(b => b.id != id);
-    AdminData.saveBrands(brands);
+    await supabase.from('brands').delete().eq('id', id);
     adminToast('Marca excluída!');
-    loadBrands();
+    await loadBrands();
 };

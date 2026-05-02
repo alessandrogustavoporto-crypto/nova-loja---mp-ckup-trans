@@ -14,21 +14,67 @@ const PRODUCTS = [
     { id: 10, name: "Kit Shampoo e Condicionador Sólido", category: "Cosméticos", price: 78.00, image: "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=300&q=80" }
 ];
 
+// GLOBAL DATA CACHES
+window.APP_DATA = {
+    products: [],
+    banners: [],
+    orders: [],
+    users: []
+};
+
 // ============================================================
 // PRODUCT STORE MODULE
 // ============================================================
 const ProductStore = {
-    _key: 'ecostore_products',
-    getAll() { 
-        const prods = JSON.parse(localStorage.getItem(this._key) || '[]');
-        if (prods.length === 0 && typeof PRODUCTS !== 'undefined') {
-            // First time initialization with static catalog
-            localStorage.setItem(this._key, JSON.stringify(PRODUCTS));
-            return PRODUCTS;
+    async fetchAll() {
+        const { data, error } = await supabase.from('products').select('*').order('id', { ascending: false });
+        if (!error && data && data.length > 0) {
+            window.APP_DATA.products = data.map(p => ({
+                ...p,
+                oldPrice: p.old_price,
+                promoActive: p.promo_active,
+                promoPrice: p.promo_price
+            }));
+        } else if (!error && data && data.length === 0) {
+            if (typeof PRODUCTS !== 'undefined') {
+                const { data: inserted, error: insertErr } = await supabase.from('products').insert(PRODUCTS.map(p => {
+                    const obj = {...p, old_price: p.oldPrice, promo_active: p.promoActive || !!p.offer, promo_price: p.price};
+                    delete obj.id; // let supabase generate id
+                    delete obj.oldPrice;
+                    delete obj.promoActive;
+                    delete obj.promoPrice;
+                    return obj;
+                })).select();
+                if (!insertErr && inserted) {
+                    window.APP_DATA.products = inserted.map(p => ({
+                        ...p,
+                        oldPrice: p.old_price,
+                        promoActive: p.promo_active,
+                        promoPrice: p.promo_price
+                    }));
+                }
+            }
         }
-        return prods;
     },
-    getById(id) { return this.getAll().find(p => p.id === id); }
+    getAll() { return window.APP_DATA.products; },
+    getById(id) { return this.getAll().find(p => p.id == id); }
+};
+
+// ============================================================
+// BANNERS STORE MODULE
+// ============================================================
+const BannerStore = {
+    async fetchAll() {
+        const { data, error } = await supabase.from('banners').select('*');
+        if (!error && data) {
+            window.APP_DATA.banners = data.map(b => ({
+                ...b,
+                btnText: b.btn_text,
+                btnLink: b.btn_link
+            }));
+        }
+    },
+    getAll() { return window.APP_DATA.banners; }
 };
 
 // ============================================================
@@ -37,17 +83,22 @@ const ProductStore = {
 const Cart = {
     _key: 'ecostore_cart',
     getItems() { return JSON.parse(localStorage.getItem(this._key) || '[]'); },
-    save(items) { localStorage.setItem(this._key, JSON.stringify(items)); document.dispatchEvent(new CustomEvent('cartChanged')); },
+    save(items) {
+        localStorage.setItem(this._key, JSON.stringify(items));
+        document.dispatchEvent(new CustomEvent('cartChanged'));
+        // Auto-sync to cloud if user is logged in (debounced)
+        clearTimeout(this._syncTimer);
+        this._syncTimer = setTimeout(() => this.saveToCloud(), 800);
+    },
     add(productId) {
         const product = ProductStore.getById(productId);
         if (!product) return;
         const items = this.getItems();
         const existing = items.find(i => i.id === productId);
         const actualPrice = (product.promoActive && product.promoPrice) ? product.promoPrice : product.price;
-
         if (existing) {
             existing.qty += 1;
-            existing.price = actualPrice; // Update price in case it changed while in cart
+            existing.price = actualPrice;
         } else {
             items.push({ id: product.id, name: product.name, price: actualPrice, image: product.image, qty: 1 });
         }
@@ -60,55 +111,127 @@ const Cart = {
         const item = items.find(i => i.id === productId);
         if (item) { item.qty = qty; this.save(items); }
     },
-    clear() { localStorage.removeItem(this._key); document.dispatchEvent(new CustomEvent('cartChanged')); },
+    clear() {
+        localStorage.removeItem(this._key);
+        document.dispatchEvent(new CustomEvent('cartChanged'));
+        this.clearCloud();
+    },
     total() { return this.getItems().reduce((s, i) => s + i.price * i.qty, 0); },
-    count() { return this.getItems().reduce((s, i) => s + i.qty, 0); }
+    count() { return this.getItems().reduce((s, i) => s + i.qty, 0); },
+
+    // ---- Cloud Sync ----
+    async saveToCloud() {
+        const user = Auth.isLoggedIn() ? Auth.getUser() : null;
+        if (!user || !user.email || !window.supabase) return;
+        const items = this.getItems();
+        // Upsert: insert or update based on customer_email
+        await supabase.from('carts').upsert(
+            [{ customer_email: user.email, items: items, updated_at: new Date().toISOString() }],
+            { onConflict: 'customer_email' }
+        );
+    },
+
+    async loadFromCloud(email) {
+        if (!window.supabase || !email) return;
+        const { data } = await supabase.from('carts').select('items').eq('customer_email', email).single();
+        if (data && data.items && data.items.length > 0) {
+            // Merge: cloud items take priority if local cart is empty
+            const localItems = this.getItems();
+            if (localItems.length === 0) {
+                localStorage.setItem(this._key, JSON.stringify(data.items));
+                document.dispatchEvent(new CustomEvent('cartChanged'));
+                showToast('\uD83D\uDED2 Seu carrinho foi restaurado!');
+            }
+        }
+    },
+
+    async clearCloud() {
+        const user = Auth.isLoggedIn() ? Auth.getUser() : null;
+        if (!user || !user.email || !window.supabase) return;
+        await supabase.from('carts').delete().eq('customer_email', user.email);
+    }
 };
+
 
 // ============================================================
 // AUTH MODULE
 // ============================================================
 const Auth = {
     _key: 'ecostore_user',
-    _allUsersKey: 'ecostore_all_users',
     isLoggedIn() { return !!localStorage.getItem(this._key); },
     getUser() { return JSON.parse(localStorage.getItem(this._key) || 'null'); },
-    getAllUsers() { return JSON.parse(localStorage.getItem(this._allUsersKey) || '[]'); },
-    login(user) {
-        localStorage.setItem(this._key, JSON.stringify(user));
-        // Save to all users list if not there
-        const all = this.getAllUsers();
-        if (!all.find(u => u.email === user.email)) {
-            all.push({ ...user, date: new Date().toLocaleDateString('pt-BR'), status: 'ativo', orders: 0 });
-            localStorage.setItem(this._allUsersKey, JSON.stringify(all));
-        }
+    async fetchAllUsers() {
+        const { data, error } = await supabase.from('customers').select('*');
+        if (!error && data) window.APP_DATA.users = data;
     },
+    getAllUsers() { return window.APP_DATA.users; },
+
+    // Register a new customer with password
+    async register(userData) {
+        const { data: existing } = await supabase.from('customers').select('id').eq('email', userData.email).single();
+        if (existing) return { success: false, error: 'E-mail já cadastrado.' };
+
+        const { error } = await supabase.from('customers').insert([{
+            name: userData.name,
+            email: userData.email,
+            password: userData.password,
+            phone: userData.phone || null,
+            cpf: userData.cpf || null,
+            cnpj: userData.cnpj || null,
+            is_pj: !!userData.cnpj,
+            address: userData.address || null,
+            status: 'ativo'
+        }]);
+        if (error) return { success: false, error: error.message };
+        await this.fetchAllUsers();
+        return { success: true };
+    },
+
+    // Login: validate email + password against Supabase
+    async loginWithPassword(email, password) {
+        const { data, error } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('email', email)
+            .eq('password', password)
+            .single();
+        if (error || !data) return { success: false, error: 'E-mail ou senha incorretos.' };
+        localStorage.setItem(this._key, JSON.stringify(data));
+        // Restore cloud cart after login
+        await Cart.loadFromCloud(email);
+        return { success: true, user: data };
+    },
+
     logout() { localStorage.removeItem(this._key); }
 };
+
 
 // ============================================================
 // ORDERS MODULE
 // ============================================================
 const Orders = {
-    _key: 'ecostore_orders',
-    getAll() { return JSON.parse(localStorage.getItem(this._key) || '[]'); },
-    create(items, total, address) {
-        const orders = this.getAll();
+    async fetchAll() {
+        const { data, error } = await supabase.from('orders').select('*').order('id', { ascending: false });
+        if (!error && data) window.APP_DATA.orders = data;
+    },
+    getAll() { return window.APP_DATA.orders; },
+    async create(items, total, address) {
         const user = Auth.getUser();
-        const order = {
-            id: '#' + String(10593 + orders.length).padStart(5, '0'),
-            date: new Date().toLocaleDateString('pt-BR'),
+        const newOrder = {
+            client_email: user ? user.email : 'anonimo@email.com',
+            client_name: user ? user.name : 'Cliente Anônimo',
+            total: total,
             status: 'processando',
-            statusLabel: 'Processando',
-            total,
-            items: items.map(i => ({ ...i })),
-            address,
-            clientEmail: user ? user.email : 'anonimo@email.com',
-            clientName: user ? user.name : 'Cliente Anônimo'
+            status_label: 'Processando',
+            items: items,
+            address: address
         };
-        orders.unshift(order);
-        localStorage.setItem(this._key, JSON.stringify(orders));
-        return order;
+        const { data, error } = await supabase.from('orders').insert([newOrder]).select().single();
+        if (data) {
+            window.APP_DATA.orders.unshift(data);
+            return data;
+        }
+        return newOrder;
     }
 };
 
@@ -122,7 +245,7 @@ function initHeroBanner() {
     const hero = document.querySelector('.hero');
     if (!hero) return;
 
-    const banners = JSON.parse(localStorage.getItem('ecostore_banners') || '[]');
+    const banners = BannerStore.getAll();
     const activeBanners = banners.filter(b => b.active);
 
     if (activeBanners.length === 0) {
@@ -257,25 +380,35 @@ window.addToCart = function(productId) {
 // ============================================================
 // DOMCONTENTLOADED
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     updateCartBadge();
+    updateHeaderAuth(); // ← Lê localStorage, sem esperar Supabase
+    initCartPage();     // ← Carrinho também usa localStorage, renderiza imediato
 
     // Sticky header
     const header = document.getElementById('header');
     if (header) { window.addEventListener('scroll', () => header.classList.toggle('scrolled', window.scrollY > 50)); }
 
+    // FETCH FROM SUPABASE (produtos, usuários, pedidos, banners)
+    if (window.supabase) {
+        await ProductStore.fetchAll();
+        await Auth.fetchAllUsers();
+        await Orders.fetchAll();
+        await BannerStore.fetchAll();
+    }
+
     renderPromoProducts();
     renderAllProducts();
     initCategoriesMenu();
     initHeroBanner();
-    initCartPage();
     initCheckoutPage();
-    initAuthPages();
-    initDashboard();
+    if (typeof initAuthPages === 'function') initAuthPages();
+    if (typeof initDashboard === 'function') initDashboard();
     initSearch();
-    updateHeaderAuth();
     syncCurrentToAllUsers();
 });
+
+
 
 // ============================================================
 // RENDER PRODUCTS (PROMO & ALL)
@@ -291,7 +424,7 @@ function renderPromoProducts(page = 1) {
     }
     if (section) section.style.display = 'block';
 
-    renderGrid('promo-product-grid', 'promo-pagination', products, page, 8, 'promo');
+    renderGrid('promo-product-grid', 'promo-pagination', products, page, 10, 'promo');
 }
 
 function renderAllProducts(page = 1, filterCategory = null, filterText = null) {
@@ -375,6 +508,11 @@ function initSearch() {
         const query = input.value;
         renderAllProducts(1, null, query);
         
+        const singleViewSection = document.getElementById('single-product-view-section');
+        if (singleViewSection && !singleViewSection.classList.contains('hidden')) {
+            backToGrid();
+        }
+        
         // Esconde promoções durante a busca para focar no resultado
         const promoSec = document.getElementById('promo-section');
         const hero = document.querySelector('.hero');
@@ -444,7 +582,8 @@ window.filterByCategory = function(category) {
     if (dropdown) dropdown.classList.remove('show');
 
     // Voltar para a grid caso esteja na visualização única
-    if (!document.getElementById('single-product-view').classList.contains('hidden')) {
+    const singleViewSection = document.getElementById('single-product-view-section');
+    if (singleViewSection && !singleViewSection.classList.contains('hidden')) {
         backToGrid();
     }
 
@@ -472,12 +611,14 @@ window.openProductDetail = function(id) {
     // Hide Grid and Hero
     const hero = document.querySelector('.hero');
     if (hero) hero.style.display = 'none';
-    document.getElementById('grid-header').style.display = 'none';
-    document.getElementById('main-product-grid').style.display = 'none';
+    const promoSection = document.getElementById('promo-section');
+    if (promoSection) promoSection.style.display = 'none';
+    const allProductsSection = document.getElementById('all-products-section');
+    if (allProductsSection) allProductsSection.style.display = 'none';
     
     // Show Single View
-    const singleView = document.getElementById('single-product-view');
-    singleView.classList.remove('hidden');
+    const singleViewSection = document.getElementById('single-product-view-section');
+    if (singleViewSection) singleViewSection.classList.remove('hidden');
 
     document.getElementById('single-img').src = product.image;
     document.getElementById('single-category').textContent = product.category;
@@ -511,13 +652,17 @@ window.openProductDetail = function(id) {
 
 window.backToGrid = function() {
     // Hide Single View
-    document.getElementById('single-product-view').classList.add('hidden');
+    const singleViewSection = document.getElementById('single-product-view-section');
+    if (singleViewSection) singleViewSection.classList.add('hidden');
     
     // Show Grid and Hero
     const hero = document.querySelector('.hero');
     if (hero) hero.style.display = 'block';
-    document.getElementById('grid-header').style.display = 'block';
-    document.getElementById('main-product-grid').style.display = 'grid';
+    
+    renderPromoProducts(); // Re-exibe promos se houver
+    
+    const allProductsSection = document.getElementById('all-products-section');
+    if (allProductsSection) allProductsSection.style.display = 'block';
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
@@ -557,34 +702,38 @@ function updateHeaderAuth() {
         const firstName = (user.name || 'Cliente').split(' ')[0];
         const isOnAccountPage = window.location.pathname.includes('minha-conta');
 
-        // Update visual state
         icon.className = 'fas fa-user-circle';
         link.classList.add('user-logged-in');
+        link.title = 'Olá, ' + firstName;
         if (tooltip) tooltip.textContent = 'Olá, ' + firstName + ' ▸';
 
-        // Prevent the <a> from navigating directly — show dropdown instead
+        // Use onclick to avoid stacking multiple listeners
         link.href = 'javascript:void(0)';
-        link.addEventListener('click', function(e) {
+        link.onclick = function(e) {
             e.preventDefault();
             e.stopPropagation();
             toggleUserDropdown(wrapper, firstName, isOnAccountPage);
-        });
+        };
 
     } else {
-        // Not logged in → go to login page
         link.href = 'login.html';
+        link.onclick = null;
         icon.className = 'far fa-user';
         if (tooltip) tooltip.textContent = 'Entrar';
         link.classList.remove('user-logged-in');
     }
 
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-        const dropdown = document.getElementById('user-dropdown');
-        if (dropdown && !wrapper.contains(e.target)) {
-            dropdown.remove();
-        }
-    });
+    // Close dropdown when clicking outside — register ONCE only
+    if (!document._dropdownListenerSet) {
+        document._dropdownListenerSet = true;
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('user-dropdown');
+            const w = document.getElementById('user-nav-wrapper');
+            if (dropdown && w && !w.contains(e.target)) {
+                dropdown.remove();
+            }
+        });
+    }
 }
 
 function toggleUserDropdown(wrapper, firstName, isOnAccountPage) {
@@ -674,13 +823,19 @@ function initCheckoutPage() {
         const a = user.address;
         document.getElementById('checkout-address').textContent = a.logradouro + ', ' + a.numero + ' — ' + a.bairro + ', ' + a.cidade + '/' + a.estado + ' | CEP: ' + a.cep;
     }
-    document.getElementById('btn-confirm-order').addEventListener('click', () => {
+    document.getElementById('btn-confirm-order').addEventListener('click', async () => {
         const payment = document.querySelector('input[name="payment"]:checked');
         if (!payment) { showToast('Selecione uma forma de pagamento.', 'error'); return; }
         const addr = user?.address || { logradouro: 'Av. Paulista', numero: '1578', bairro: 'Bela Vista', cidade: 'São Paulo', estado: 'SP', cep: '01310-200' };
-        const order = Orders.create(Cart.getItems(), Cart.total(), addr);
+        
+        document.getElementById('btn-confirm-order').disabled = true;
+        document.getElementById('btn-confirm-order').textContent = 'Processando...';
+
+        const order = await Orders.create(Cart.getItems(), Cart.total(), addr);
         Cart.clear();
-        document.getElementById('order-id-confirm').textContent = order.id;
+        
+        // Supabase returns an ID integer, we format it with #
+        document.getElementById('order-id-confirm').textContent = '#' + String(order.id).padStart(5, '0');
         document.getElementById('confirm-modal').classList.remove('hidden');
         setTimeout(() => document.getElementById('confirm-modal').classList.add('visible'), 10);
     });
@@ -692,81 +847,145 @@ function initCheckoutPage() {
 function initAuthPages() {
     const pjToggle = document.getElementById('pj-toggle');
     if (pjToggle) {
-        pjToggle.addEventListener('change', e => {
-            const isPJ = e.target.checked;
+        const togglePJ = (isPJ) => {
             document.getElementById('pf-fields').classList.toggle('hidden', isPJ);
             document.getElementById('pj-fields').classList.toggle('hidden', !isPJ);
+            // PF fields required
             document.getElementById('nome').required = !isPJ;
             document.getElementById('cpf').required = !isPJ;
+            document.getElementById('telefone-pf').required = !isPJ;
+            // PJ fields required
             document.getElementById('razao-social').required = isPJ;
             document.getElementById('cnpj').required = isPJ;
-        });
+            document.getElementById('telefone-pj').required = isPJ;
+        };
+        pjToggle.addEventListener('change', e => togglePJ(e.target.checked));
+        togglePJ(pjToggle.checked); // apply on load
     }
     const btnCep = document.getElementById('btn-busca-cep');
     if (btnCep) {
-        btnCep.addEventListener('click', () => {
-            const cep = document.getElementById('cep').value.replace(/\D/g, '');
-            if (cep.length >= 8) { document.getElementById('logradouro').value = 'Av. Paulista'; document.getElementById('bairro').value = 'Bela Vista'; document.getElementById('cidade').value = 'São Paulo'; document.getElementById('estado').value = 'SP'; showToast('Endereço encontrado!'); }
-            else { showToast('CEP inválido.', 'error'); }
+        btnCep.addEventListener('click', async () => {
+            const cepInput = document.getElementById('cep');
+            btnCep.disabled = true;
+            btnCep.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            const result = await Validators.buscarCep(cepInput.value, {
+                logradouro: document.getElementById('logradouro'),
+                bairro:     document.getElementById('bairro'),
+                cidade:     document.getElementById('cidade'),
+                estado:     document.getElementById('estado')
+            });
+            btnCep.disabled = false;
+            btnCep.innerHTML = '<i class="fas fa-search"></i>';
+            if (result.ok) showToast('Endereço encontrado!');
+            else showToast(result.msg, 'error');
         });
     }
+
     const cadastroForm = document.getElementById('cadastro-form');
     if (cadastroForm) {
-        cadastroForm.addEventListener('submit', e => {
+        cadastroForm.addEventListener('submit', async e => {
             e.preventDefault();
-            const isPJ = document.getElementById('pj-toggle')?.checked;
-            const user = { 
-                name: (document.getElementById('nome')?.value || document.getElementById('razao-social')?.value || 'Cliente'), 
-                email: document.getElementById('email-cad').value,
-                phone: isPJ ? document.getElementById('telefone-pj').value : document.getElementById('telefone-pf').value,
-                cnpj: isPJ ? document.getElementById('cnpj').value : null,
-                cpf: isPJ ? null : document.getElementById('cpf').value,
-                address: { 
-                    logradouro: document.getElementById('logradouro').value, 
-                    numero: document.getElementById('numero').value, 
-                    bairro: document.getElementById('bairro').value, 
-                    cidade: document.getElementById('cidade').value, 
-                    estado: document.getElementById('estado').value, 
-                    cep: document.getElementById('cep').value 
-                } 
+            const isPJ     = document.getElementById('pj-toggle')?.checked;
+            const btnSubmit = cadastroForm.querySelector('button[type="submit"]');
+            const msg       = document.getElementById('feedback-msg');
+
+            const showErr = text => {
+                if (msg) { msg.textContent = text; msg.className = 'feedback-msg feedback-error'; msg.classList.remove('hidden'); }
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Finalizar Cadastro'; }
             };
-            Auth.login(user);
-            const msg = document.getElementById('feedback-msg');
-            msg.textContent = 'Cadastro realizado com sucesso! Redirecionando...';
-            msg.className = 'feedback-msg feedback-success';
-            msg.classList.remove('hidden');
-            setTimeout(() => { window.location.href = 'minha-conta.html'; }, 1800);
-        });
-    }
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', e => {
-            e.preventDefault();
-            const emailVal = document.getElementById('email').value;
-            
-            // Tenta encontrar o usuário real para pegar o nome correto
-            const allUsers = Auth.getAllUsers();
-            const realUser = allUsers.find(u => u.email === emailVal);
-            
-            let displayName = '';
-            if (realUser) {
-                displayName = realUser.name;
-            } else {
-                // Fallback: deriva o nome do e-mail apenas se não houver cadastro prévio
-                displayName = emailVal.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Validando...'; }
+
+            // ---- Validações ----
+            const nomeRaw  = isPJ ? document.getElementById('razao-social')?.value : document.getElementById('nome')?.value;
+            const emailRaw = document.getElementById('email-cad').value;
+            const password = document.getElementById('senha-cad')?.value;
+            const telefone = isPJ ? document.getElementById('telefone-pj').value : document.getElementById('telefone-pf').value;
+            const cpfRaw   = !isPJ ? document.getElementById('cpf').value : null;
+            const cnpjRaw  = isPJ  ? document.getElementById('cnpj').value : null;
+
+            // Nome/Razão Social: PJ só precisa de mín 3 chars
+            if (!nomeRaw || nomeRaw.trim().length < 3)
+                return showErr((isPJ ? 'Razão Social' : 'Nome') + ' deve ter pelo menos 3 caracteres.');
+
+            if (!isPJ) {
+                // Nome completo PF: precisa de sobrenome e sem números
+                const nomeErr = Validators.nome(nomeRaw);
+                if (nomeErr) return showErr(nomeErr);
             }
 
-            Auth.login({
-                name: displayName || 'Usuário EcoStore',
-                email: emailVal,
-                phone: realUser?.phone || '(11) 99999-9999',
-                address: realUser?.address || { logradouro: 'Av. Paulista', numero: '1578', bairro: 'Bela Vista', cidade: 'São Paulo', estado: 'SP', cep: '01310-200' }
-            });
-            showToast('Login realizado! Bem-vindo(a) de volta.');
-            setTimeout(() => { window.location.href = 'minha-conta.html'; }, 1200);
+            const emailErr = Validators.email(emailRaw);
+            if (emailErr) return showErr(emailErr);
+
+            if (!password || password.length < 6)
+                return showErr('A senha deve ter no mínimo 6 caracteres.');
+
+            const telErr = Validators.telefone(telefone);
+            if (telErr) return showErr(telErr);
+
+            if (!isPJ && cpfRaw) {
+                const cpfErr = Validators.cpf(cpfRaw);
+                if (cpfErr) return showErr(cpfErr);
+            }
+            if (isPJ && cnpjRaw) {
+                const cnpjErr = Validators.cnpj(cnpjRaw);
+                if (cnpjErr) return showErr(cnpjErr);
+            }
+
+            if (btnSubmit) btnSubmit.textContent = 'Cadastrando...';
+
+            // ---- Sanitização antes de salvar ----
+            const userData = {
+                name:     Validators.sanitize.nome(nomeRaw || 'Cliente'),
+                email:    Validators.sanitize.email(emailRaw),
+                password: password,
+                phone:    Validators.sanitize.telefone(telefone),
+                cpf:      cpfRaw  ? Validators.sanitize.cpf(cpfRaw)   : null,
+                cnpj:     cnpjRaw ? Validators.sanitize.cnpj(cnpjRaw) : null,
+                address: {
+                    logradouro: document.getElementById('logradouro').value,
+                    numero:     document.getElementById('numero').value,
+                    bairro:     document.getElementById('bairro').value,
+                    cidade:     document.getElementById('cidade').value,
+                    estado:     document.getElementById('estado').value,
+                    cep:        Validators.sanitize.cep(document.getElementById('cep').value)
+                }
+            };
+
+            const result = await Auth.register(userData);
+            if (result.success) {
+                localStorage.setItem('ecostore_user', JSON.stringify(userData));
+                if (msg) { msg.textContent = 'Cadastro realizado com sucesso! Redirecionando...'; msg.className = 'feedback-msg feedback-success'; msg.classList.remove('hidden'); }
+                setTimeout(() => { window.location.href = 'minha-conta.html'; }, 1000);
+            } else {
+                showErr(result.error || 'Erro ao cadastrar.');
+            }
+        });
+    }
+
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const emailVal = document.getElementById('email').value.trim();
+            const passVal  = document.getElementById('senha').value.trim();
+            const btnSubmit = loginForm.querySelector('button[type="submit"]');
+            const msg = document.getElementById('login-msg');
+            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Entrando...'; }
+
+            const result = await Auth.loginWithPassword(emailVal, passVal);
+            if (result.success) {
+                showToast('Login realizado! Bem-vindo(a), ' + result.user.name + '!');
+                setTimeout(() => { window.location.href = 'minha-conta.html'; }, 1000);
+            } else {
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Entrar'; }
+                if (msg) { msg.textContent = result.error; msg.className = 'feedback-msg feedback-error'; msg.classList.remove('hidden'); }
+                else showToast(result.error, 'error');
+            }
         });
     }
 }
+
 
 // ============================================================
 // DASHBOARD (minha-conta.html)
@@ -781,16 +1000,28 @@ function initDashboard() {
         const dashPhone = document.getElementById('dash-phone');
         const dashAddr = document.getElementById('dash-address-box');
 
-        if (dashName) dashName.textContent = user.name;
-        if (dashFull) dashFull.textContent = user.name;
+        if (dashName) dashName.textContent = user.name || user.email || 'Cliente';
+        if (dashFull) dashFull.textContent = user.name || user.email || 'Cliente';
         if (dashEmail) dashEmail.textContent = user.email;
         if (dashPhone) dashPhone.textContent = user.phone || 'Não informado';
-        if (dashAddr && user.address) {
-            dashAddr.innerHTML = 
-                '<p class="info-value">' + user.address.logradouro + ', ' + user.address.numero + '</p>' +
-                '<p class="info-value">' + user.address.bairro + ', ' + user.address.cidade + ' - ' + user.address.estado + '</p>' +
-                '<p class="info-value">CEP: ' + user.address.cep + '</p>';
+
+        const dashCpf = document.getElementById('dash-cpf');
+        if (dashCpf) dashCpf.textContent = user.cpf || (user.cnpj ? 'CNPJ: ' + user.cnpj : 'Não informado');
+
+        if (dashAddr) {
+            // address can be a JSON string (Supabase TEXT) or an object
+            let addr = user.address;
+            if (typeof addr === 'string') { try { addr = JSON.parse(addr); } catch(e) { addr = null; } }
+            if (addr && addr.logradouro) {
+                dashAddr.innerHTML =
+                    '<p class="info-value">' + addr.logradouro + ', ' + addr.numero + '</p>' +
+                    '<p class="info-value">' + addr.bairro + ', ' + addr.cidade + ' - ' + addr.estado + '</p>' +
+                    '<p class="info-value">CEP: ' + addr.cep + '</p>';
+            } else {
+                dashAddr.innerHTML = '<p class="info-value" style="color:var(--text-muted)">Endereço não cadastrado.</p>';
+            }
         }
+
     } else {
         // Redireciona se tentar acessar a área sem estar logado
         if (window.location.pathname.includes('minha-conta.html')) {
@@ -800,39 +1031,49 @@ function initDashboard() {
 
     const editUserForm = document.getElementById('edit-user-form');
     if (editUserForm) {
-        editUserForm.addEventListener('submit', e => {
+        editUserForm.addEventListener('submit', async e => {
             e.preventDefault();
             const user = Auth.getUser();
             const oldEmail = user.email;
-            
-            user.name = document.getElementById('edit-name').value;
-            user.email = document.getElementById('edit-email').value;
-            user.phone = document.getElementById('edit-phone').value;
+            const btn = editUserForm.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
 
-            // Atualiza a sessão
-            localStorage.setItem('ecostore_user', JSON.stringify(user));
-            
-            // Atualiza na lista global de usuários também
-            const allUsers = Auth.getAllUsers();
-            const idx = allUsers.findIndex(u => u.email === oldEmail);
-            if (idx > -1) {
-                allUsers[idx] = { ...allUsers[idx], ...user };
-                localStorage.setItem('ecostore_all_users', JSON.stringify(allUsers));
+            user.name  = document.getElementById('edit-name').value.trim();
+            user.email = document.getElementById('edit-email').value.trim();
+            user.phone = document.getElementById('edit-phone').value.trim();
+
+            // Update in Supabase
+            const { error } = await supabase
+                .from('customers')
+                .update({ name: user.name, email: user.email, phone: user.phone })
+                .eq('email', oldEmail);
+
+            if (error) {
+                showToast('Erro ao salvar: ' + error.message, 'error');
+                if (btn) { btn.disabled = false; btn.textContent = 'Salvar Alterações'; }
+                return;
             }
 
+            // Update local session
+            localStorage.setItem('ecostore_user', JSON.stringify(user));
+
+            if (btn) { btn.disabled = false; btn.textContent = 'Salvar Alterações'; }
             showToast('Dados atualizados com sucesso!');
             closeEditUserModal();
-            initDashboard(); // Re-renderiza os dados na tela
-            updateHeaderAuth(); // Atualiza o nome no cabeçalho
+            initDashboard();
+            updateHeaderAuth();
         });
     }
 
     const editAddressForm = document.getElementById('edit-address-form');
     if (editAddressForm) {
-        editAddressForm.addEventListener('submit', e => {
+        editAddressForm.addEventListener('submit', async e => {
             e.preventDefault();
             const user = Auth.getUser();
-            user.address = {
+            const btn = editAddressForm.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+
+            const newAddress = {
                 cep: document.getElementById('edit-addr-cep').value,
                 logradouro: document.getElementById('edit-addr-logradouro').value,
                 numero: document.getElementById('edit-addr-numero').value,
@@ -840,13 +1081,24 @@ function initDashboard() {
                 cidade: document.getElementById('edit-addr-cidade').value,
                 estado: document.getElementById('edit-addr-estado').value
             };
-            localStorage.setItem('ecostore_user', JSON.stringify(user));
-            const allUsers = Auth.getAllUsers();
-            const idx = allUsers.findIndex(u => u.email === user.email);
-            if (idx > -1) {
-                allUsers[idx].address = user.address;
-                localStorage.setItem('ecostore_all_users', JSON.stringify(allUsers));
+
+            // Update in Supabase
+            const { error } = await supabase
+                .from('customers')
+                .update({ address: newAddress })
+                .eq('email', user.email);
+
+            if (error) {
+                showToast('Erro ao salvar endereço: ' + error.message, 'error');
+                if (btn) { btn.disabled = false; btn.textContent = 'Salvar Endereço'; }
+                return;
             }
+
+            // Update local session
+            user.address = newAddress;
+            localStorage.setItem('ecostore_user', JSON.stringify(user));
+
+            if (btn) { btn.disabled = false; btn.textContent = 'Salvar Endereço'; }
             showToast('Endereço atualizado!');
             closeEditAddressModal();
             initDashboard();
@@ -981,15 +1233,97 @@ window.closeEditAddressModal = function() {
     setTimeout(() => document.getElementById('edit-address-modal').classList.add('hidden'), 300);
 };
 
-window.buscaCepEdit = function() {
-    const cep = document.getElementById('edit-addr-cep').value.replace(/\D/g, '');
-    if (cep.length >= 8) {
-        document.getElementById('edit-addr-logradouro').value = 'Av. Paulista';
-        document.getElementById('edit-addr-bairro').value = 'Bela Vista';
-        document.getElementById('edit-addr-cidade').value = 'São Paulo';
-        document.getElementById('edit-addr-estado').value = 'SP';
-        showToast('Endereço encontrado!');
-    } else {
-        showToast('CEP inválido.', 'error');
+window.buscaCepEdit = async function() {
+    const btn = document.querySelector('[onclick="buscaCepEdit()"]');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+    const result = await Validators.buscarCep(
+        document.getElementById('edit-addr-cep').value,
+        {
+            logradouro: document.getElementById('edit-addr-logradouro'),
+            bairro:     document.getElementById('edit-addr-bairro'),
+            cidade:     document.getElementById('edit-addr-cidade'),
+            estado:     document.getElementById('edit-addr-estado')
+        }
+    );
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-search"></i>'; }
+    if (result.ok) showToast('Endereço encontrado!');
+    else showToast(result.msg, 'error');
+};
+
+// ============================================================
+// MODAL: ALTERAR SENHA
+// ============================================================
+window.openChangePasswordModal = function() {
+    const modal = document.getElementById('change-password-modal');
+    const msg   = document.getElementById('change-pass-msg');
+    if (!modal) return;
+    // Clear fields
+    document.getElementById('current-password').value = '';
+    document.getElementById('new-password').value = '';
+    document.getElementById('confirm-password').value = '';
+    if (msg) { msg.textContent = ''; msg.className = 'feedback-msg hidden'; }
+    modal.classList.remove('hidden');
+    setTimeout(() => modal.classList.add('visible'), 10);
+
+    const form = document.getElementById('change-password-form');
+    if (form && !form._passwordHandlerSet) {
+        form._passwordHandlerSet = true;
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            const user        = Auth.getUser();
+            const currentPass = document.getElementById('current-password').value;
+            const newPass     = document.getElementById('new-password').value;
+            const confirmPass = document.getElementById('confirm-password').value;
+            const btn         = form.querySelector('button[type="submit"]');
+            const msgEl       = document.getElementById('change-pass-msg');
+
+            const showMsg = (text, isError) => {
+                msgEl.textContent = text;
+                msgEl.className = 'feedback-msg ' + (isError ? 'feedback-error' : 'feedback-success');
+                msgEl.classList.remove('hidden');
+            };
+
+            // 1. Verify current password against Supabase
+            const { data: check } = await supabase
+                .from('customers')
+                .select('id')
+                .eq('email', user.email)
+                .eq('password', currentPass)
+                .single();
+
+            if (!check) { showMsg('Senha atual incorreta.', true); return; }
+
+            // 2. Validate new password
+            if (newPass.length < 6) { showMsg('A nova senha deve ter pelo menos 6 caracteres.', true); return; }
+            if (newPass !== confirmPass) { showMsg('As senhas não conferem.', true); return; }
+
+            // 3. Update in Supabase
+            if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+            const { error } = await supabase
+                .from('customers')
+                .update({ password: newPass })
+                .eq('email', user.email);
+
+            if (error) {
+                showMsg('Erro ao salvar: ' + error.message, true);
+                if (btn) { btn.disabled = false; btn.textContent = 'Salvar Nova Senha'; }
+                return;
+            }
+
+            // 4. Update localStorage session
+            user.password = newPass;
+            localStorage.setItem('ecostore_user', JSON.stringify(user));
+
+            if (btn) { btn.disabled = false; btn.textContent = 'Salvar Nova Senha'; }
+            showMsg('Senha alterada com sucesso!', false);
+            setTimeout(() => window.closeChangePasswordModal(), 1500);
+        });
     }
+};
+
+window.closeChangePasswordModal = function() {
+    const modal = document.getElementById('change-password-modal');
+    if (!modal) return;
+    modal.classList.remove('visible');
+    setTimeout(() => modal.classList.add('hidden'), 300);
 };

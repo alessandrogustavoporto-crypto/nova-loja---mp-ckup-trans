@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     /* Color Palette */
     --primary-green: #1a5c38; /* Predominant Green */
     --light-green: #2a8a55;
@@ -1239,7 +1239,7 @@ input:checked + .slider:before {
 @media (max-width: 600px) { .cart-table thead { display: none !important; } .cart-table td { display: block !important; padding: 8px 15px; border: none; } .cart-row { border-bottom: 1px solid var(--border-color); } }
 
 /* ============================================================
-   USER NAV WRAPPER — tooltip + logged-in indicator
+   USER NAV WRAPPER â€” tooltip + logged-in indicator
    ============================================================ */
 .user-nav-wrapper {
     position: relative;
@@ -1247,40 +1247,7 @@ input:checked + .slider:before {
     align-items: center;
 }
 
-.user-tooltip {
-    position: absolute;
-    bottom: calc(100% + 10px);
-    left: 50%;
-    transform: translateX(-50%) translateY(6px);
-    background: var(--dark-green);
-    color: var(--white);
-    font-size: 13px;
-    font-weight: 500;
-    padding: 6px 12px;
-    border-radius: var(--radius-full);
-    white-space: nowrap;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    box-shadow: var(--shadow-md);
-    z-index: 100;
-}
 
-/* Arrow below tooltip */
-.user-tooltip::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-top-color: var(--dark-green);
-}
-
-.user-nav-wrapper:hover .user-tooltip {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-}
 
 /* Logged-in icon glow */
 .user-logged-in {
@@ -1434,7 +1401,7 @@ input:checked + .slider:before {
 @media (max-width: 600px) { .cart-table thead { display: none !important; } .cart-table td { display: block !important; padding: 8px 15px; border: none; } .cart-row { border-bottom: 1px solid var(--border-color); } }
 
 /* ============================================================
-   USER NAV WRAPPER — tooltip + logged-in indicator
+   USER NAV WRAPPER â€” tooltip + logged-in indicator
    ============================================================ */
 .user-nav-wrapper {
     position: relative;
@@ -1442,48 +1409,6 @@ input:checked + .slider:before {
     align-items: center;
 }
 
-.user-tooltip {
-    position: absolute;
-    top: calc(100% + 12px);
-    left: 50%;
-    transform: translateX(-50%) translateY(-6px);
-    background: #000000; /* Preto sólido para contraste máximo */
-    color: var(--primary-orange);
-    font-size: 13px;
-    font-weight: 700; /* Texto em negrito */
-    padding: 7px 14px;
-    border-radius: var(--radius-sm);
-    white-space: nowrap;
-    pointer-events: none;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    z-index: 100;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-
-/* Arrow above tooltip */
-.user-tooltip::after {
-    content: '';
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-bottom-color: #000000;
-}
-
-.user-nav-wrapper:hover .user-tooltip {
-    opacity: 1;
-    visibility: visible;
-    transform: translateX(-50%) translateY(0);
-}
-
-/* Logged-in icon glow */
-.user-logged-in {
-    color: #a8e6c3 !important;
-}
 
 .user-logged-in i {
     filter: drop-shadow(0 0 4px rgba(168, 230, 195, 0.6));
@@ -1644,6 +1569,8 @@ input:checked + .slider:before {
     text-align: justify; 
     white-space: pre-line;
     margin: 0;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 .single-product-info h2 { min-height: 40px; display: flex; align-items: center; }
 
@@ -1651,8 +1578,10 @@ input:checked + .slider:before {
 .drawer-desc {
     max-height: 250px;
     overflow-y: auto;
+    overflow-x: hidden;
     padding-right: 10px;
     min-height: 100px;
+    word-wrap: break-word;
 }
 .drawer-desc::-webkit-scrollbar { width: 5px; }
 .drawer-desc::-webkit-scrollbar-track { background: #f1f1f1; }
