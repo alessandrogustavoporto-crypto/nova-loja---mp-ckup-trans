@@ -782,7 +782,6 @@ function syncCurrentToAllUsers() {
 function updateHeaderAuth() {
     const link    = document.getElementById('user-nav-link');
     const icon    = document.getElementById('user-nav-icon');
-    const tooltip = document.getElementById('user-tooltip');
     const wrapper = document.getElementById('user-nav-wrapper');
     if (!link || !wrapper) return;
 
@@ -794,7 +793,6 @@ function updateHeaderAuth() {
         icon.className = 'fas fa-user-circle';
         link.classList.add('user-logged-in');
         link.title = 'Olá, ' + firstName;
-        if (tooltip) tooltip.textContent = 'Olá, ' + firstName + ' ▸';
 
         // Use onclick to avoid stacking multiple listeners
         link.href = 'javascript:void(0)';
@@ -808,7 +806,6 @@ function updateHeaderAuth() {
         link.href = 'login.html';
         link.onclick = null;
         icon.className = 'far fa-user';
-        if (tooltip) tooltip.textContent = 'Entrar';
         link.classList.remove('user-logged-in');
     }
 
