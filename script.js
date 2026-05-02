@@ -566,13 +566,18 @@ function renderGrid(gridId, paginationId, products, page, perPage, type, cat = n
     const fmt = p => 'R$ ' + p.toFixed(2).replace('.', ',');
 
     paginated.forEach(product => {
+        const hasVariations = product.variations && product.variations.length > 0;
+        const btnText = hasVariations ? 'Escolher Opções' : 'Comprar';
+        const btnAction = hasVariations ? `openProductDetail(${product.id})` : `addToCart(${product.id})`;
+        const btnIcon = hasVariations ? 'fa-list-ul' : 'fa-cart-plus';
+
         grid.innerHTML += '<div class="product-card">' +
             (product.offer ? '<span class="badge-offer">' + product.offer + '</span>' : '') +
             '<img src="' + product.image + '" alt="' + product.name + '" class="product-img" onclick="openProductDetail(' + product.id + ')" style="cursor:pointer">' +
             '<span class="product-category">' + product.category + '</span>' +
             '<h3 class="product-title" onclick="openProductDetail(' + product.id + ')" style="cursor:pointer">' + product.name + '</h3>' +
             '<div class="product-price">' + (product.promoActive && product.promoPrice ? fmt(product.promoPrice) : fmt(product.price)) + (product.promoActive && product.promoPrice ? '<span>' + fmt(product.price) + '</span>' : '') + '</div>' +
-            '<button class="btn-buy" onclick="addToCart(' + product.id + ')"><i class="fas fa-cart-plus"></i> Comprar</button>' +
+            '<button class="btn-buy" onclick="' + btnAction + '"><i class="fas ' + btnIcon + '"></i> ' + btnText + '</button>' +
             '</div>';
     });
 
@@ -771,6 +776,14 @@ window.openProductDetail = function(id) {
     // Bind Add to Cart
     const addBtn = document.getElementById('single-add-btn');
     addBtn.onclick = () => {
+        if (product.variations && product.variations.length > 0 && !selectedOption) {
+            showToast('Por favor, selecione uma opção antes de adicionar ao carrinho.', 'error');
+            // Shake effect on variations container
+            varContainer.style.animation = 'shake 0.5s';
+            setTimeout(() => { varContainer.style.animation = ''; }, 500);
+            return;
+        }
+
         const qty = parseInt(document.getElementById('single-qty').value);
         const cartItemName = selectedOption ? `${product.name} - ${selectedOption}` : product.name;
         
