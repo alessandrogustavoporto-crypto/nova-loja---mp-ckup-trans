@@ -946,6 +946,7 @@ function initCheckoutPage() {
             }
         } catch (err) {
             console.error(err);
+            alert('ERRO TÉCNICO: ' + err.message);
             showToast('Erro ao conectar com o Mercado Pago. Tente novamente.', 'error');
             document.getElementById('btn-confirm-order').disabled = false;
             document.getElementById('btn-confirm-order').textContent = 'Confirmar Pedido';
