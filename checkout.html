@@ -40,12 +40,24 @@
 
                 <!-- Payment -->
                 <div class="checkout-section">
-                    <h2 class="checkout-section-title"><i class="fas fa-lock"></i> Pagamento Seguro</h2>
-                    <div class="payment-options" style="display: block; text-align: center; padding: 20px;">
-                        <img src="https://logospng.org/download/mercado-pago/logo-mercado-pago-icone-1024.png" alt="Mercado Pago" style="width: 60px; margin-bottom: 15px;">
-                        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.5;">Você será redirecionado para o ambiente 100% seguro do <strong>Mercado Pago</strong> para escolher pagar com PIX, Cartão de Crédito ou Boleto.</p>
-                        <input type="radio" name="payment" value="mercadopago" checked style="display:none;">
+                    <h2 class="checkout-section-title"><i class="fas fa-credit-card"></i> Forma de Pagamento</h2>
+                    
+                    <div class="payment-tabs">
+                        <button class="payment-tab active" data-type="card"><i class="fas fa-credit-card"></i> Cartão</button>
+                        <button class="payment-tab" data-type="pix"><i class="fas fa-qrcode"></i> PIX</button>
                     </div>
+
+                    <!-- Card Form -->
+                    <div id="payment-card-form" class="payment-content active">
+                        <div id="cardPaymentBrick_container"></div>
+                    </div>
+
+                    <!-- PIX Content -->
+                    <div id="payment-pix-content" class="payment-content">
+                        <div id="pixPaymentBrick_container"></div>
+                    </div>
+
+                    <input type="hidden" id="payment_method_id">
                 </div>
             </div>
 

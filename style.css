@@ -1621,3 +1621,53 @@ input:checked + .slider:before {
     50% { transform: translateX(5px); }
     75% { transform: translateX(-5px); }
 }
+
+/* --- Checkout Transparente --- */
+.payment-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: #f0f2f5;
+    padding: 5px;
+    border-radius: var(--radius-md);
+}
+
+.payment-tab {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.payment-tab.active {
+    background: var(--white);
+    color: var(--primary-green);
+    box-shadow: var(--shadow-sm);
+}
+
+.payment-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.payment-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#cardPaymentBrick_container, #pixPaymentBrick_container {
+    min-height: 200px;
+}

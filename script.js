@@ -1018,9 +1018,12 @@ window.goToCheckout = function() {
 };
 
 // ============================================================
-// CHECKOUT PAGE
+// CHECKOUT PAGE - TRANSPARENT CHECKOUT
 // ============================================================
-function initCheckoutPage() {
+let mp = null;
+let cardPaymentBrickController = null;
+
+async function initCheckoutPage() {
     const checkoutWrapper = document.getElementById('checkout-wrapper');
     if (!checkoutWrapper) return;
     const items = Cart.getItems();
@@ -1035,75 +1038,211 @@ function initCheckoutPage() {
     const addr = user?.address || { logradouro: '—', numero: '—', bairro: '—', cidade: '—', estado: '—', cep: '—' };
     document.getElementById('checkout-address').textContent = addr.logradouro + ', ' + addr.numero + ' — ' + addr.bairro + ', ' + addr.cidade + '/' + addr.estado + ' | CEP: ' + addr.cep;
 
-    document.getElementById('btn-confirm-order').addEventListener('click', async () => {
-        const payment = document.querySelector('input[name="payment"]:checked');
-        if (!payment) { showToast('Selecione uma forma de pagamento.', 'error'); return; }
-        
-        const btn = document.getElementById('btn-confirm-order');
-        btn.disabled = true;
-        btn.textContent = 'Processando...';
+    // --- MERCADO PAGO INITIALIZATION ---
+    // Substitua pela sua Public Key
+    const MP_PUBLIC_KEY = 'TEST-f0761e0b-5d9c-4b6e-8e3a-9e3b9f4a5c6e'; // Placeholder TEST key
+    mp = new MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
 
-        try {
-            // 1. Cria o pedido no Supabase
-            const order = await Orders.create(Cart.getItems(), Cart.total(), addr);
+    // --- TAB SWITCHING ---
+    const tabs = document.querySelectorAll('.payment-tab');
+    const contents = document.querySelectorAll('.payment-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const type = tab.dataset.type;
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(`payment-${type}-form`)?.classList.add('active');
+            document.getElementById(`payment-${type}-content`)?.classList.add('active');
             
-            // 2. Chama o Worker para gerar o pagamento
-            const response = await fetch('https://api-pagamentos.alessandrogustavoporto.workers.dev', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    items: Cart.getItems().map(i => ({ name: i.name, qty: i.qty, price: i.price })), 
-                    orderId: order.id, 
-                    payer: user 
-                })
-            });
-            const data = await response.json();
+            if (type === 'card' && !cardPaymentBrickController) initCardBrick();
+            if (type === 'pix') initPixBrick();
+        });
+    });
 
-            if (data.initPoint) {
-                // 3. Abre o Mercado Pago em uma nova aba
-                window.open(data.initPoint, '_blank');
-                
-                // 4. INICIA O VIGIA: Fica conferindo se o pedido foi pago
-                showToast('Aguardando pagamento...', 'success');
-                btn.textContent = 'Aguardando Pagamento...';
-                
-                const checkStatus = setInterval(async () => {
-                    const dbId = order.id.replace('#', '').replace(/^0+/, '');
-                    console.log('--- VIGIA: Conferindo pedido', dbId, '---');
-                    
-                    const { data: orderData, error: subaError } = await supabase
-                        .from('orders')
-                        .select('status')
-                        .eq('id', dbId)
-                        .single();
-                    
-                    if (subaError) {
-                        console.log('ERRO NO VIGIA:', subaError.message);
-                    } else {
-                        console.log('STATUS ATUAL NO BANCO:', orderData?.status);
-                    }
-                    
-                    if (orderData && orderData.status === 'separacao') {
-                        console.log('!!! PAGAMENTO DETECTADO !!!');
-                        clearInterval(checkStatus);
-                        Cart.clear();
-                        showToast('Pagamento Confirmado! Redirecionando...', 'success');
-                        setTimeout(() => { window.location.href = 'minha-conta.html'; }, 2000);
-                    }
-                }, 2000);
+    // Default: Card
+    initCardBrick();
 
-            } else { 
-                const msg = data.detail?.message || data.error || 'Erro desconhecido';
-                throw new Error('Erro Mercado Pago: ' + msg); 
-            }
-        } catch (err) {
-            console.error(err);
-            alert('ERRO TÉCNICO: ' + err.message);
-            btn.disabled = false;
-            btn.textContent = 'Confirmar Pedido';
+    // Confirm Order Button
+    document.getElementById('btn-confirm-order').addEventListener('click', async () => {
+        const activeTab = document.querySelector('.payment-tab.active').dataset.type;
+        
+        if (activeTab === 'card') {
+            // O Brick do cartão gerencia o envio via callback (onSubmit)
+            // Mas podemos forçar o clique se necessário ou usar o botão do Brick
+            // Para manter a UI consistente, vamos ocultar o botão global e usar o do Brick ou vice-versa.
+            // Aqui vamos disparar o submit do Brick.
+            showToast('Por favor, finalize o pagamento no formulário do cartão.', 'info');
+        } else if (activeTab === 'pix') {
+            // Lógica similar para PIX
         }
     });
 }
+
+async function initCardBrick() {
+    const bricksBuilder = mp.bricks();
+    const user = Auth.getUser();
+    const total = Cart.total();
+
+    const renderCardPaymentBrick = async (bricksBuilder) => {
+        const settings = {
+            initialization: {
+                amount: total,
+                payer: {
+                    email: user?.email || '',
+                },
+            },
+            customization: {
+                visual: {
+                    style: {
+                        theme: 'default',
+                    },
+                },
+                paymentMethods: {
+                    maxInstallments: 12,
+                }
+            },
+            callbacks: {
+                onReady: () => {
+                    // Brick pronto
+                    const btn = document.getElementById('btn-confirm-order');
+                    if (btn) btn.style.display = 'none'; // Esconde botão global para usar o do Brick
+                },
+                onSubmit: async (formData) => {
+                    return processTransparentPayment(formData);
+                },
+                onError: (error) => {
+                    console.error('Brick Error:', error);
+                },
+            },
+        };
+        cardPaymentBrickController = await bricksBuilder.create(
+            'payment',
+            'cardPaymentBrick_container',
+            settings
+        );
+    };
+    renderCardPaymentBrick(bricksBuilder);
+}
+
+async function initPixBrick() {
+    // Implementação do Brick de PIX se desejado, ou lógica customizada
+    const container = document.getElementById('pixPaymentBrick_container');
+    container.innerHTML = `
+        <div style="text-align:center; padding: 20px;">
+            <i class="fas fa-qrcode" style="font-size: 40px; color: var(--primary-green); margin-bottom: 15px;"></i>
+            <p>Ao confirmar, um código PIX será gerado para pagamento instantâneo.</p>
+            <button onclick="processPixPayment()" class="btn-primary" style="margin-top: 15px;">Gerar PIX</button>
+        </div>
+    `;
+}
+
+async function processTransparentPayment(formData) {
+    const btn = document.getElementById('btn-confirm-order');
+    const user = Auth.getUser();
+    const addr = user?.address || {};
+
+    try {
+        // 1. Cria o pedido no Supabase primeiro
+        const order = await Orders.create(Cart.getItems(), Cart.total(), addr);
+        
+        // 2. Envia para o Supabase Edge Function processar o pagamento transparente
+        const response = await fetch('https://kakeytwbtnwbkofintuh.supabase.co/functions/v1/mercadopago-checkout', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseKey}`
+            },
+            body: JSON.stringify({
+                transaction_amount: formData.transaction_amount,
+                token: formData.token,
+                description: 'Compra EcoStore - Pedido ' + order.id,
+                installments: formData.installments,
+                payment_method_id: formData.payment_method_id,
+                issuer_id: formData.issuer_id,
+                payer: {
+                    email: formData.payer.email,
+                    identification: formData.payer.identification
+                },
+                external_reference: order.id,
+                orderId: order.id
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'approved') {
+            showToast('Pagamento aprovado com sucesso!', 'success');
+            Cart.clear();
+            setTimeout(() => { window.location.href = 'minha-conta.html'; }, 2000);
+        } else if (result.status === 'in_process') {
+            showToast('Pagamento em análise.', 'info');
+            setTimeout(() => { window.location.href = 'minha-conta.html'; }, 2000);
+        } else {
+            showToast('Pagamento recusado: ' + (result.detail || 'Verifique os dados'), 'error');
+        }
+    } catch (err) {
+        console.error('Erro no processamento:', err);
+        showToast('Erro técnico ao processar pagamento.', 'error');
+    }
+}
+
+async function processPixPayment() {
+    const user = Auth.getUser();
+    const addr = user?.address || {};
+    
+    try {
+        const order = await Orders.create(Cart.getItems(), Cart.total(), addr);
+        const response = await fetch('https://kakeytwbtnwbkofintuh.supabase.co/functions/v1/mercadopago-checkout', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseKey}`
+            },
+            body: JSON.stringify({
+                transaction_amount: Cart.total(),
+                description: 'Compra EcoStore PIX - Pedido ' + order.id,
+                payment_method_id: 'pix',
+                payer: { email: user.email },
+                external_reference: order.id,
+                orderId: order.id
+            })
+        });
+        const result = await response.json();
+        
+        if (result.point_of_interaction) {
+            const qrCode = result.point_of_interaction.transaction_data.qr_code;
+            const qrCodeBase64 = result.point_of_interaction.transaction_data.qr_code_base64;
+            
+            const container = document.getElementById('pixPaymentBrick_container');
+            container.innerHTML = `
+                <div style="text-align:center;">
+                    <h4>Escaneie o QR Code</h4>
+                    <img src="data:image/png;base64,${qrCodeBase64}" style="width:200px; margin: 10px 0;">
+                    <p style="font-size:12px; word-break:break-all; background:#eee; padding:10px;">${qrCode}</p>
+                    <button class="btn-small btn-primary" onclick="navigator.clipboard.writeText('${qrCode}'); showToast('Código copiado!')">Copiar Código PIX</button>
+                </div>
+            `;
+            showToast('PIX gerado! Aguardando pagamento...');
+            
+            // Inicia vigia
+            const checkStatus = setInterval(async () => {
+                const dbId = order.id.replace('#', '').replace(/^0+/, '');
+                const { data } = await supabase.from('orders').select('status').eq('id', dbId).single();
+                if (data && data.status === 'separacao') {
+                    clearInterval(checkStatus);
+                    Cart.clear();
+                    showToast('Pagamento Confirmado!', 'success');
+                    setTimeout(() => { window.location.href = 'minha-conta.html'; }, 2000);
+                }
+            }, 3000);
+        }
+    } catch (e) {
+        showToast('Erro ao gerar PIX.', 'error');
+    }
+}
+
 
 // ============================================================
 // AUTH PAGES
