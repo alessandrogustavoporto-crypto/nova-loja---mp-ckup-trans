@@ -1447,13 +1447,14 @@ function initDashboard() {
             if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
 
             user.name  = document.getElementById('edit-name').value.trim();
+            user.cpf   = document.getElementById('edit-cpf').value.trim();
             user.email = document.getElementById('edit-email').value.trim();
             user.phone = document.getElementById('edit-phone').value.trim();
 
             // Update in Supabase
             const { error } = await supabase
                 .from('customers')
-                .update({ name: user.name, email: user.email, phone: user.phone })
+                .update({ name: user.name, cpf: user.cpf, email: user.email, phone: user.phone })
                 .eq('email', oldEmail);
 
             if (error) {
@@ -1703,6 +1704,7 @@ window.openEditUserModal = function() {
     const user = Auth.getUser();
     if (!user) return;
     document.getElementById('edit-name').value = user.name || '';
+    document.getElementById('edit-cpf').value = user.cpf || '';
     document.getElementById('edit-email').value = user.email || '';
     document.getElementById('edit-phone').value = user.phone || '';
     document.getElementById('edit-user-modal').classList.remove('hidden');
