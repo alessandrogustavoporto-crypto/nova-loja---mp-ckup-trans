@@ -1089,19 +1089,9 @@ async function initCardBrick() {
                 amount: total,
                 payer: {
                     email: user?.email || '',
-                    identification: {
-                        type: 'CPF',
-                        number: user?.cpf || ''
-                    },
                 },
             },
             customization: {
-                paymentMethods: {
-                    maxInstallments: 12,
-                    types: {
-                        excluded: ['bank_transfer', 'ticket']
-                    }
-                },
                 visual: {
                     style: {
                         theme: 'default',
@@ -1114,19 +1104,18 @@ async function initCardBrick() {
                     if (btn) btn.style.display = 'none';
                 },
                 onSubmit: async (formData) => {
-                    // Adiciona entity_type se estiver faltando
-                    if (!formData.payer.entity_type) {
-                        formData.payer.entity_type = 'individual';
-                    }
                     return processTransparentPayment(formData);
                 },
                 onError: (error) => {
                     console.error('Brick Error:', error);
+                    // Se o Brick falhar, mostra o botão global de novo como fallback
+                    const btn = document.getElementById('btn-confirm-order');
+                    if (btn) btn.style.display = 'block';
                 },
             },
         };
         cardPaymentBrickController = await bricksBuilder.create(
-            'payment',
+            'cardPayment',
             'cardPaymentBrick_container',
             settings
         );
