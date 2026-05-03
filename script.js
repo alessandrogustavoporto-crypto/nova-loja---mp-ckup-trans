@@ -1231,6 +1231,10 @@ async function processPixPayment() {
             `;
             showToast('PIX gerado! Aguardando pagamento...');
             
+            // Esconde o botão de confirmação lateral
+            const btnGlobal = document.getElementById('btn-confirm-order');
+            if (btnGlobal) btnGlobal.style.display = 'none';
+            
             // Inicia vigia
             const checkStatus = setInterval(async () => {
                 const dbId = order.id.replace('#', '').replace(/^0+/, '');
