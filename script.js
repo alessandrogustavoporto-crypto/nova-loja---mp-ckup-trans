@@ -1025,52 +1025,82 @@ function initCheckoutPage() {
     if (!checkoutWrapper) return;
     const items = Cart.getItems();
     if (items.length === 0) { window.location.href = 'carrinho.html'; return; }
+    
     const fmt = v => 'R$ ' + v.toFixed(2).replace('.', ',');
     const summaryBody = document.getElementById('checkout-summary-body');
     summaryBody.innerHTML = items.map(i => '<tr><td><img src="' + i.image + '" class="cart-thumb"> ' + i.name + '</td><td class="text-center">' + i.qty + 'x</td><td class="cart-subtotal">' + fmt(i.price * i.qty) + '</td></tr>').join('');
     document.getElementById('checkout-total-value').textContent = fmt(Cart.total());
+    
     const user = Auth.getUser();
-    if (user && user.address) {
-        const a = user.address;
-        document.getElementById('checkout-address').textContent = a.logradouro + ', ' + a.numero + ' — ' + a.bairro + ', ' + a.cidade + '/' + a.estado + ' | CEP: ' + a.cep;
-    }
+    const addr = user?.address || { logradouro: '—', numero: '—', bairro: '—', cidade: '—', estado: '—', cep: '—' };
+    document.getElementById('checkout-address').textContent = addr.logradouro + ', ' + addr.numero + ' — ' + addr.bairro + ', ' + addr.cidade + '/' + addr.estado + ' | CEP: ' + addr.cep;
+
     document.getElementById('btn-confirm-order').addEventListener('click', async () => {
         const payment = document.querySelector('input[name="payment"]:checked');
         if (!payment) { showToast('Selecione uma forma de pagamento.', 'error'); return; }
-        const addr = user?.address || { logradouro: 'Av. Paulista', numero: '1578', bairro: 'Bela Vista', cidade: 'São Paulo', estado: 'SP', cep: '01310-200' };
         
-        document.getElementById('btn-confirm-order').disabled = true;
-        document.getElementById('btn-confirm-order').textContent = 'Processando...';
+        const btn = document.getElementById('btn-confirm-order');
+        btn.disabled = true;
+        btn.textContent = 'Processando...';
 
-        // Cria pedido no banco como "Processando"
-        const order = await Orders.create(Cart.getItems(), Cart.total(), addr);
-        
-        // ----------------------------------------------------
-        // INTEGRAÇÃO MERCADO PAGO
-        // ----------------------------------------------------
         try {
-            // Chamada para a Função do Cloudflare (API Backend)
+            // 1. Cria o pedido no Supabase
+            const order = await Orders.create(Cart.getItems(), Cart.total(), addr);
+            
+            // 2. Chama o Worker para gerar o pagamento
             const response = await fetch('https://api-pagamentos.alessandrogustavoporto.workers.dev', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ items: Cart.getItems(), orderId: order.id, payer: user })
+                body: JSON.stringify({ 
+                    items: Cart.getItems().map(i => ({ name: i.name, qty: i.qty, price: i.price })), 
+                    orderId: order.id, 
+                    payer: user 
+                })
             });
-            
             const data = await response.json();
 
             if (data.initPoint) {
-                // Redireciona diretamente para o Mercado Pago (mais confiável e seguro)
-                window.location.href = data.initPoint;
-            } else {
-                console.error('Erro na API do MP:', data);
-                throw new Error(data.error || 'Erro ao gerar link de pagamento');
+                // 3. Abre o Mercado Pago em uma nova aba
+                window.open(data.initPoint, '_blank');
+                
+                // 4. INICIA O VIGIA: Fica conferindo se o pedido foi pago
+                showToast('Aguardando pagamento...', 'success');
+                btn.textContent = 'Aguardando Pagamento...';
+                
+                const checkStatus = setInterval(async () => {
+                    const dbId = order.id.replace('#', '').replace(/^0+/, '');
+                    console.log('--- VIGIA: Conferindo pedido', dbId, '---');
+                    
+                    const { data: orderData, error: subaError } = await supabase
+                        .from('orders')
+                        .select('status')
+                        .eq('id', dbId)
+                        .single();
+                    
+                    if (subaError) {
+                        console.log('ERRO NO VIGIA:', subaError.message);
+                    } else {
+                        console.log('STATUS ATUAL NO BANCO:', orderData?.status);
+                    }
+                    
+                    if (orderData && orderData.status === 'separacao') {
+                        console.log('!!! PAGAMENTO DETECTADO !!!');
+                        clearInterval(checkStatus);
+                        Cart.clear();
+                        showToast('Pagamento Confirmado! Redirecionando...', 'success');
+                        setTimeout(() => { window.location.href = 'minha-conta.html'; }, 2000);
+                    }
+                }, 2000);
+
+            } else { 
+                const msg = data.detail?.message || data.error || 'Erro desconhecido';
+                throw new Error('Erro Mercado Pago: ' + msg); 
             }
         } catch (err) {
             console.error(err);
             alert('ERRO TÉCNICO: ' + err.message);
-            showToast('Erro ao conectar com o Mercado Pago. Tente novamente.', 'error');
-            document.getElementById('btn-confirm-order').disabled = false;
-            document.getElementById('btn-confirm-order').textContent = 'Confirmar Pedido';
+            btn.disabled = false;
+            btn.textContent = 'Confirmar Pedido';
         }
     });
 }
