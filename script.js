@@ -1039,8 +1039,7 @@ async function initCheckoutPage() {
     document.getElementById('checkout-address').textContent = addr.logradouro + ', ' + addr.numero + ' — ' + addr.bairro + ', ' + addr.cidade + '/' + addr.estado + ' | CEP: ' + addr.cep;
 
     // --- MERCADO PAGO INITIALIZATION ---
-    // Substitua pela sua Public Key
-    const MP_PUBLIC_KEY = 'TEST-f0761e0b-5d9c-4b6e-8e3a-9e3b9f4a5c6e'; // Placeholder TEST key
+    const MP_PUBLIC_KEY = 'APP_USR-c404bdea-25d7-4dd2-9514-c32c13ebb328'; 
     mp = new MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
 
     // --- TAB SWITCHING ---
@@ -1053,7 +1052,6 @@ async function initCheckoutPage() {
             tabs.forEach(t => t.classList.remove('active'));
             contents.forEach(c => c.classList.remove('active'));
             tab.classList.add('active');
-            document.getElementById(`payment-${type}-form`)?.classList.add('active');
             document.getElementById(`payment-${type}-content`)?.classList.add('active');
             
             if (type === 'card' && !cardPaymentBrickController) initCardBrick();
