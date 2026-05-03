@@ -1201,7 +1201,15 @@ async function processPixPayment() {
                 transaction_amount: Cart.total(),
                 description: 'Compra EcoStore PIX - Pedido ' + order.id,
                 payment_method_id: 'pix',
-                payer: { email: user.email },
+                payer: { 
+                    email: user.email,
+                    first_name: user.nome?.split(' ')[0] || 'Cliente',
+                    last_name: user.nome?.split(' ').slice(1).join(' ') || 'EcoStore',
+                    identification: {
+                        type: 'CPF',
+                        number: user.cpf?.replace(/\D/g, '') || ''
+                    }
+                },
                 external_reference: order.id,
                 orderId: order.id
             })
