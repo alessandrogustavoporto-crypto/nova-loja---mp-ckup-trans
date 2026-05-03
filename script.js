@@ -1089,25 +1089,35 @@ async function initCardBrick() {
                 amount: total,
                 payer: {
                     email: user?.email || '',
+                    identification: {
+                        type: 'CPF',
+                        number: user?.cpf || ''
+                    },
                 },
             },
             customization: {
+                paymentMethods: {
+                    maxInstallments: 12,
+                    types: {
+                        excluded: ['bank_transfer', 'ticket']
+                    }
+                },
                 visual: {
                     style: {
                         theme: 'default',
                     },
                 },
-                paymentMethods: {
-                    maxInstallments: 12,
-                }
             },
             callbacks: {
                 onReady: () => {
-                    // Brick pronto
                     const btn = document.getElementById('btn-confirm-order');
-                    if (btn) btn.style.display = 'none'; // Esconde botão global para usar o do Brick
+                    if (btn) btn.style.display = 'none';
                 },
                 onSubmit: async (formData) => {
+                    // Adiciona entity_type se estiver faltando
+                    if (!formData.payer.entity_type) {
+                        formData.payer.entity_type = 'individual';
+                    }
                     return processTransparentPayment(formData);
                 },
                 onError: (error) => {
