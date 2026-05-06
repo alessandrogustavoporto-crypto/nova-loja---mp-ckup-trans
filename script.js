@@ -1695,6 +1695,8 @@ function renderOrdersList(orders, container) {
         '<div class="order-details hidden"><div class="details-grid">' +
         '<div class="details-items"><h4>Itens do Pedido</h4><ul>' + order.items.map(i => '<li>' + i.qty + 'x ' + i.name + ' — ' + fmt(i.price) + '</li>').join('') + '</ul></div>' +
         '<div class="details-address"><h4>Endereço de Entrega</h4><p>' + order.address.logradouro + ', ' + order.address.numero + '</p><p>' + order.address.bairro + ' — ' + order.address.cidade + ' / ' + order.address.estado + '</p><p>CEP: ' + order.address.cep + '</p></div>' +
+        '</div><div class="details-actions" style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; text-align:right;">' +
+        '<button class="btn-primary" onclick="trackOrder(\'' + order.id + '\')"><i class="fas fa-truck-fast"></i> Acompanhar Entrega</button>' +
         '</div></div></div>').join('');
 }
 
@@ -1702,6 +1704,71 @@ window.toggleOrderDetails = function(headerEl) {
     const card = headerEl.closest('.order-card');
     card.classList.toggle('expanded');
     card.querySelector('.order-details').classList.toggle('hidden');
+};
+
+window.trackOrder = function(orderId) {
+    // 1. Achar o pedido na lista (_latestOrders)
+    const order = _latestOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    // 2. Mudar para a aba de acompanhamento
+    const trackBtn = document.querySelector('[data-tab="tab-acompanhamento"]');
+    if (trackBtn) trackBtn.click();
+
+    // 3. Renderizar o conteúdo
+    const container = document.getElementById('tracking-content');
+    if (!container) return;
+
+    const s = order.status;
+    const isCompleted = step => {
+        const flow = ['aguardando', 'processando', 'separacao', 'enviado', 'saiu', 'entregue'];
+        const currentIdx = flow.indexOf(s);
+        const stepIdx = flow.indexOf(step);
+        return currentIdx >= stepIdx;
+    };
+    
+    const isActive = step => s === step || (s === 'saiu' && step === 'enviado');
+
+    const steps = [
+        { id: 'aguardando', label: 'Pedido Realizado', icon: 'fa-check' },
+        { id: 'processando', label: 'Pagamento Aprovado', icon: 'fa-credit-card' },
+        { id: 'enviado', label: 'Em Transporte', icon: 'fa-truck' },
+        { id: 'entregue', label: 'Entregue', icon: 'fa-home' }
+    ];
+
+    let html = '<h2 class="tab-title">Acompanhamento do Pedido ' + order.id + '</h2>';
+    html += '<div class="stepper-container">';
+    
+    steps.forEach((step, idx) => {
+        const done = isCompleted(step.id);
+        const active = isActive(step.id);
+        const cls = done ? 'completed' : (active ? 'active' : '');
+        
+        html += '<div class="step ' + cls + '">' +
+                '<div class="step-icon"><i class="fas ' + (done && step.id !== s ? 'fa-check' : step.icon) + '"></i></div>' +
+                '<div class="step-label">' + step.label + '</div>' +
+                '<div class="step-date">' + (done ? order.date : 'Pendente') + '</div>' +
+                '</div>';
+        
+        if (idx < steps.length - 1) {
+            html += '<div class="step-line ' + (done && flow.indexOf(s) > flow.indexOf(step.id) ? 'completed' : '') + '"></div>';
+        }
+    });
+
+    html += '</div>';
+    
+    // Tracking History
+    html += '<div class="tracking-details"><h3>Últimas Atualizações</h3><ul class="tracking-list">';
+    if (s === 'entregue') html += '<li><strong>' + order.date + '</strong> - Pedido entregue com sucesso!</li>';
+    if (s === 'enviado' || s === 'saiu') html += '<li><strong>' + order.date + '</strong> - Pedido em trânsito para o seu endereço.</li>';
+    if (s === 'separacao') html += '<li><strong>' + order.date + '</strong> - Pedido em fase de separação e embalagem.</li>';
+    if (s === 'processando') html += '<li><strong>' + order.date + '</strong> - Pagamento confirmado. Seu pedido está sendo processado.</li>';
+    if (s === 'aguardando') html += '<li><strong>' + order.date + '</strong> - Aguardando confirmação de pagamento.</li>';
+    if (s === 'cancelado') html += '<li style="color:#c0392b"><strong>' + order.date + '</strong> - Este pedido foi cancelado.</li>';
+    html += '<li><strong>' + order.date + '</strong> - Pedido recebido em nosso sistema.</li>';
+    html += '</ul></div>';
+
+    container.innerHTML = html;
 };
 
 window.openEditUserModal = function() {

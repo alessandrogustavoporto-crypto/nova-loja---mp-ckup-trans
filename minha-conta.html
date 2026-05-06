@@ -88,41 +88,13 @@
 
             <!-- TAB: Acompanhamento -->
             <div id="tab-acompanhamento" class="tab-pane">
-                <h2 class="tab-title">Acompanhamento do Pedido #10592</h2>
-                
-                <div class="stepper-container">
-                    <div class="step completed">
-                        <div class="step-icon"><i class="fas fa-check"></i></div>
-                        <div class="step-label">Pedido Realizado</div>
-                        <div class="step-date">28/04/2026 10:30</div>
+                <div id="tracking-content">
+                    <div style="text-align:center; padding:80px 20px; color:var(--text-muted);">
+                        <i class="fas fa-truck" style="font-size:48px; opacity:0.3; margin-bottom:20px;"></i>
+                        <h3 style="margin-bottom:10px;">Acompanhe seu Pedido</h3>
+                        <p>Selecione um pedido na aba <strong>"Meus Pedidos"</strong> para ver os detalhes da entrega em tempo real.</p>
+                        <button class="btn-primary mt-20" onclick="document.querySelector('[data-tab=tab-pedidos]').click()" style="margin-top:20px;">Ver Meus Pedidos</button>
                     </div>
-                    <div class="step-line completed"></div>
-                    <div class="step completed">
-                        <div class="step-icon"><i class="fas fa-check"></i></div>
-                        <div class="step-label">Pagamento Aprovado</div>
-                        <div class="step-date">28/04/2026 10:35</div>
-                    </div>
-                    <div class="step-line completed"></div>
-                    <div class="step active">
-                        <div class="step-icon"><i class="fas fa-box"></i></div>
-                        <div class="step-label">Em Transporte</div>
-                        <div class="step-date">29/04/2026 14:20</div>
-                    </div>
-                    <div class="step-line"></div>
-                    <div class="step">
-                        <div class="step-icon"><i class="fas fa-home"></i></div>
-                        <div class="step-label">Entregue</div>
-                        <div class="step-date">Previsto: 02/05</div>
-                    </div>
-                </div>
-                
-                <div class="tracking-details">
-                    <h3>Últimas Atualizações</h3>
-                    <ul class="tracking-list">
-                        <li><strong>29/04/2026 14:20</strong> - Pedido saiu do centro de distribuição (São Paulo/SP)</li>
-                        <li><strong>28/04/2026 18:00</strong> - Pedido embalado e pronto para envio</li>
-                        <li><strong>28/04/2026 10:35</strong> - Pagamento confirmado</li>
-                    </ul>
                 </div>
             </div>
 
