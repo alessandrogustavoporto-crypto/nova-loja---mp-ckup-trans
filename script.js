@@ -266,6 +266,7 @@ const ORDER_STATUS_MAP = {
 };
 
 const Orders = {
+    _latestOrders: [], // Cache global para acompanhamento
     async fetchAll() {
         const { data, error } = await supabase.from('orders').select('*').order('id', { ascending: false });
         if (!error && data) {
@@ -1599,8 +1600,7 @@ function initDashboard() {
     const dateStart    = document.getElementById('order-date-start');
     const dateEnd      = document.getElementById('order-date-end');
 
-    // Guarda os pedidos mais recentes para filtrar localmente sem nova query
-    let _latestOrders = [];
+
 
     const onFilter = () => {
         filterState.search    = (searchInput?.value  || '').toLowerCase().trim();
@@ -1617,7 +1617,7 @@ function initDashboard() {
 
     // ---- Carga inicial + indicador visual sutil ----
     ordersContainer.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="font-size:28px;"></i><p style="margin-top:12px;font-size:14px;">Carregando pedidos...</p></div>';
-    fetchAndRenderUserOrders().then(orders => { if (orders) _latestOrders = orders; });
+    fetchAndRenderUserOrders().then(orders => { if (orders) Orders._latestOrders = orders; });
 
     // ---- Polling silencioso a cada 10 s ----
     // Atualiza apenas os dados sem piscar a tela
@@ -1627,7 +1627,7 @@ function initDashboard() {
         if (!tabPedidos || !tabPedidos.classList.contains('active')) return;
 
         const orders = await fetchAndRenderUserOrders();
-        if (orders) _latestOrders = orders;
+        if (orders) Orders._latestOrders = orders;
     }, 10000);
 
     // Limpa o intervalo ao sair da página
@@ -1707,8 +1707,8 @@ window.toggleOrderDetails = function(headerEl) {
 };
 
 window.trackOrder = function(orderId) {
-    // 1. Achar o pedido na lista (_latestOrders)
-    const order = _latestOrders.find(o => o.id === orderId);
+    // 1. Achar o pedido na lista
+    const order = Orders._latestOrders.find(o => o.id === orderId);
     if (!order) return;
 
     // 2. Mudar para a aba de acompanhamento
@@ -1720,8 +1720,9 @@ window.trackOrder = function(orderId) {
     if (!container) return;
 
     const s = order.status;
+    const flow = ['aguardando', 'processando', 'separacao', 'enviado', 'saiu', 'entregue'];
+    
     const isCompleted = step => {
-        const flow = ['aguardando', 'processando', 'separacao', 'enviado', 'saiu', 'entregue'];
         const currentIdx = flow.indexOf(s);
         const stepIdx = flow.indexOf(step);
         return currentIdx >= stepIdx;
