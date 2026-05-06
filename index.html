@@ -40,6 +40,9 @@
             </nav>
 
             <div class="header-actions">
+                <button class="mobile-search-toggle" id="mobile-search-toggle" title="Pesquisar">
+                    <i class="fas fa-search"></i>
+                </button>
                 <div class="user-nav-wrapper" id="user-nav-wrapper">
                     <a href="login.html" class="icon-link" id="user-nav-link" title="Entrar / Minha Conta">
                         <i class="far fa-user" id="user-nav-icon"></i>
@@ -50,6 +53,11 @@
                     <span class="cart-count">0</span>
                 </a>
             </div>
+        </div>
+        <!-- Mobile Search Bar (Hidden by default) -->
+        <div class="mobile-search-bar" id="mobile-search-bar">
+            <input type="text" id="mobile-search-input" placeholder="O que você procura?">
+            <button type="button" id="mobile-search-btn"><i class="fas fa-search"></i></button>
         </div>
     </header>
 
