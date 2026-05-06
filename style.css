@@ -496,18 +496,18 @@ ul {
     }
     .hero {
         height: auto !important;
-        min-height: 140px;
-        aspect-ratio: 16 / 7;
-        background-size: contain !important;
+        min-height: 120px;
+        aspect-ratio: 16 / 5.5;
+        background-size: cover !important;
         background-repeat: no-repeat !important;
-        background-position: center top !important;
+        background-position: center center !important;
         background-color: #f8f9fa;
         padding: 0;
         margin: 0;
     }
     .section-header {
-        margin-top: -25px !important;
-        padding-top: 0 !important;
+        margin-top: 0 !important;
+        padding-top: 10px !important;
     }
 }
 
