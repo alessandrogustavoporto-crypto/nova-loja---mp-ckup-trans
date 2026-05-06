@@ -506,8 +506,8 @@ ul {
         margin: 0;
     }
     .section-header {
-        margin-top: 0 !important;
-        padding-top: 5px !important;
+        margin-top: -25px !important;
+        padding-top: 0 !important;
     }
 }
 
