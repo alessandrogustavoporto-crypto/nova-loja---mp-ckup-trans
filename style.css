@@ -138,7 +138,6 @@ ul {
 }
 
 /* Header Actions */
-/* Header Actions */
 .header-actions {
     display: flex;
     gap: 20px;
@@ -152,49 +151,6 @@ ul {
 
 .icon-link:hover {
     color: var(--primary-orange);
-}
-
-.mobile-search-toggle {
-    display: none;
-    background: none;
-    border: none;
-    color: var(--white);
-    font-size: 20px;
-    cursor: pointer;
-}
-
-.mobile-search-bar {
-    display: none;
-    background: var(--white);
-    padding: 10px 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.mobile-search-bar.active {
-    display: flex;
-    gap: 10px;
-    animation: fadeInDown 0.3s ease;
-}
-
-@keyframes fadeInDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.mobile-search-bar input {
-    flex: 1;
-    border: 1px solid var(--border-color);
-    padding: 10px 15px;
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-}
-
-.mobile-search-bar button {
-    background: var(--primary-green);
-    color: var(--white);
-    border: none;
-    padding: 0 15px;
-    border-radius: var(--radius-sm);
 }
 
 .cart-icon .cart-count {
@@ -524,37 +480,15 @@ ul {
         font-size: 22px;
     }
     .search-bar {
-        display: none !important; /* Hide desktop search */
-    }
-    .mobile-search-toggle {
-        display: block; /* Show lupa icon */
+        order: 3;
+        max-width: 100%;
+        margin-top: 5px;
     }
     .header-actions {
         gap: 15px;
     }
     .nav-menu {
-        display: block !important;
-        width: 100%;
-        overflow-x: auto;
-        white-space: nowrap;
-        background: var(--dark-green);
-        padding: 10px 0;
-        margin-top: 10px;
-        -webkit-overflow-scrolling: touch;
-    }
-    .nav-menu::-webkit-scrollbar {
-        display: none;
-    }
-    .nav-menu ul {
-        display: flex;
-        gap: 20px;
-        padding: 0 15px;
-        justify-content: flex-start;
-    }
-    .nav-menu a {
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        display: none !important;
     }
     .product-grid {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

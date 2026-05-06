@@ -486,7 +486,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof initAuthPages === 'function') initAuthPages();
     if (typeof initDashboard === 'function') initDashboard();
     initSearch();
-    initMobileSearch();
     syncCurrentToAllUsers();
 
     // FETCH EM BACKGROUND DO SUPABASE
@@ -696,41 +695,6 @@ function initSearch() {
     btn.addEventListener('click', handleSearch);
     input.addEventListener('keyup', (e) => {
         if (e.key === 'Enter') handleSearch();
-    });
-
-    // Mobile Search Sync
-    const mobInput = document.getElementById('mobile-search-input');
-    const mobBtn = document.getElementById('mobile-search-btn');
-    if (mobInput && mobBtn) {
-        const handleMobSearch = () => {
-            const query = mobInput.value;
-            input.value = query; // Sync with main
-            handleSearch();
-            document.getElementById('mobile-search-bar').classList.remove('active');
-        };
-        mobBtn.onclick = handleMobSearch;
-        mobInput.onkeyup = (e) => { if (e.key === 'Enter') handleMobSearch(); };
-    }
-}
-
-function initMobileSearch() {
-    const toggle = document.getElementById('mobile-search-toggle');
-    const bar = document.getElementById('mobile-search-bar');
-    if (!toggle || !bar) return;
-
-    toggle.onclick = (e) => {
-        e.stopPropagation();
-        bar.classList.toggle('active');
-        if (bar.classList.contains('active')) {
-            document.getElementById('mobile-search-input').focus();
-        }
-    };
-
-    // Close on click outside
-    document.addEventListener('click', (e) => {
-        if (!bar.contains(e.target) && !toggle.contains(e.target)) {
-            bar.classList.remove('active');
-        }
     });
 }
 
