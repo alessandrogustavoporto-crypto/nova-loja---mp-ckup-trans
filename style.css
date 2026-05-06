@@ -185,15 +185,15 @@ ul {
 }
 
 .hero h1 {
-    font-size: 48px;
+    font-size: clamp(2rem, 8vw, 48px);
     font-weight: 700;
     margin-bottom: 20px;
-    line-height: 1.2;
+    line-height: 1.1;
     transition: opacity 0.5s ease;
 }
 
 .hero p {
-    font-size: 20px;
+    font-size: clamp(1rem, 3vw, 20px);
     margin-bottom: 30px;
     opacity: 0.9;
     transition: opacity 0.5s ease;
@@ -291,11 +291,11 @@ ul {
 }
 
 .product-title {
-    font-size: 16px;
+    font-size: clamp(14px, 2vw, 16px);
     font-weight: 500;
     color: var(--text-main);
     margin-bottom: 10px;
-    height: 48px; /* Fixed height for 2 lines */
+    height: clamp(40px, 5vw, 48px); /* Fixed height for 2 lines */
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -469,22 +469,26 @@ ul {
 @media (max-width: 768px) {
     .header-container {
         flex-wrap: wrap;
-        padding: 15px 20px;
+        padding: 10px 15px;
+        gap: 10px;
+    }
+    .logo a {
+        font-size: 22px;
     }
     .search-bar {
         order: 3;
         max-width: 100%;
-        margin-top: 15px;
+        margin-top: 5px;
+    }
+    .header-actions {
+        gap: 15px;
     }
     .nav-menu {
         display: none !important;
     }
     .product-grid {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: 15px;
-    }
-    .hero h1 {
-        font-size: 36px;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
     }
 }
 
