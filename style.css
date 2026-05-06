@@ -1701,3 +1701,9 @@ input:checked + .slider:before {
 #cardPaymentBrick_container, #pixPaymentBrick_container {
     min-height: 200px;
 }
+
+/* Forçar remoção de elementos de promoção e newsletter */
+#promo-section, 
+.newsletter {
+    display: none !important;
+}
