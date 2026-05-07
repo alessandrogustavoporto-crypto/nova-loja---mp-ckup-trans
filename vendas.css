@@ -147,8 +147,15 @@ body { background: var(--pdv-bg); color: var(--pdv-text); height: 100vh; overflo
     border-bottom: 1px solid #f1f2f6;
     display: flex;
     flex-direction: column;
+    transition: background 0.2s;
 }
-.suggestion-item:hover { background: #f1f2f6; }
+.suggestion-item:hover { 
+    background: var(--pdv-primary); 
+    color: white; 
+}
+.suggestion-item:hover small {
+    color: rgba(255,255,255,0.8);
+}
 .suggestion-item span { font-size: 14px; font-weight: 600; }
 .suggestion-item small { font-size: 11px; color: var(--pdv-text-muted); }
 

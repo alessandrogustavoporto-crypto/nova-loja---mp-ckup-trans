@@ -227,7 +227,7 @@ function searchCustomer(query) {
 
     if (matches.length > 0) {
         list.innerHTML = matches.map(c => `
-            <div class="suggestion-item" onclick="selectCustomer(${c.id})">
+            <div class="suggestion-item" onmousedown="window.selectCustomer(${c.id})">
                 <span>${c.name}</span>
                 <small>CPF: ${c.cpf || '—'} | ${c.email}</small>
             </div>
