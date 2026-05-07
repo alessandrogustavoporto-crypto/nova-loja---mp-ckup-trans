@@ -45,6 +45,7 @@ body { background: var(--pdv-bg); color: var(--pdv-text); height: 100vh; overflo
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-group label { font-size: 12px; font-weight: 700; color: var(--pdv-text-muted); text-transform: uppercase; }
 .pdv-input {
+    width: 100%;
     padding: 12px;
     border: 1px solid var(--pdv-border);
     border-radius: 6px;
