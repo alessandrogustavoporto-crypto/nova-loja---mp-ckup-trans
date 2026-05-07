@@ -220,6 +220,15 @@
 
         <!-- F-TAB: Overview -->
         <div id="f-tab-overview" class="f-tab-content active">
+            <div class="filter-bar-fin">
+                <select id="overview-period-filter" class="admin-select">
+                    <option value="today">Hoje</option>
+                    <option value="7days" selected>Últimos 7 dias</option>
+                    <option value="30days">Últimos 30 dias</option>
+                    <option value="year">Este Ano</option>
+                    <option value="all">Todo o Período</option>
+                </select>
+            </div>
             <div class="kpi-grid">
                 <div class="kpi-card"><span>Faturamento Total</span><strong id="fin-total-billing">R$ 0,00</strong></div>
                 <div class="kpi-card"><span>Ticket Médio</span><strong id="fin-avg-ticket">R$ 0,00</strong></div>

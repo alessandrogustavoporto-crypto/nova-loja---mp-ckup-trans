@@ -268,6 +268,10 @@ async function initAdminDashboard() {
     // Sales Period Filter
     const salesFilter = document.getElementById('sales-period-filter');
     if (salesFilter) salesFilter.addEventListener('change', () => loadSalesCharts(salesFilter.value));
+
+    // Overview Period Filter
+    const ovFilter = document.getElementById('overview-period-filter');
+    if (ovFilter) ovFilter.addEventListener('change', () => loadFinanceData(ovFilter.value));
 }
 
 // ---- Dashboard KPIs ----
@@ -821,10 +825,24 @@ window.saveBanner = async function() {
 // ============================================================
 let financeCharts = {};
 
-async function loadFinanceData() {
-    const orders = await AdminData.getOrders();
+async function loadFinanceData(period = '7days') {
+    const allOrders = await AdminData.getOrders();
     const products = await AdminData.getProducts();
     const clients = await AdminData.getClients();
+
+    // Filtro de Período
+    const now = new Date();
+    const orders = allOrders.filter(o => {
+        if (period === 'all') return true;
+        const oDate = new Date(o.created_at);
+        if (period === 'today') return oDate.toDateString() === now.toDateString();
+        
+        const diffDays = (now - oDate) / (1000 * 60 * 60 * 24);
+        if (period === '7days') return diffDays <= 7;
+        if (period === '30days') return diffDays <= 30;
+        if (period === 'year') return oDate.getFullYear() === now.getFullYear();
+        return true;
+    });
 
     const totalBilling = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
     const avgTicket = orders.length > 0 ? totalBilling / orders.length : 0;
@@ -847,13 +865,13 @@ async function loadFinanceData() {
     setVal('fin-total-orders', orders.length);
     setVal('fin-total-profit', fmt(totalProfit));
 
-    initOverviewCharts(orders);
+    initOverviewCharts(orders, period);
     loadSalesCharts('7days');
     loadProductsFinance(orders, products);
     loadCustomersFinance(orders, clients);
 }
 
-function initOverviewCharts(orders) {
+function initOverviewCharts(orders, period = '7days') {
     const payments = {};
     orders.forEach(o => {
         const method = o.payment_method || 'Outros';
@@ -868,21 +886,28 @@ function initOverviewCharts(orders) {
         }]
     }, { plugins: { title: { display: true, text: 'Formas de Pagamento' } } });
 
-    const last7 = {};
-    for(let i=6; i>=0; i--) {
+    // Billing Chart adjustment based on period
+    let lastDays = {};
+    let count = 7;
+    if (period === 'today') count = 1;
+    if (period === '30days') count = 30;
+    if (period === 'all' || period === 'year') count = 30; // Max 30 for visualization
+
+    for(let i=count-1; i>=0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i);
-        last7[d.toLocaleDateString('pt-BR').substring(0, 5)] = 0;
+        lastDays[d.toLocaleDateString('pt-BR').substring(0, 5)] = 0;
     }
+    
     orders.forEach(o => {
         const day = o.date.substring(0, 5);
-        if (last7[day] !== undefined) last7[day] += parseFloat(o.total || 0);
+        if (lastDays[day] !== undefined) lastDays[day] += parseFloat(o.total || 0);
     });
 
     renderChart('chart-billing-overview', 'line', {
-        labels: Object.keys(last7),
+        labels: Object.keys(lastDays),
         datasets: [{
             label: 'Faturamento R$',
-            data: Object.values(last7),
+            data: Object.values(lastDays),
             borderColor: '#27ae60',
             tension: 0.3,
             fill: true,
