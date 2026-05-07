@@ -296,7 +296,12 @@ async function initAdminDashboard() {
 
     // Sales Period Filter
     const salesFilter = document.getElementById('sales-period-filter');
-    if (salesFilter) salesFilter.addEventListener('change', () => loadSalesCharts(salesFilter.value));
+    if (salesFilter) {
+        if (!salesFilter._bound) {
+            salesFilter._bound = true;
+            salesFilter.addEventListener('change', () => loadSalesCharts(salesFilter.value, cachedAdminData.orders));
+        }
+    }
 
     // Overview Period Filter
     const ovFilter = document.getElementById('overview-period-filter');
@@ -1071,23 +1076,23 @@ function loadSalesCharts(period, allOrders) {
         });
         data = monthly;
     } else {
-        // Últimos 7 dias reais
-        const last7 = [];
-        for(let i=6; i>=0; i--) {
+        const daysToCount = period === '30days' ? 30 : 7;
+        const timeline = [];
+        for(let i = daysToCount - 1; i >= 0; i--) {
             const d = new Date(); d.setDate(d.getDate() - i);
-            last7.push({ 
-                label: d.toLocaleDateString('pt-BR', {weekday: 'short'}), 
+            timeline.push({ 
+                label: d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}), 
                 key: d.toLocaleDateString('pt-BR').substring(0, 5),
                 val: 0 
             });
         }
         orders.forEach(o => {
             const dayKey = o.date.substring(0, 5);
-            const entry = last7.find(l => l.key === dayKey);
+            const entry = timeline.find(l => l.key === dayKey);
             if (entry) entry.val += parseFloat(o.total || 0);
         });
-        labels = last7.map(l => l.label);
-        data = last7.map(l => l.val);
+        labels = timeline.map(l => l.label);
+        data = timeline.map(l => l.val);
     }
 
     renderChart('chart-sales-history', 'bar', {
