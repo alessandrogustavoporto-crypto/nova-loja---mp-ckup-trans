@@ -25,9 +25,10 @@
         <main class="pdv-main">
             <!-- BUSCA DE PRODUTO -->
             <section class="search-section">
-                <div class="form-group">
+                <div class="form-group" style="position: relative;">
                     <label>Buscar Produto (Nome / Código / SKU)</label>
-                    <input type="text" id="pdv-prod-search" class="pdv-input" placeholder="F1 - Digite ou escaneie o produto..." autofocus>
+                    <input type="text" id="pdv-prod-search" class="pdv-input" placeholder="F1 - Digite ou escaneie o produto..." autofocus autocomplete="off">
+                    <div id="prod-suggestions" class="suggestions-list hidden" style="width: 100%;"></div>
                 </div>
                 <div class="form-group" style="width: 100px;">
                     <label>Qtd</label>

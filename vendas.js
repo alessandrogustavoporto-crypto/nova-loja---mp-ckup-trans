@@ -43,6 +43,9 @@ function setupEventListeners() {
     const prodSearch = document.getElementById('pdv-prod-search');
     const addBtn = document.getElementById('pdv-add-btn');
 
+    // Busca em tempo real de produtos
+    prodSearch.addEventListener('input', (e) => showProductSuggestions(e.target.value));
+
     // Add item on Enter in search
     prodSearch.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') addItemFromSearch();
@@ -88,8 +91,67 @@ function setupShortcuts() {
 }
 
 // ============================================================
-// ITEM MANAGEMENT
+// PRODUCT SEARCH & ADD
 // ============================================================
+
+function showProductSuggestions(query) {
+    const list = document.getElementById('prod-suggestions');
+    if (query.length < 2) {
+        list.classList.add('hidden');
+        return;
+    }
+
+    // Se for código de barras exato (geralmente longo e numérico), não abre lista, espera o Enter ou Adicionar
+    const exactMatch = allProducts.find(p => p.barcode === query);
+    if (exactMatch && query.length >= 8) {
+        list.classList.add('hidden');
+        return;
+    }
+
+    const matches = allProducts.filter(p => 
+        p.name.toLowerCase().includes(query.toLowerCase()) || 
+        (p.barcode && p.barcode.includes(query))
+    ).slice(0, 8);
+
+    if (matches.length > 0) {
+        list.innerHTML = matches.map(p => `
+            <div class="suggestion-item" data-id="${p.id}">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>${p.name}</span>
+                    <strong style="color:var(--pdv-primary);">${fmt(p.price)}</strong>
+                </div>
+                <small>Estoque: ${p.stock || 0} | EAN: ${p.barcode || '—'}</small>
+            </div>
+        `).join('');
+        list.classList.remove('hidden');
+
+        // Eventos de clique
+        list.querySelectorAll('.suggestion-item').forEach(item => {
+            item.onmousedown = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.selectProduct(item.getAttribute('data-id'));
+            };
+        });
+    } else {
+        list.classList.add('hidden');
+    }
+}
+
+window.selectProduct = function(id) {
+    const product = allProducts.find(p => String(p.id) === String(id));
+    if (product) {
+        const qty = parseInt(document.getElementById('pdv-prod-qty').value) || 1;
+        const priceOverride = parseFloat(document.getElementById('pdv-prod-price').value);
+        addItem(product, qty, priceOverride);
+        
+        document.getElementById('pdv-prod-search').value = '';
+        document.getElementById('pdv-prod-qty').value = '1';
+        document.getElementById('pdv-prod-price').value = '';
+        document.getElementById('prod-suggestions').classList.add('hidden');
+        document.getElementById('pdv-prod-search').focus();
+    }
+}
 
 function addItemFromSearch() {
     const query = document.getElementById('pdv-prod-search').value.trim();
@@ -101,15 +163,15 @@ function addItemFromSearch() {
     const product = allProducts.find(p => 
         p.barcode === query || 
         p.id.toString() === query || 
-        p.name.toLowerCase().includes(query.toLowerCase())
+        p.name.toLowerCase() === query.toLowerCase()
     );
 
     if (product) {
         addItem(product, qty, priceOverride);
-        // Reset inputs
         document.getElementById('pdv-prod-search').value = '';
         document.getElementById('pdv-prod-qty').value = '1';
         document.getElementById('pdv-prod-price').value = '';
+        document.getElementById('prod-suggestions').classList.add('hidden');
         document.getElementById('pdv-prod-search').focus();
     } else {
         alert('Produto não encontrado!');
