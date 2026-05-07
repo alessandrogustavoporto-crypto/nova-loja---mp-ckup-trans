@@ -1,0 +1,162 @@
+:root {
+    --pdv-bg: #f8f9fa;
+    --pdv-sidebar: #ffffff;
+    --pdv-primary: #27ae60;
+    --pdv-secondary: #2c3e50;
+    --pdv-danger: #e74c3c;
+    --pdv-border: #dfe6e9;
+    --pdv-text: #2d3436;
+    --pdv-text-muted: #636e72;
+    --pdv-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+body { background: var(--pdv-bg); color: var(--pdv-text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+/* HEADER */
+.pdv-header {
+    background: var(--pdv-secondary);
+    color: white;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--pdv-shadow);
+}
+.header-info { display: flex; gap: 20px; font-size: 14px; opacity: 0.9; }
+
+/* MAIN LAYOUT */
+.pdv-container { display: flex; flex: 1; overflow: hidden; }
+
+/* LEFT SIDE: ITEMS & INPUTS */
+.pdv-main { flex: 1; display: flex; flex-direction: column; padding: 20px; gap: 20px; }
+
+.search-section {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 15px;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: var(--pdv-shadow);
+}
+
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; font-weight: 700; color: var(--pdv-text-muted); text-transform: uppercase; }
+.pdv-input {
+    padding: 12px;
+    border: 1px solid var(--pdv-border);
+    border-radius: 6px;
+    font-size: 16px;
+    outline: none;
+}
+.pdv-input:focus { border-color: var(--pdv-primary); box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1); }
+
+/* TABLE */
+.items-section {
+    flex: 1;
+    background: white;
+    border-radius: 8px;
+    box-shadow: var(--pdv-shadow);
+    overflow: auto;
+}
+.pdv-table { width: 100%; border-collapse: collapse; }
+.pdv-table th {
+    background: #f1f2f6;
+    padding: 15px;
+    text-align: left;
+    font-size: 13px;
+    color: var(--pdv-text-muted);
+    position: sticky;
+    top: 0;
+}
+.pdv-table td { padding: 15px; border-bottom: 1px solid var(--pdv-border); font-size: 14px; }
+.pdv-table tr:hover { background: #f9f9f9; }
+
+/* RIGHT SIDE: SUMMARY */
+.pdv-sidebar {
+    width: 400px;
+    background: var(--pdv-sidebar);
+    border-left: 1px solid var(--pdv-border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    gap: 20px;
+}
+
+.customer-card {
+    padding: 15px;
+    background: #f1f2f6;
+    border-radius: 8px;
+    border: 1px dashed #ccc;
+}
+
+.totals-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.total-row { display: flex; justify-content: space-between; font-size: 16px; }
+.total-row.grand-total {
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 2px solid var(--pdv-border);
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--pdv-primary);
+}
+
+.pdv-actions { display: flex; flex-direction: column; gap: 10px; }
+.btn-pdv {
+    padding: 18px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.2s;
+}
+.btn-finish { background: var(--pdv-primary); color: white; }
+.btn-finish:hover { background: #219150; }
+.btn-cancel { background: #eee; color: var(--pdv-text); }
+.btn-cancel:hover { background: #ddd; }
+
+/* MODAL */
+.modal-overlay {
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal-content {
+    background: white;
+    width: 500px;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+.hidden { display: none !important; }
+
+/* UTILS */
+.text-danger { color: var(--pdv-danger); }
+.btn-icon-remove { color: var(--pdv-danger); cursor: pointer; font-size: 18px; }
+
+/* ATALHOS FOOTER */
+.pdv-footer {
+    background: #eee;
+    padding: 5px 20px;
+    font-size: 11px;
+    display: flex;
+    gap: 20px;
+    color: #666;
+}
+.shortcut { font-weight: 800; color: #333; background: #ddd; padding: 2px 5px; border-radius: 3px; }
