@@ -300,16 +300,27 @@ async function initAdminDashboard() {
 
     // Overview Period Filter
     const ovFilter = document.getElementById('overview-period-filter');
-    if (ovFilter) ovFilter.addEventListener('change', () => loadFinanceData(ovFilter.value));
+    if (ovFilter) {
+        if (!ovFilter._bound) {
+            ovFilter._bound = true;
+            ovFilter.addEventListener('change', () => loadFinanceData(ovFilter.value));
+        }
+    }
 
     // Orders Pagination Listeners
     const btnPrev = document.getElementById('prev-orders');
     const btnNext = document.getElementById('next-orders');
-    if (btnPrev) btnPrev.addEventListener('click', () => { if (ordersCurrentPage > 1) { ordersCurrentPage--; renderOrdersTable(); } });
-    if (btnNext) btnNext.addEventListener('click', () => { 
-        const totalPages = Math.ceil(filteredOrdersCount / ordersPageSize);
-        if (ordersCurrentPage < totalPages) { ordersCurrentPage++; renderOrdersTable(); } 
-    });
+    if (btnPrev && !btnPrev._bound) {
+        btnPrev._bound = true;
+        btnPrev.addEventListener('click', () => { if (ordersCurrentPage > 1) { ordersCurrentPage--; renderOrdersTable(); } });
+    }
+    if (btnNext && !btnNext._bound) {
+        btnNext._bound = true;
+        btnNext.addEventListener('click', () => { 
+            const totalPages = Math.ceil(filteredOrdersCount / ordersPageSize);
+            if (ordersCurrentPage < totalPages) { ordersCurrentPage++; renderOrdersTable(); } 
+        });
+    }
 }
 
 // ---- Dashboard KPIs ----
@@ -518,8 +529,8 @@ document.addEventListener('change', e => {
 window.deleteProduct = async function(id) {
     if (!confirm('Confirmar exclusão deste produto?')) return;
     await supabase.from('products').delete().eq('id', id);
-    await loadProducts();
-    adminToast('Produto excluído.', 'error');
+    adminToast('Produto excluído.');
+    initAdminDashboard();
 };
 
 // ---- Categories ----
@@ -568,14 +579,14 @@ window.saveCategory = async function() {
         await supabase.from('categories').insert([{name}]);
     }
     closeCatModal();
-    await loadCategories();
+    initAdminDashboard();
     adminToast('Categoria salva!');
 };
 
 window.deleteCategory = async function(id) {
     if (!confirm('Excluir esta categoria?')) return;
     await supabase.from('categories').delete().eq('id', id);
-    await loadCategories();
+    initAdminDashboard();
 };
 
 // ---- Clients ----
@@ -643,8 +654,7 @@ window.saveClient = async function() {
 
     adminToast('Dados do cliente atualizados!');
     closeClientModal();
-    await loadClients();
-    await loadDashboard();
+    initAdminDashboard();
 };
 
 window.toggleClientBlock = async function(email, currentStatus) {
@@ -656,7 +666,7 @@ window.toggleClientBlock = async function(email, currentStatus) {
     if (error) { adminToast('Erro: ' + error.message, 'error'); return; }
 
     adminToast('Status do cliente atualizado para ' + newStatus);
-    await loadClients();
+    initAdminDashboard();
 };
 
 window.deleteClient = async function(email) {
@@ -666,7 +676,7 @@ window.deleteClient = async function(email) {
     if (error) { adminToast('Erro ao excluir: ' + error.message, 'error'); return; }
 
     adminToast('Cliente excluído com sucesso!', 'error');
-    await loadClients();
+    initAdminDashboard();
 };
 
 // ---- Orders ----
@@ -743,7 +753,7 @@ function renderOrdersTable() {
 window.updateOrderStatus = async function(id, newStatus) {
     await supabase.from('orders').update({status: newStatus, status_label: statusInfo[newStatus].label}).eq('id', id);
     adminToast('Status atualizado: ' + statusInfo[newStatus].label);
-    await loadDashboard();
+    initAdminDashboard();
 };
 
 window.viewOrder = function(id) {
