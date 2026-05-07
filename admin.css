@@ -157,22 +157,25 @@
 /* ---- KPI Cards ---- */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
     margin-bottom: 25px;
 }
 
 .kpi-card {
     background: var(--white);
     border-radius: var(--radius-md);
-    padding: 22px;
+    padding: 15px;
     display: flex;
-    align-items: center;
-    gap: 18px;
+    flex-direction: column;
+    gap: 8px;
     box-shadow: var(--shadow-sm);
-    border-left: 5px solid transparent;
+    border-left: 4px solid transparent;
     transition: var(--transition);
 }
+
+.kpi-card span { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+.kpi-card strong { font-size: 16px; color: var(--text-main); }
 
 .kpi-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
 .kpi-green { border-left-color: var(--primary-green); }
