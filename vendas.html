@@ -75,9 +75,10 @@
             <!-- CLIENTE -->
             <div class="customer-card">
                 <label style="font-size:11px; font-weight:800; color:#888; text-transform:uppercase;">Identificar Cliente</label>
-                <div style="display:flex; gap:10px; margin-top:5px;">
-                    <input type="text" id="pdv-cust-search" class="pdv-input" placeholder="Nome ou CPF..." style="flex:1; padding:8px;">
+                <div style="display:flex; gap:10px; margin-top:5px; position: relative;">
+                    <input type="text" id="pdv-cust-search" class="pdv-input" placeholder="Nome ou CPF..." style="flex:1; padding:8px;" autocomplete="off">
                     <button class="btn-pdv btn-cancel" title="Novo Cliente" onclick="openNewCustModal()" style="padding:0 12px;"><i class="fas fa-plus"></i></button>
+                    <div id="cust-suggestions" class="suggestions-list hidden"></div>
                 </div>
                 <div id="selected-customer-info" style="margin-top:10px; font-size:13px; font-weight:600; color:var(--pdv-primary);" class="hidden">
                     <i class="fas fa-check-circle"></i> <span id="selected-cust-name">Consumidor Final</span>

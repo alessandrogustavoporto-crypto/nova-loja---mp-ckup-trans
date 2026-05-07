@@ -214,17 +214,38 @@ async function saveNewCustomer() {
 }
 
 function searchCustomer(query) {
-    if (query.length < 3) return;
-    const cust = allCustomers.find(c => 
-        (c.cpf && c.cpf.includes(query)) || 
-        (c.name && c.name.toLowerCase().includes(query.toLowerCase())) ||
-        (c.email && c.email.toLowerCase().includes(query.toLowerCase()))
-    );
+    const list = document.getElementById('cust-suggestions');
+    if (query.length < 3) {
+        list.classList.add('hidden');
+        return;
+    }
 
+    const matches = allCustomers.filter(c => 
+        (c.cpf && c.cpf.includes(query)) || 
+        (c.name && c.name.toLowerCase().includes(query.toLowerCase()))
+    ).slice(0, 5);
+
+    if (matches.length > 0) {
+        list.innerHTML = matches.map(c => `
+            <div class="suggestion-item" onclick="selectCustomer(${c.id})">
+                <span>${c.name}</span>
+                <small>CPF: ${c.cpf || '—'} | ${c.email}</small>
+            </div>
+        `).join('');
+        list.classList.remove('hidden');
+    } else {
+        list.classList.add('hidden');
+    }
+}
+
+function selectCustomer(id) {
+    const cust = allCustomers.find(c => c.id === id);
     if (cust) {
         selectedCustomer = cust;
         document.getElementById('selected-customer-info').classList.remove('hidden');
-        document.getElementById('selected-cust-name').textContent = cust.name || cust.email;
+        document.getElementById('selected-cust-name').textContent = cust.name;
+        document.getElementById('cust-suggestions').classList.add('hidden');
+        document.getElementById('pdv-cust-search').value = '';
     }
 }
 
