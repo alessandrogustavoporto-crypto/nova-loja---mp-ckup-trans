@@ -16,18 +16,18 @@ function logErrorToDOM(msg) {
     const div = document.createElement('div');
     div.style.position = 'fixed'; div.style.top = '0'; div.style.left = '0'; div.style.right = '0'; div.style.background = 'red'; div.style.color = 'white'; div.style.padding = '20px'; div.style.zIndex = '999999'; div.style.fontSize = '24px'; div.style.fontWeight = 'bold';
     div.textContent = 'ERRO CRÍTICO: ' + msg;
-    if(document.body) document.body.prepend(div); else window.onload = () => document.body.prepend(div);
+    if (document.body) document.body.prepend(div); else window.onload = () => document.body.prepend(div);
 }
-window.addEventListener('error', function(e) { logErrorToDOM(e.message); });
-window.addEventListener('unhandledrejection', function(e) { logErrorToDOM(e.reason ? e.reason.message || e.reason : 'Rejeição de promessa'); });
+window.addEventListener('error', function (e) { logErrorToDOM(e.message); });
+window.addEventListener('unhandledrejection', function (e) { logErrorToDOM(e.reason ? e.reason.message || e.reason : 'Rejeição de promessa'); });
 
 
 // ---- Auth ----
 const AdminAuth = {
     _sessionKey: 'ecostore_admin_session',
-    
+
     isLoggedIn() { return !!sessionStorage.getItem(this._sessionKey); },
-    async hasMaster() { 
+    async hasMaster() {
         try {
             const { data, error } = await supabase.from('admins').select('*').limit(1);
             if (error) {
@@ -40,7 +40,7 @@ const AdminAuth = {
             return false;
         }
     },
-    
+
     async register(name, email, password) {
         if (await this.hasMaster()) { alert('Já existe um master'); return false; }
         const { error } = await supabase.from('admins').insert([{ name, email, password }]);
@@ -51,7 +51,7 @@ const AdminAuth = {
         }
         return true;
     },
-    
+
     async login(email, pass) {
         const { data, error } = await supabase.from('admins').select('*').eq('email', email).eq('password', pass).single();
         if (error) {
@@ -65,12 +65,12 @@ const AdminAuth = {
         }
         return false;
     },
-    
+
     logout() { sessionStorage.removeItem(this._sessionKey); window.location.href = 'admin-login.html'; },
     getAdmin() { return JSON.parse(sessionStorage.getItem(this._sessionKey) || 'null'); }
 };
 
-window.adminLogout = function() { AdminAuth.logout(); };
+window.adminLogout = function () { AdminAuth.logout(); };
 
 // ---- Data Store ----
 const AdminData = {
@@ -130,12 +130,12 @@ const AdminData = {
 const fmt = v => 'R$ ' + parseFloat(v || 0).toFixed(2).replace('.', ',');
 const statusInfo = {
     aguardando: { label: 'Aguardando Pagamento', badge: 'badge-aguardando' },
-    separacao:  { label: 'Em Separação',         badge: 'badge-separacao' },
-    saiu:       { label: 'Saiu para Entrega',    badge: 'badge-saiu' },
-    entregue:   { label: 'Entregue',             badge: 'badge-entregue' },
-    cancelado:  { label: 'Cancelado',            badge: 'badge-cancelado' },
-    processando:{ label: 'Processando',          badge: 'badge-processando' },
-    enviado:    { label: 'Enviado',              badge: 'badge-separacao' }
+    separacao: { label: 'Em Separação', badge: 'badge-separacao' },
+    saiu: { label: 'Saiu para Entrega', badge: 'badge-saiu' },
+    entregue: { label: 'Entregue', badge: 'badge-entregue' },
+    cancelado: { label: 'Cancelado', badge: 'badge-cancelado' },
+    processando: { label: 'Processando', badge: 'badge-processando' },
+    enviado: { label: 'Enviado', badge: 'badge-separacao' }
 };
 
 function statusBadge(s) {
@@ -157,10 +157,10 @@ async function initAdminLogin() {
     if (!isLoginPage) return;
 
     if (AdminAuth.isLoggedIn()) { window.location.href = 'admin.html'; return; }
-    
+
     const loginForm = document.getElementById('admin-login-form');
-    const regForm   = document.getElementById('admin-register-form');
-    const msgEl     = document.getElementById('admin-auth-msg');
+    const regForm = document.getElementById('admin-register-form');
+    const msgEl = document.getElementById('admin-auth-msg');
     if (!loginForm || !regForm) return;
 
     // Determine which form to show
@@ -181,13 +181,13 @@ async function initAdminLogin() {
     }
 
     // Handle Registration
-    window.submitAdminRegister = async function(e) {
+    window.submitAdminRegister = async function (e) {
         if (e) e.preventDefault();
-        const name  = document.getElementById('reg-admin-name').value.trim();
+        const name = document.getElementById('reg-admin-name').value.trim();
         const email = document.getElementById('reg-admin-email').value.trim();
-        const pass  = document.getElementById('reg-admin-pass').value.trim();
+        const pass = document.getElementById('reg-admin-pass').value.trim();
         if (!name || !email || !pass) { alert('Preencha todos os campos!'); return; }
-        
+
         const btn = regForm.querySelector('button[type="submit"]');
         if (btn) { btn.disabled = true; btn.textContent = 'Cadastrando...'; }
 
@@ -209,10 +209,10 @@ async function initAdminLogin() {
     };
 
     // Handle Login
-    window.submitAdminLogin = async function(e) {
+    window.submitAdminLogin = async function (e) {
         if (e) e.preventDefault();
         const email = document.getElementById('admin-email').value.trim();
-        const pass  = document.getElementById('admin-pass').value.trim();
+        const pass = document.getElementById('admin-pass').value.trim();
         if (!email || !pass) { alert('Preencha e-mail e senha!'); return; }
 
         const btn = loginForm.querySelector('button[type="submit"]');
@@ -303,6 +303,30 @@ async function initAdminDashboard() {
         }
     }
 
+    // Customer Period Filter
+    const custFilter = document.getElementById('cust-period-filter');
+    if (custFilter) {
+        if (!custFilter._bound) {
+            custFilter._bound = true;
+            custFilter.addEventListener('change', () => {
+                const now = new Date();
+                const filtered = cachedAdminData.orders.filter(o => {
+                    if (o.status === 'cancelado') return false;
+                    const period = custFilter.value;
+                    if (period === 'all') return true;
+                    const oDate = new Date(o.created_at);
+                    if (period === 'today') return oDate.toDateString() === now.toDateString();
+                    const diffDays = (now - oDate) / (1000 * 60 * 60 * 24);
+                    if (period === '7days') return diffDays <= 7;
+                    if (period === '30days') return diffDays <= 30;
+                    if (period === 'year') return oDate.getFullYear() === now.getFullYear();
+                    return true;
+                });
+                loadCustomersFinance(filtered, cachedAdminData.clients, custFilter.value);
+            });
+        }
+    }
+
     // Overview Period Filter
     const ovFilter = document.getElementById('overview-period-filter');
     if (ovFilter) {
@@ -321,9 +345,9 @@ async function initAdminDashboard() {
     }
     if (btnNext && !btnNext._bound) {
         btnNext._bound = true;
-        btnNext.addEventListener('click', () => { 
+        btnNext.addEventListener('click', () => {
             const totalPages = Math.ceil(filteredOrdersCount / ordersPageSize);
-            if (ordersCurrentPage < totalPages) { ordersCurrentPage++; renderOrdersTable(); } 
+            if (ordersCurrentPage < totalPages) { ordersCurrentPage++; renderOrdersTable(); }
         });
     }
 }
@@ -331,19 +355,19 @@ async function initAdminDashboard() {
 // ---- Dashboard KPIs ----
 async function loadDashboard(orders, products, clients, banners) {
     if (!orders) orders = await AdminData.getOrders();
-    allAdminOrders = orders; 
+    allAdminOrders = orders;
     if (!products) products = await AdminData.getProducts();
     if (!clients) clients = await AdminData.getClients();
     if (!banners) banners = await AdminData.getBanners();
 
     const salesTotal = orders.filter(o => o.status !== 'cancelado').reduce((s, o) => s + parseFloat(o.total || 0), 0);
-    const pending = orders.filter(o => ['aguardando','separacao','processando'].includes(o.status)).length;
+    const pending = orders.filter(o => ['aguardando', 'separacao', 'processando'].includes(o.status)).length;
     const activeBanners = banners.filter(b => b.active).length;
 
-    document.getElementById('kpi-sales').textContent    = fmt(salesTotal);
-    document.getElementById('kpi-pending').textContent  = pending;
-    document.getElementById('kpi-clients').textContent  = clients.length;
-    document.getElementById('kpi-banners').textContent  = activeBanners;
+    document.getElementById('kpi-sales').textContent = fmt(salesTotal);
+    document.getElementById('kpi-pending').textContent = pending;
+    document.getElementById('kpi-clients').textContent = clients.length;
+    document.getElementById('kpi-banners').textContent = activeBanners;
 
     const tbody = document.getElementById('dashboard-orders-table');
     tbody.innerHTML = orders.slice(0, 5).map(o =>
@@ -392,12 +416,12 @@ async function loadProducts(filter, preloadedProds) {
     await populateBrandSelect();
 }
 
-window.openProductModal = async function(id) {
+window.openProductModal = async function (id) {
     const modal = document.getElementById('product-modal');
     modal.classList.remove('hidden');
     await populateCategorySelect();
     await populateBrandSelect();
-    
+
     // Preview Reset
     const preview = document.getElementById('prod-img-preview');
     if (preview) { preview.src = ''; preview.style.display = 'none'; }
@@ -406,13 +430,13 @@ window.openProductModal = async function(id) {
 
     if (!id) {
         document.getElementById('product-modal-title').textContent = 'Novo Produto';
-        ['prod-id','prod-name','prod-image-base64','prod-desc','prod-barcode'].forEach(f => { const el = document.getElementById(f); if(el) el.value = ''; });
-        ['prod-price','prod-promo-price','prod-stock','prod-cost'].forEach(f => { const el = document.getElementById(f); if(el) el.value = ''; });
+        ['prod-id', 'prod-name', 'prod-image-base64', 'prod-desc', 'prod-barcode'].forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
+        ['prod-price', 'prod-promo-price', 'prod-stock', 'prod-cost'].forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
         document.getElementById('prod-promo-active').checked = false;
         renderVariations([]);
         return;
     }
-    
+
     const prods = await AdminData.getProducts();
     const prod = prods.find(p => p.id === id);
     if (!prod) return;
@@ -439,7 +463,7 @@ window.openProductModal = async function(id) {
     renderVariations(prod.variations || []);
 };
 
-window.addVariationRow = function(name = '', price = '') {
+window.addVariationRow = function (name = '', price = '') {
     const list = document.getElementById('variations-list');
     const div = document.createElement('div');
     div.className = 'variation-row';
@@ -472,9 +496,9 @@ function getVariationsData() {
     return data;
 }
 
-window.closeProductModal = function() { document.getElementById('product-modal').classList.add('hidden'); };
+window.closeProductModal = function () { document.getElementById('product-modal').classList.add('hidden'); };
 
-window.saveProduct = async function() {
+window.saveProduct = async function () {
     const id = document.getElementById('prod-id').value;
     const product = {
         name: document.getElementById('prod-name').value,
@@ -520,7 +544,7 @@ document.addEventListener('change', e => {
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = function(event) {
+        reader.onload = function (event) {
             const base64 = event.target.result;
             document.getElementById('prod-image-base64').value = base64;
             const preview = document.getElementById('prod-img-preview');
@@ -533,7 +557,7 @@ document.addEventListener('change', e => {
     }
 });
 
-window.deleteProduct = async function(id) {
+window.deleteProduct = async function (id) {
     if (!confirm('Confirmar exclusão deste produto?')) return;
     await supabase.from('products').delete().eq('id', id);
     adminToast('Produto excluído.');
@@ -566,7 +590,7 @@ async function populateCategorySelect() {
     sel.innerHTML = cats.map(c => '<option value="' + c.name + '">' + c.name + '</option>').join('');
 }
 
-window.openCatModal = async function(id) {
+window.openCatModal = async function (id) {
     document.getElementById('cat-modal').classList.remove('hidden');
     if (!id) { document.getElementById('cat-id').value = ''; document.getElementById('cat-name').value = ''; return; }
     const cats = await AdminData.getCategories();
@@ -574,23 +598,23 @@ window.openCatModal = async function(id) {
     if (cat) { document.getElementById('cat-id').value = cat.id; document.getElementById('cat-name').value = cat.name; }
 };
 
-window.closeCatModal = function() { document.getElementById('cat-modal').classList.add('hidden'); };
+window.closeCatModal = function () { document.getElementById('cat-modal').classList.add('hidden'); };
 
-window.saveCategory = async function() {
+window.saveCategory = async function () {
     const id = document.getElementById('cat-id').value;
     const name = document.getElementById('cat-name').value.trim();
     if (!name) { adminToast('Digite um nome.', 'error'); return; }
     if (id) {
-        await supabase.from('categories').update({name}).eq('id', id);
+        await supabase.from('categories').update({ name }).eq('id', id);
     } else {
-        await supabase.from('categories').insert([{name}]);
+        await supabase.from('categories').insert([{ name }]);
     }
     closeCatModal();
     initAdminDashboard();
     adminToast('Categoria salva!');
 };
 
-window.deleteCategory = async function(id) {
+window.deleteCategory = async function (id) {
     if (!confirm('Excluir esta categoria?')) return;
     await supabase.from('categories').delete().eq('id', id);
     initAdminDashboard();
@@ -599,7 +623,7 @@ window.deleteCategory = async function(id) {
 // ---- Clients ----
 async function loadClients(nameFilter, typeFilter, preloadedClients) {
     let clients = preloadedClients || cachedAdminData.clients || await AdminData.getClients();
-    
+
     // Filtro local (INSTANTÂNEO)
     if (nameFilter) {
         const nf = nameFilter.toLowerCase();
@@ -627,12 +651,12 @@ async function loadClients(nameFilter, typeFilter, preloadedClients) {
     ).join('');
 
     const search = document.getElementById('client-search');
-    const typeF  = document.getElementById('client-type-filter');
+    const typeF = document.getElementById('client-type-filter');
     if (search && !search._bound) { search._bound = true; search.addEventListener('input', () => loadClients(search.value, typeF.value)); }
-    if (typeF && !typeF._bound)   { typeF._bound = true;  typeF.addEventListener('change', () => loadClients(search.value, typeF.value)); }
+    if (typeF && !typeF._bound) { typeF._bound = true; typeF.addEventListener('change', () => loadClients(search.value, typeF.value)); }
 }
 
-window.openClientModal = async function(email) {
+window.openClientModal = async function (email) {
     const clients = await AdminData.getClients();
     const client = clients.find(c => c.email === email);
     if (!client) return;
@@ -646,25 +670,25 @@ window.openClientModal = async function(email) {
     document.getElementById('client-modal').classList.remove('hidden');
 };
 
-window.closeClientModal = function() {
+window.closeClientModal = function () {
     document.getElementById('client-modal').classList.add('hidden');
 };
 
-window.saveClient = async function() {
+window.saveClient = async function () {
     const emailId = document.getElementById('client-modal-id').value;
     const name = document.getElementById('client-modal-name').value;
     const email = document.getElementById('client-modal-email').value;
     const phone = document.getElementById('client-modal-phone').value;
     const status = document.getElementById('client-modal-status').value;
 
-    await supabase.from('customers').update({name, email, phone, status}).eq('email', emailId);
+    await supabase.from('customers').update({ name, email, phone, status }).eq('email', emailId);
 
     adminToast('Dados do cliente atualizados!');
     closeClientModal();
     initAdminDashboard();
 };
 
-window.toggleClientBlock = async function(email, currentStatus) {
+window.toggleClientBlock = async function (email, currentStatus) {
     const newStatus = currentStatus === 'ativo' ? 'bloqueado' : 'ativo';
     const msg = newStatus === 'bloqueado' ? 'Deseja bloquear este cliente?' : 'Deseja desbloquear este cliente?';
     if (!confirm(msg)) return;
@@ -676,7 +700,7 @@ window.toggleClientBlock = async function(email, currentStatus) {
     initAdminDashboard();
 };
 
-window.deleteClient = async function(email) {
+window.deleteClient = async function (email) {
     if (!confirm('AVISO: Esta ação é irreversível. Deseja excluir permanentemente este cliente e seus dados?')) return;
 
     const { error } = await supabase.from('customers').delete().eq('email', email);
@@ -694,10 +718,10 @@ let currentOrdersList = [];
 async function loadOrders(statusFilter, searchFilter, preloadedOrders) {
     allAdminOrders = preloadedOrders || cachedAdminData.orders || await AdminData.getOrders();
     let orders = allAdminOrders;
-    
+
     if (statusFilter) orders = orders.filter(o => o.status === statusFilter);
-    if (searchFilter) orders = orders.filter(o => 
-        String(o.id).toLowerCase().includes(searchFilter.toLowerCase()) || 
+    if (searchFilter) orders = orders.filter(o =>
+        String(o.id).toLowerCase().includes(searchFilter.toLowerCase()) ||
         (o.clientName || '').toLowerCase().includes(searchFilter.toLowerCase()) ||
         (o.clientEmail || '').toLowerCase().includes(searchFilter.toLowerCase())
     );
@@ -732,14 +756,14 @@ function renderOrdersTable() {
                 <td>${fmt(o.total)}</td>
                 <td>
                     <select class="status-select" onchange="updateOrderStatus('${o.id}', this.value)">
-                        ${['aguardando','separacao','saiu','entregue','cancelado','processando'].map(s =>
-                            `<option value="${s}"${o.status === s ? ' selected' : ''}>${statusInfo[s].label}</option>`
-                        ).join('')}
+                        ${['aguardando', 'separacao', 'saiu', 'entregue', 'cancelado', 'processando'].map(s =>
+            `<option value="${s}"${o.status === s ? ' selected' : ''}>${statusInfo[s].label}</option>`
+        ).join('')}
                     </select>
                 </td>
                 <td>
                     <button class="btn-icon btn-icon-view" onclick="viewOrder('${o.id}')" title="Ver detalhes"><i class="fas fa-eye"></i></button>
-                    ${o.clientPhone ? ` <a href="https://wa.me/55${o.clientPhone.replace(/\D/g,'')}" target="_blank" class="btn-icon" style="color:#25D366;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>` : ''}
+                    ${o.clientPhone ? ` <a href="https://wa.me/55${o.clientPhone.replace(/\D/g, '')}" target="_blank" class="btn-icon" style="color:#25D366;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>` : ''}
                 </td>
             </tr>
         `;
@@ -749,7 +773,7 @@ function renderOrdersTable() {
     const totalPages = Math.ceil(filteredOrdersCount / ordersPageSize) || 1;
     const info = document.getElementById('orders-page-info');
     if (info) info.textContent = `Página ${ordersCurrentPage} de ${totalPages}`;
-    
+
     // Update button states
     const btnPrev = document.getElementById('prev-orders');
     const btnNext = document.getElementById('next-orders');
@@ -757,13 +781,13 @@ function renderOrdersTable() {
     if (btnNext) btnNext.disabled = ordersCurrentPage === totalPages;
 }
 
-window.updateOrderStatus = async function(id, newStatus) {
-    await supabase.from('orders').update({status: newStatus, status_label: statusInfo[newStatus].label}).eq('id', id);
+window.updateOrderStatus = async function (id, newStatus) {
+    await supabase.from('orders').update({ status: newStatus, status_label: statusInfo[newStatus].label }).eq('id', id);
     adminToast('Status atualizado: ' + statusInfo[newStatus].label);
     initAdminDashboard();
 };
 
-window.viewOrder = function(id) {
+window.viewOrder = function (id) {
     const o = allAdminOrders.find(o => o.id == id);
     if (!o) return;
     document.getElementById('order-detail-title').textContent = 'Pedido ' + o.id;
@@ -772,7 +796,7 @@ window.viewOrder = function(id) {
         '<h4><i class="fas fa-user"></i> Dados do Cliente</h4>' +
         '<p><strong>Nome:</strong> ' + (o.clientName || '—') + '</p>' +
         '<p><strong>E-mail:</strong> ' + (o.clientEmail || '—') + '</p>' +
-        '<p><strong>WhatsApp:</strong> ' + (o.clientPhone ? '<a href="https://wa.me/55' + o.clientPhone.replace(/\D/g,'') + '" target="_blank" style="color:#25D366"><i class="fab fa-whatsapp"></i> ' + o.clientPhone + '</a>' : '—') + '</p>' +
+        '<p><strong>WhatsApp:</strong> ' + (o.clientPhone ? '<a href="https://wa.me/55' + o.clientPhone.replace(/\D/g, '') + '" target="_blank" style="color:#25D366"><i class="fab fa-whatsapp"></i> ' + o.clientPhone + '</a>' : '—') + '</p>' +
         '</div>' +
         '<div class="order-detail-section">' +
         '<h4><i class="fas fa-map-marker-alt"></i> Endereço de Entrega</h4>' +
@@ -792,9 +816,9 @@ window.viewOrder = function(id) {
     document.getElementById('order-detail-modal').classList.remove('hidden');
 };
 
-window.closeOrderModal = function() { document.getElementById('order-detail-modal').classList.add('hidden'); };
+window.closeOrderModal = function () { document.getElementById('order-detail-modal').classList.add('hidden'); };
 
-window.printOrder = function() {
+window.printOrder = function () {
     const o = window._currentOrder;
     if (!o) return;
     const printArea = document.getElementById('print-area');
@@ -824,8 +848,8 @@ async function loadBanners(preloadedBanners) {
             '<td><strong>' + (b.title || 'Sem título') + '</strong></td>' +
             '<td>' + (b.subtitle || '—') + '</td>' +
             '<td>' +
-            '<button class="badge ' + (b.active ? 'badge-ativo' : 'badge-bloqueado') + '" onclick="toggleBannerActive(' + b.id + ')" style="border:none; cursor:pointer;">' + 
-            (b.active ? '<i class="fas fa-check-circle"></i> Ativo' : '<i class="fas fa-times-circle"></i> Inativo') + 
+            '<button class="badge ' + (b.active ? 'badge-ativo' : 'badge-bloqueado') + '" onclick="toggleBannerActive(' + b.id + ')" style="border:none; cursor:pointer;">' +
+            (b.active ? '<i class="fas fa-check-circle"></i> Ativo' : '<i class="fas fa-times-circle"></i> Inativo') +
             '</button>' +
             '</td>' +
             '<td>' +
@@ -835,17 +859,17 @@ async function loadBanners(preloadedBanners) {
         ).join('');
 }
 
-window.toggleBannerActive = async function(id) {
+window.toggleBannerActive = async function (id) {
     const banners = await AdminData.getBanners();
     const b = banners.find(item => item.id === id);
     if (b) {
-        await supabase.from('banners').update({active: !b.active}).eq('id', id);
+        await supabase.from('banners').update({ active: !b.active }).eq('id', id);
         await loadBanners();
         adminToast('Status do banner atualizado!');
     }
 };
 
-window.openBannerModal = async function(id) {
+window.openBannerModal = async function (id) {
     const modal = document.getElementById('banner-modal');
     modal.classList.remove('hidden');
 
@@ -859,7 +883,7 @@ window.openBannerModal = async function(id) {
 
     if (!id) {
         document.getElementById('banner-modal-title').textContent = 'Inserir Novo Banner';
-        ['banner-id','banner-title','banner-subtitle','banner-btn-text','banner-btn-link','banner-image-base64'].forEach(f => { const el = document.getElementById(f); if(el) el.value = ''; });
+        ['banner-id', 'banner-title', 'banner-subtitle', 'banner-btn-text', 'banner-btn-link', 'banner-image-base64'].forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
         document.getElementById('banner-active').checked = true;
         return;
     }
@@ -884,13 +908,13 @@ window.openBannerModal = async function(id) {
     }
 };
 
-window.closeBannerModal = function() {
+window.closeBannerModal = function () {
     document.getElementById('banner-modal').classList.add('hidden');
 };
 
-window.saveBanner = async function() {
+window.saveBanner = async function () {
     const id = document.getElementById('banner-id').value;
-    
+
     const banner = {
         title: document.getElementById('banner-title').value,
         subtitle: document.getElementById('banner-subtitle').value,
@@ -964,7 +988,7 @@ function renderFinanceDashboard(data, period) {
         if (period === 'all') return true;
         const oDate = new Date(o.created_at);
         if (period === 'today') return oDate.toDateString() === now.toDateString();
-        
+
         const diffDays = (now - oDate) / (1000 * 60 * 60 * 24);
         if (period === '7days') return diffDays <= 7;
         if (period === '30days') return diffDays <= 30;
@@ -974,7 +998,7 @@ function renderFinanceDashboard(data, period) {
 
     const totalBilling = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
     const avgTicket = orders.length > 0 ? totalBilling / orders.length : 0;
-    
+
     // Calculo de Cancelados (dentro do período selecionado)
     const canceledOrders = allOrders.filter(o => {
         if (o.status !== 'cancelado') return false;
@@ -1001,7 +1025,7 @@ function renderFinanceDashboard(data, period) {
         });
     });
 
-    const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     setVal('fin-total-billing', fmt(totalBilling));
     setVal('fin-avg-ticket', fmt(avgTicket));
     setVal('fin-total-orders', orders.length);
@@ -1036,11 +1060,11 @@ function initOverviewCharts(orders, period = '7days') {
     if (period === '30days') count = 30;
     if (period === 'all' || period === 'year') count = 30; // Max 30 for visualization
 
-    for(let i=count-1; i>=0; i--) {
+    for (let i = count - 1; i >= 0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i);
         lastDays[d.toLocaleDateString('pt-BR').substring(0, 5)] = 0;
     }
-    
+
     orders.forEach(o => {
         const day = o.date.substring(0, 5);
         if (lastDays[day] !== undefined) lastDays[day] += parseFloat(o.total || 0);
@@ -1062,12 +1086,12 @@ function initOverviewCharts(orders, period = '7days') {
 function loadSalesCharts(period, allOrders) {
     if (!allOrders) return;
     const orders = allOrders.filter(o => o.status !== 'cancelado');
-    
+
     let labels = [];
     let data = [];
 
     if (period === 'year') {
-        labels = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
         const monthly = new Array(12).fill(0);
         const currentYear = new Date().getFullYear();
         orders.forEach(o => {
@@ -1078,12 +1102,12 @@ function loadSalesCharts(period, allOrders) {
     } else {
         const daysToCount = period === '30days' ? 30 : 7;
         const timeline = [];
-        for(let i = daysToCount - 1; i >= 0; i--) {
+        for (let i = daysToCount - 1; i >= 0; i--) {
             const d = new Date(); d.setDate(d.getDate() - i);
-            timeline.push({ 
-                label: d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'}), 
+            timeline.push({
+                label: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
                 key: d.toLocaleDateString('pt-BR').substring(0, 5),
-                val: 0 
+                val: 0
             });
         }
         orders.forEach(o => {
@@ -1101,7 +1125,7 @@ function loadSalesCharts(period, allOrders) {
     });
 
     // Análise por Dia da Semana (Real)
-    const dowLabels = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+    const dowLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
     const dowData = new Array(7).fill(0);
     orders.forEach(o => {
         const d = new Date(o.created_at);
@@ -1121,7 +1145,7 @@ function loadProductsFinance(orders, products) {
             if (!ranking[item.name]) ranking[item.name] = { qty: 0, revenue: 0, profit: 0 };
             ranking[item.name].qty += item.qty;
             ranking[item.name].revenue += item.price * item.qty;
-            
+
             const p = products.find(prod => prod.name === item.name);
             if (p) {
                 ranking[item.name].profit += (item.price - (p.cost || 0)) * item.qty;
@@ -1129,7 +1153,7 @@ function loadProductsFinance(orders, products) {
         });
     });
 
-    const sorted = Object.entries(ranking).sort((a,b) => b[1].qty - a[1].qty).slice(0, 5);
+    const sorted = Object.entries(ranking).sort((a, b) => b[1].qty - a[1].qty).slice(0, 5);
     const tbody = document.getElementById('fin-products-ranking');
     if (tbody) tbody.innerHTML = sorted.map(([name, data]) => {
         const profitColor = data.profit < 0 ? '#e74c3c' : '#27ae60';
@@ -1147,7 +1171,7 @@ function loadProductsFinance(orders, products) {
     const container = document.getElementById('fin-low-stock-container');
     if (container) {
         if (lowStock.length > 0) {
-            container.innerHTML = `<h4><i class="fas fa-exclamation-triangle"></i> Alerta de Estoque Baixo (Menos de 5 und)</h4>` + 
+            container.innerHTML = `<h4><i class="fas fa-exclamation-triangle"></i> Alerta de Estoque Baixo (Menos de 5 und)</h4>` +
                 lowStock.map(p => `<p>• ${p.name}: <strong>${p.stock} unidades</strong> restantes.</p>`).join('');
         } else {
             container.innerHTML = `<p style="color: #27ae60"><i class="fas fa-check-circle"></i> Estoque em dia.</p>`;
@@ -1164,7 +1188,7 @@ function loadCustomersFinance(orders, clients, period = '7days') {
         customerValue[o.clientEmail].total += parseFloat(o.total || 0);
     });
 
-    const vips = Object.entries(customerValue).sort((a,b) => b[1].total - a[1].total).slice(0, 5);
+    const vips = Object.entries(customerValue).sort((a, b) => b[1].total - a[1].total).slice(0, 5);
     const tbody = document.getElementById('fin-vip-ranking');
     if (tbody) tbody.innerHTML = vips.map(([email, data]) => {
         const avg = data.total / (data.orders || 1);
@@ -1192,9 +1216,9 @@ function loadCustomersFinance(orders, clients, period = '7days') {
 
     const purchasingClientsCount = Object.keys(customerValue).length;
     const recurring = Object.values(customerValue).filter(v => v.orders > 1).length;
-    
+
     const totalBilling = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
-    const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     setVal('fin-ltv', fmt(totalBilling / (purchasingClientsCount || 1)));
     setVal('fin-recurring-clients', recurring);
     setVal('fin-new-clients', newClients);
@@ -1217,7 +1241,7 @@ function renderChart(id, type, data, options = {}) {
     });
 }
 
-window.deleteBanner = async function(id) {
+window.deleteBanner = async function (id) {
     if (!confirm('Excluir este banner permanentemente?')) return;
     await supabase.from('banners').delete().eq('id', id);
     await loadBanners();
@@ -1230,7 +1254,7 @@ document.addEventListener('change', e => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = function(event) {
+        reader.onload = function (event) {
             const base64 = event.target.result;
             document.getElementById('banner-image-base64').value = base64;
             const preview = document.getElementById('banner-img-preview');
@@ -1279,7 +1303,7 @@ async function populateBrandSelect() {
     select.innerHTML = '<option value="">Sem Marca</option>' + brands.map(b => '<option value="' + b.name + '">' + b.name + '</option>').join('');
 }
 
-window.openBrandModal = async function(id) {
+window.openBrandModal = async function (id) {
     const modal = document.getElementById('brand-modal');
     modal.classList.remove('hidden');
 
@@ -1299,20 +1323,20 @@ window.openBrandModal = async function(id) {
     }
 };
 
-window.closeBrandModal = function() {
+window.closeBrandModal = function () {
     document.getElementById('brand-modal').classList.add('hidden');
 };
 
-window.saveBrand = async function() {
+window.saveBrand = async function () {
     const id = document.getElementById('brand-id').value;
     const name = document.getElementById('brand-name').value.trim();
 
     if (!name) { adminToast('O nome da marca é obrigatório!', 'error'); return; }
 
     if (id) {
-        await supabase.from('brands').update({name}).eq('id', id);
+        await supabase.from('brands').update({ name }).eq('id', id);
     } else {
-        await supabase.from('brands').insert([{name}]);
+        await supabase.from('brands').insert([{ name }]);
     }
 
     adminToast('Marca salva com sucesso!');
@@ -1320,7 +1344,7 @@ window.saveBrand = async function() {
     await loadBrands();
 };
 
-window.deleteBrand = async function(id) {
+window.deleteBrand = async function (id) {
     if (!confirm('Deseja excluir esta marca?')) return;
     await supabase.from('brands').delete().eq('id', id);
     adminToast('Marca excluída!');
