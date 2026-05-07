@@ -238,7 +238,7 @@ function searchCustomer(query) {
     }
 }
 
-function selectCustomer(id) {
+window.selectCustomer = function(id) {
     const cust = allCustomers.find(c => c.id === id);
     if (cust) {
         selectedCustomer = cust;
