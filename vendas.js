@@ -1,6 +1,10 @@
-// ============================================================
-// PDV - PONTO DE VENDA | CORE LOGIC
-// ============================================================
+// Admin Auth Check
+const _sessionKey = 'ecostore_admin_session';
+const loggedAdmin = JSON.parse(sessionStorage.getItem(_sessionKey) || 'null');
+
+if (!loggedAdmin) {
+    window.location.href = 'admin-login.html';
+}
 
 let pdvItems = [];
 let allProducts = [];
@@ -9,6 +13,11 @@ let selectedCustomer = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+    // Update Seller Name
+    if (loggedAdmin && document.getElementById('vendedor-nome')) {
+        document.getElementById('vendedor-nome').textContent = loggedAdmin.name;
+    }
+    
     updateClock();
     setInterval(updateClock, 1000);
     
