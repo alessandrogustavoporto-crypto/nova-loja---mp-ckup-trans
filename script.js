@@ -592,7 +592,8 @@ function renderAllProducts(page = 1, filterCategory = null, filterText = null, f
         const query = filterText.toLowerCase().trim();
         products = products.filter(p => 
             p.name.toLowerCase().includes(query) || 
-            (p.brand && p.brand.toLowerCase().includes(query))
+            (p.brand && p.brand.toLowerCase().includes(query)) ||
+            (p.barcode && p.barcode.toLowerCase().includes(query))
         );
     }
 
