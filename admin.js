@@ -914,6 +914,20 @@ function renderFinanceDashboard(data, period) {
     const totalBilling = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
     const avgTicket = orders.length > 0 ? totalBilling / orders.length : 0;
     
+    // Calculo de Cancelados (dentro do período selecionado)
+    const canceledOrders = allOrders.filter(o => {
+        if (o.status !== 'cancelado') return false;
+        if (period === 'all') return true;
+        const oDate = new Date(o.created_at);
+        if (period === 'today') return oDate.toDateString() === now.toDateString();
+        const diffDays = (now - oDate) / (1000 * 60 * 60 * 24);
+        if (period === '7days') return diffDays <= 7;
+        if (period === '30days') return diffDays <= 30;
+        if (period === 'year') return oDate.getFullYear() === now.getFullYear();
+        return true;
+    });
+    const totalCanceled = canceledOrders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+
     let totalProfit = 0;
     orders.forEach(o => {
         (o.items || []).forEach(item => {
@@ -931,6 +945,7 @@ function renderFinanceDashboard(data, period) {
     setVal('fin-avg-ticket', fmt(avgTicket));
     setVal('fin-total-orders', orders.length);
     setVal('fin-total-profit', fmt(totalProfit));
+    setVal('fin-total-canceled', fmt(totalCanceled));
 
     initOverviewCharts(orders, period);
     loadSalesCharts('7days', allOrders); // Passa allOrders para o gráfico real
