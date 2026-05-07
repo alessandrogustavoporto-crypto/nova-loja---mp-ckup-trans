@@ -27,7 +27,7 @@
             <section class="search-section">
                 <div class="form-group" style="position: relative;">
                     <label>Buscar Produto (Nome / Código / SKU)</label>
-                    <input type="text" id="pdv-prod-search" class="pdv-input" placeholder="F1 - Digite ou escaneie o produto..." autofocus autocomplete="off">
+                    <input type="text" id="pdv-prod-search" name="pdv_product_lookup" class="pdv-input" placeholder="F1 - Digite ou escaneie o produto..." autofocus autocomplete="off">
                     <div id="prod-suggestions" class="suggestions-list hidden" style="width: 100%;"></div>
                 </div>
                 <div class="form-group" style="width: 100px;">
@@ -79,7 +79,7 @@
                 
                 <!-- ESTADO: BUSCANDO -->
                 <div id="cust-search-container" style="display:flex; gap:10px; margin-top:5px; position: relative;">
-                    <input type="text" id="pdv-cust-search" class="pdv-input" placeholder="Nome ou CPF..." style="flex:1; padding:8px;" autocomplete="off">
+                    <input type="text" id="pdv-cust-search" name="pdv_customer_lookup" class="pdv-input" placeholder="Nome ou CPF..." style="flex:1; padding:8px;" autocomplete="off">
                     <button class="btn-pdv btn-cancel" title="Novo Cliente" onclick="openNewCustModal()" style="padding:0 12px;"><i class="fas fa-plus"></i></button>
                     <div id="cust-suggestions" class="suggestions-list hidden"></div>
                 </div>
