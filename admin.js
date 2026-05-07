@@ -384,11 +384,23 @@ async function loadDashboard(orders, products, clients, banners) {
     if (!clients) clients = await AdminData.getClients();
     if (!banners) banners = await AdminData.getBanners();
 
-    const salesTotal = orders.filter(o => o.status !== 'cancelado').reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    const now = new Date();
+    const filteredOrders = orders.filter(o => o.status !== 'cancelado');
+    const salesTotal = filteredOrders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    
+    // Vendas no Mês Corrente (Sempre fixo do dia 1 até hoje)
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const salesMonthTotal = orders.filter(o => {
+        if (o.status === 'cancelado') return false;
+        const oDate = new Date(o.created_at);
+        return oDate >= firstDayOfMonth && oDate <= now;
+    }).reduce((s, o) => s + parseFloat(o.total || 0), 0);
+
     const pending = orders.filter(o => ['aguardando', 'separacao', 'processando'].includes(o.status)).length;
     const activeBanners = banners.filter(b => b.active).length;
 
     document.getElementById('kpi-sales').textContent = fmt(salesTotal);
+    document.getElementById('kpi-month-sales').textContent = fmt(salesMonthTotal);
     document.getElementById('kpi-pending').textContent = pending;
     document.getElementById('kpi-clients').textContent = clients.length;
     document.getElementById('kpi-banners').textContent = activeBanners;

@@ -184,8 +184,9 @@
 .kpi-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
 .kpi-green { border-left-color: var(--primary-green); }
 .kpi-orange { border-left-color: var(--primary-orange); }
-.kpi-blue { border-left-color: #3498db; }
-.kpi-gray { border-left-color: #95a5a6; }
+.kpi-blue { border-left: 5px solid #3498db; }
+.kpi-purple { border-left: 5px solid #9b59b6; }
+.kpi-gray { border-left: 5px solid #95a5a6; }
 
 .kpi-icon {
     width: 48px;
