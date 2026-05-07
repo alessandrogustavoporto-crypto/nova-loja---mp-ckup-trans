@@ -157,9 +157,13 @@
 /* ---- KPI Cards ---- */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 15px;
     margin-bottom: 25px;
+}
+
+.kpi-grid-5 {
+    grid-template-columns: repeat(5, 1fr) !important;
 }
 
 .kpi-card {
