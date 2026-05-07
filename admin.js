@@ -11,6 +11,9 @@ let cachedAdminData = {
 // Pagination State
 let ordersCurrentPage = 1;
 const ordersPageSize = 50;
+let dashCurrentPage = 1;
+const dashPageSize = 30;
+let dashPendingOrders = [];
 
 function logErrorToDOM(msg) {
     const div = document.createElement('div');
@@ -407,10 +410,31 @@ async function loadDashboard(orders, products, clients, banners, period = 'all')
     setVal('kpi-total-products', products.length);
     setVal('kpi-banners', activeBanners);
 
+    // Filtrar apenas pedidos pendentes para a lista do dashboard
+    dashPendingOrders = orders.filter(o => ['aguardando', 'separacao', 'processando'].includes(o.status));
+    dashCurrentPage = 1;
+    renderDashboardOrders();
+}
+
+function renderDashboardOrders() {
     const tbody = document.getElementById('dashboard-orders-table');
-    tbody.innerHTML = orders.slice(0, 5).map(o =>
+    const pagContainer = document.getElementById('dashboard-pagination');
+    if (!tbody || !pagContainer) return;
+
+    const start = (dashCurrentPage - 1) * dashPageSize;
+    const end = start + dashPageSize;
+    const paginated = dashPendingOrders.slice(start, end);
+
+    if (dashPendingOrders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted)">Nenhum pedido pendente.</td></tr>';
+        pagContainer.innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = paginated.map((o, index) =>
         '<tr>' +
-        '<td><strong>' + o.id + '</strong></td>' +
+        '<td>' + (start + index + 1) + '</td>' +
+        '<td><strong>#' + String(o.id).padStart(5, '0') + '</strong></td>' +
         '<td>' + (o.clientName || '—') + '</td>' +
         '<td>' + o.date + '</td>' +
         '<td>' + fmt(o.total) + '</td>' +
@@ -418,7 +442,22 @@ async function loadDashboard(orders, products, clients, banners, period = 'all')
         '<td><button class="btn-icon btn-icon-view" onclick="viewOrder(\'' + o.id + '\')"><i class="fas fa-eye"></i></button></td>' +
         '</tr>'
     ).join('');
+
+    // Render Pagination
+    const totalPages = Math.ceil(dashPendingOrders.length / dashPageSize);
+    let html = `
+        <button class="btn-icon" ${dashCurrentPage === 1 ? 'disabled' : ''} onclick="changeDashPage(${dashCurrentPage - 1})"><i class="fas fa-chevron-left"></i></button>
+        <span style="font-weight:600; font-size:14px;">Página ${dashCurrentPage} de ${totalPages}</span>
+        <button class="btn-icon" ${dashCurrentPage === totalPages ? 'disabled' : ''} onclick="changeDashPage(${dashCurrentPage + 1})"><i class="fas fa-chevron-right"></i></button>
+    `;
+    pagContainer.innerHTML = html;
 }
+
+window.changeDashPage = function (page) {
+    dashCurrentPage = page;
+    renderDashboardOrders();
+    document.getElementById('dashboard-orders-table').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 // ---- Products ----
 async function loadProducts(filter, preloadedProds) {

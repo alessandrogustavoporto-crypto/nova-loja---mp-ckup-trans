@@ -92,12 +92,13 @@
 
             <div class="admin-card">
                 <div class="admin-card-header">
-                    <h2>Pedidos Recentes</h2>
+                    <h2>Fila de Pedidos Pendentes</h2>
                 </div>
                 <div class="admin-card-body">
                     <table class="admin-table">
                         <thead>
                             <tr>
+                                <th width="40">#</th>
                                 <th>Pedido</th>
                                 <th>Cliente</th>
                                 <th>Data</th>
@@ -108,6 +109,9 @@
                         </thead>
                         <tbody id="dashboard-orders-table"></tbody>
                     </table>
+                </div>
+                <div id="dashboard-pagination" class="pagination-footer" style="display: flex; justify-content: center; align-items: center; gap: 20px; padding: 20px; border-top: 1px solid #eee;">
+                    <!-- Paginação JS -->
                 </div>
             </div>
         </section>
