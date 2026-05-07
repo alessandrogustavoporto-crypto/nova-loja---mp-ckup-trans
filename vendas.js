@@ -227,19 +227,32 @@ function searchCustomer(query) {
 
     if (matches.length > 0) {
         list.innerHTML = matches.map(c => `
-            <div class="suggestion-item" onmousedown="window.selectCustomer(${c.id})">
+            <div class="suggestion-item" data-id="${c.id}">
                 <span>${c.name}</span>
                 <small>CPF: ${c.cpf || '—'} | ${c.email}</small>
             </div>
         `).join('');
         list.classList.remove('hidden');
+        
+        // Adiciona ouvintes de clique nos itens recém-criados
+        list.querySelectorAll('.suggestion-item').forEach(item => {
+            item.onmousedown = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = item.getAttribute('data-id');
+                window.selectCustomer(id);
+            };
+        });
     } else {
         list.classList.add('hidden');
     }
 }
 
 window.selectCustomer = function(id) {
-    const cust = allCustomers.find(c => c.id === id);
+    console.log('Selecionando cliente ID:', id);
+    // Busca flexível (número ou string)
+    const cust = allCustomers.find(c => String(c.id) === String(id));
+    
     if (cust) {
         selectedCustomer = cust;
         
@@ -250,6 +263,8 @@ window.selectCustomer = function(id) {
         
         document.getElementById('cust-suggestions').classList.add('hidden');
         document.getElementById('pdv-cust-search').value = '';
+    } else {
+        console.error('Cliente não encontrado no cache local para o ID:', id);
     }
 }
 
