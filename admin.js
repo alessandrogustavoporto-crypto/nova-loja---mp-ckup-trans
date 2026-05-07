@@ -8,6 +8,10 @@ let cachedAdminData = {
     banners: null
 };
 
+// Pagination State
+let ordersCurrentPage = 1;
+const ordersPageSize = 50;
+
 function logErrorToDOM(msg) {
     const div = document.createElement('div');
     div.style.position = 'fixed'; div.style.top = '0'; div.style.left = '0'; div.style.right = '0'; div.style.background = 'red'; div.style.color = 'white'; div.style.padding = '20px'; div.style.zIndex = '999999'; div.style.fontSize = '24px'; div.style.fontWeight = 'bold';
@@ -297,6 +301,15 @@ async function initAdminDashboard() {
     // Overview Period Filter
     const ovFilter = document.getElementById('overview-period-filter');
     if (ovFilter) ovFilter.addEventListener('change', () => loadFinanceData(ovFilter.value));
+
+    // Orders Pagination Listeners
+    const btnPrev = document.getElementById('prev-orders');
+    const btnNext = document.getElementById('next-orders');
+    if (btnPrev) btnPrev.addEventListener('click', () => { if (ordersCurrentPage > 1) { ordersCurrentPage--; renderOrdersTable(); } });
+    if (btnNext) btnNext.addEventListener('click', () => { 
+        const totalPages = Math.ceil(filteredOrdersCount / ordersPageSize);
+        if (ordersCurrentPage < totalPages) { ordersCurrentPage++; renderOrdersTable(); } 
+    });
 }
 
 // ---- Dashboard KPIs ----
@@ -658,10 +671,13 @@ window.deleteClient = async function(email) {
 
 // ---- Orders ----
 let allAdminOrders = [];
+let filteredOrdersCount = 0;
+let currentOrdersList = [];
 
 async function loadOrders(statusFilter, searchFilter, preloadedOrders) {
-    allAdminOrders = preloadedOrders || await AdminData.getOrders();
+    allAdminOrders = preloadedOrders || cachedAdminData.orders || await AdminData.getOrders();
     let orders = allAdminOrders;
+    
     if (statusFilter) orders = orders.filter(o => o.status === statusFilter);
     if (searchFilter) orders = orders.filter(o => 
         String(o.id).toLowerCase().includes(searchFilter.toLowerCase()) || 
@@ -669,31 +685,59 @@ async function loadOrders(statusFilter, searchFilter, preloadedOrders) {
         (o.clientEmail || '').toLowerCase().includes(searchFilter.toLowerCase())
     );
 
-    const tbody = document.getElementById('orders-admin-table');
-    if (!tbody) return;
-    tbody.innerHTML = orders.map(o =>
-        '<tr>' +
-        '<td><strong>#' + String(o.id).padStart(5, '0') + '</strong></td>' +
-        '<td>' + (o.clientName || '—') + '</td>' +
-        '<td>' + o.date + '</td>' +
-        '<td>' + fmt(o.total) + '</td>' +
-        '<td>' +
-        '<select class="status-select" onchange="updateOrderStatus(\'' + o.id + '\', this.value)">' +
-        ['aguardando','separacao','saiu','entregue','cancelado','processando'].map(s =>
-            '<option value="' + s + '"' + (o.status === s ? ' selected' : '') + '>' + statusInfo[s].label + '</option>'
-        ).join('') +
-        '</select>' +
-        '</td>' +
-        '<td>' +
-        '<button class="btn-icon btn-icon-view" onclick="viewOrder(\'' + o.id + '\')" title="Ver detalhes"><i class="fas fa-eye"></i></button>' +
-        (o.clientPhone ? ' <a href="https://wa.me/55' + o.clientPhone.replace(/\D/g,'') + '" target="_blank" class="btn-icon" style="color:#25D366;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>' : '') +
-        '</td></tr>'
-    ).join('');
+    currentOrdersList = orders;
+    filteredOrdersCount = orders.length;
+    ordersCurrentPage = 1; // Reset to page 1 on filter change
+    renderOrdersTable();
 
     const search = document.getElementById('order-admin-search');
     const status = document.getElementById('order-admin-status');
     if (search && !search._bound) { search._bound = true; search.addEventListener('input', () => loadOrders(status.value, search.value)); }
     if (status && !status._bound) { status._bound = true; status.addEventListener('change', () => loadOrders(status.value, search.value)); }
+}
+
+function renderOrdersTable() {
+    const tbody = document.getElementById('orders-admin-table');
+    if (!tbody) return;
+
+    const start = (ordersCurrentPage - 1) * ordersPageSize;
+    const end = start + ordersPageSize;
+    const paginated = currentOrdersList.slice(start, end);
+
+    tbody.innerHTML = paginated.map((o, index) => {
+        const rowNum = start + index + 1;
+        return `
+            <tr>
+                <td>${rowNum}</td>
+                <td><strong>#${String(o.id).padStart(5, '0')}</strong></td>
+                <td>${o.clientName || '—'}</td>
+                <td>${o.date}</td>
+                <td>${fmt(o.total)}</td>
+                <td>
+                    <select class="status-select" onchange="updateOrderStatus('${o.id}', this.value)">
+                        ${['aguardando','separacao','saiu','entregue','cancelado','processando'].map(s =>
+                            `<option value="${s}"${o.status === s ? ' selected' : ''}>${statusInfo[s].label}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+                <td>
+                    <button class="btn-icon btn-icon-view" onclick="viewOrder('${o.id}')" title="Ver detalhes"><i class="fas fa-eye"></i></button>
+                    ${o.clientPhone ? ` <a href="https://wa.me/55${o.clientPhone.replace(/\D/g,'')}" target="_blank" class="btn-icon" style="color:#25D366;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>` : ''}
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    // Update pagination info
+    const totalPages = Math.ceil(filteredOrdersCount / ordersPageSize) || 1;
+    const info = document.getElementById('orders-page-info');
+    if (info) info.textContent = `Página ${ordersCurrentPage} de ${totalPages}`;
+    
+    // Update button states
+    const btnPrev = document.getElementById('prev-orders');
+    const btnNext = document.getElementById('next-orders');
+    if (btnPrev) btnPrev.disabled = ordersCurrentPage === 1;
+    if (btnNext) btnNext.disabled = ordersCurrentPage === totalPages;
 }
 
 window.updateOrderStatus = async function(id, newStatus) {

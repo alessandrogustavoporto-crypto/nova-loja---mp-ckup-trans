@@ -163,9 +163,14 @@
             <div class="admin-card-header"><h2>Gestão de Pedidos</h2></div>
             <div class="admin-card-body">
                 <table class="admin-table">
-                    <thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
+                    <thead><tr><th>#</th><th>Pedido</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead>
                     <tbody id="orders-admin-table"></tbody>
                 </table>
+            </div>
+            <div class="pagination-footer" style="display: flex; justify-content: center; align-items: center; gap: 20px; padding: 20px; border-top: 1px solid #eee;">
+                <button id="prev-orders" class="btn-icon" title="Anterior"><i class="fas fa-chevron-left"></i></button>
+                <span id="orders-page-info" style="font-weight: 600; font-size: 14px;">Página 1</span>
+                <button id="next-orders" class="btn-icon" title="Próximo"><i class="fas fa-chevron-right"></i></button>
             </div>
         </div>
     </section>
