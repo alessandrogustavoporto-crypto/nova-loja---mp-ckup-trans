@@ -896,9 +896,10 @@ async function loadFinanceData(period = '7days', forceRefresh = false) {
 function renderFinanceDashboard(data, period) {
     const { orders: allOrders, products, clients } = data;
 
-    // Filtro de Período
+    // Filtro de Período + Filtro de Cancelados
     const now = new Date();
     const orders = allOrders.filter(o => {
+        if (o.status === 'cancelado') return false; // Ignora cancelados
         if (period === 'all') return true;
         const oDate = new Date(o.created_at);
         if (period === 'today') return oDate.toDateString() === now.toDateString();
@@ -932,7 +933,7 @@ function renderFinanceDashboard(data, period) {
     setVal('fin-total-profit', fmt(totalProfit));
 
     initOverviewCharts(orders, period);
-    loadSalesCharts('7days');
+    loadSalesCharts('7days', allOrders); // Passa allOrders para o gráfico real
     loadProductsFinance(orders, products);
     loadCustomersFinance(orders, clients);
 }
@@ -982,19 +983,58 @@ function initOverviewCharts(orders, period = '7days') {
     });
 }
 
-function loadSalesCharts(period) {
-    const labels = period === 'year' ? ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'] : ['Seg','Ter','Qua','Qui','Sex','Sab','Dom'];
-    const dummyData = labels.map(() => Math.floor(Math.random() * 5000) + 1000);
+function loadSalesCharts(period, allOrders) {
+    if (!allOrders) return;
+    const orders = allOrders.filter(o => o.status !== 'cancelado');
+    
+    let labels = [];
+    let data = [];
+
+    if (period === 'year') {
+        labels = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const monthly = new Array(12).fill(0);
+        const currentYear = new Date().getFullYear();
+        orders.forEach(o => {
+            const d = new Date(o.created_at);
+            if (d.getFullYear() === currentYear) monthly[d.getMonth()] += parseFloat(o.total || 0);
+        });
+        data = monthly;
+    } else {
+        // Últimos 7 dias reais
+        const last7 = [];
+        for(let i=6; i>=0; i--) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            last7.push({ 
+                label: d.toLocaleDateString('pt-BR', {weekday: 'short'}), 
+                key: d.toLocaleDateString('pt-BR').substring(0, 5),
+                val: 0 
+            });
+        }
+        orders.forEach(o => {
+            const dayKey = o.date.substring(0, 5);
+            const entry = last7.find(l => l.key === dayKey);
+            if (entry) entry.val += parseFloat(o.total || 0);
+        });
+        labels = last7.map(l => l.label);
+        data = last7.map(l => l.val);
+    }
 
     renderChart('chart-sales-history', 'bar', {
         labels: labels,
-        datasets: [{ label: 'Vendas por Período', data: dummyData, backgroundColor: '#3498db' }]
+        datasets: [{ label: 'Faturamento R$', data: data, backgroundColor: '#3498db' }]
     });
 
-    const dow = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+    // Análise por Dia da Semana (Real)
+    const dowLabels = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+    const dowData = new Array(7).fill(0);
+    orders.forEach(o => {
+        const d = new Date(o.created_at);
+        dowData[d.getDay()] += parseFloat(o.total || 0);
+    });
+
     renderChart('chart-dow-analysis', 'radar', {
-        labels: dow,
-        datasets: [{ label: 'Vendas por Dia da Semana', data: [12, 19, 15, 17, 25, 30, 20], borderColor: '#e67e22' }]
+        labels: dowLabels,
+        datasets: [{ label: 'Vendas acumuladas por dia', data: dowData, borderColor: '#e67e22' }]
     });
 }
 
