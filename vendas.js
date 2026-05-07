@@ -175,6 +175,44 @@ function renderItems() {
 // CUSTOMER & TOTALS
 // ============================================================
 
+function openNewCustModal() {
+    document.getElementById('modal-new-customer').classList.remove('hidden');
+    document.getElementById('new-cust-name').focus();
+}
+
+function closeNewCustModal() {
+    document.getElementById('modal-new-customer').classList.add('hidden');
+}
+
+async function saveNewCustomer() {
+    const name = document.getElementById('new-cust-name').value.trim();
+    const cpf = document.getElementById('new-cust-cpf').value.trim();
+    const email = document.getElementById('new-cust-email').value.trim() || `pdv_${Date.now()}@ecostore.com`;
+    const phone = document.getElementById('new-cust-phone').value.trim();
+
+    if (!name) { alert('O nome é obrigatório!'); return; }
+
+    try {
+        const { data, error } = await supabase.from('customers').insert([{
+            name, cpf, email, phone
+        }]).select().single();
+
+        if (error) throw error;
+
+        alert('Cliente cadastrado com sucesso!');
+        selectedCustomer = data;
+        document.getElementById('selected-customer-info').classList.remove('hidden');
+        document.getElementById('selected-cust-name').textContent = data.name;
+        
+        await loadInitialData(); // Refresh list
+        closeNewCustModal();
+
+    } catch (e) {
+        console.error(e);
+        alert('Erro ao cadastrar cliente: ' + (e.message || 'Verifique se o e-mail ou CPF já existem.'));
+    }
+}
+
 function searchCustomer(query) {
     if (query.length < 3) return;
     const cust = allCustomers.find(c => 
