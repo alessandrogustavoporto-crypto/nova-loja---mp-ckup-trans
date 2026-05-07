@@ -313,9 +313,24 @@ const Orders = {
                 address: data.address || {}
             };
             window.APP_DATA.orders.unshift(normalized);
+            
+            // Realiza a baixa de estoque
+            this.decrementStock(items);
+            
             return normalized;
         }
         return newOrder;
+    },
+    async decrementStock(items) {
+        for (const item of items) {
+            try {
+                const { data } = await supabase.from('products').select('stock').eq('id', item.id).single();
+                if (data) {
+                    const newStock = Math.max(0, (data.stock || 0) - item.qty);
+                    await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
+                }
+            } catch(e) { console.error('Erro ao baixar estoque:', e); }
+        }
     }
 };
 
@@ -455,6 +470,13 @@ document.addEventListener('cartChanged', updateCartBadge);
 window.addToCart = function(productId) {
     const product = ProductStore.getById(productId);
     if (!product) return;
+    
+    // Validar estoque
+    if (product.stock <= 0) {
+        showToast('Produto esgotado no momento!', 'error');
+        return;
+    }
+
     Cart.add(productId);
     showToast('"' + product.name.substring(0, 30) + '..." adicionado!');
     const cartIcon = document.querySelector('.cart-icon');
@@ -624,13 +646,19 @@ function renderGrid(gridId, paginationId, products, page, perPage, type, cat = n
             if (discount > 0) offerBadge = `-${discount}%`;
         }
 
+        const isOut = product.stock <= 0;
+        const btnClass = isOut ? 'btn-buy btn-out-of-stock' : 'btn-buy';
+        const finalBtnText = isOut ? 'Esgotado' : btnText;
+        const finalBtnAction = isOut ? '' : btnAction;
+        const finalBtnIcon = isOut ? 'fa-times-circle' : btnIcon;
+
         grid.innerHTML += '<div class="product-card">' +
             (offerBadge ? '<span class="badge-offer">' + offerBadge + '</span>' : '') +
             '<img src="' + product.image + '" alt="' + product.name + '" class="product-img" onclick="openProductDetail(' + product.id + ')" style="cursor:pointer">' +
             '<span class="product-category">' + product.category + '</span>' +
             '<h3 class="product-title" onclick="openProductDetail(' + product.id + ')" style="cursor:pointer">' + product.name + '</h3>' +
             '<div class="product-price">' + (product.promoActive && product.promoPrice ? fmt(product.promoPrice) : fmt(product.price)) + (product.promoActive && product.promoPrice ? '<span>' + fmt(product.price) + '</span>' : '') + '</div>' +
-            '<button class="btn-buy" onclick="' + btnAction + '"><i class="fas ' + btnIcon + '"></i> ' + btnText + '</button>' +
+            '<button class="' + btnClass + '" onclick="' + finalBtnAction + '" ' + (isOut ? 'disabled' : '') + '><i class="fas ' + finalBtnIcon + '"></i> ' + finalBtnText + '</button>' +
             '</div>';
     });
 
