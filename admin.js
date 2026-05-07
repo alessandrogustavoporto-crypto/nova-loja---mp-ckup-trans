@@ -336,6 +336,30 @@ async function initAdminDashboard() {
         }
     }
 
+    // Product Period Filter
+    const prodFilter = document.getElementById('prod-period-filter');
+    if (prodFilter) {
+        if (!prodFilter._bound) {
+            prodFilter._bound = true;
+            prodFilter.addEventListener('change', () => {
+                const now = new Date();
+                const filtered = cachedAdminData.orders.filter(o => {
+                    if (o.status === 'cancelado') return false;
+                    const period = prodFilter.value;
+                    if (period === 'all') return true;
+                    const oDate = new Date(o.created_at);
+                    if (period === 'today') return oDate.toDateString() === now.toDateString();
+                    const diffDays = (now - oDate) / (1000 * 60 * 60 * 24);
+                    if (period === '7days') return diffDays <= 7;
+                    if (period === '30days') return diffDays <= 30;
+                    if (period === 'year') return oDate.getFullYear() === now.getFullYear();
+                    return true;
+                });
+                loadProductsFinance(filtered, cachedAdminData.products);
+            });
+        }
+    }
+
     // Orders Pagination Listeners
     const btnPrev = document.getElementById('prev-orders');
     const btnNext = document.getElementById('next-orders');
