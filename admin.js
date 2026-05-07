@@ -377,24 +377,34 @@ async function initAdminDashboard() {
 }
 
 // ---- Dashboard KPIs ----
-async function loadDashboard(orders, products, clients, banners) {
+async function loadDashboard(orders, products, clients, banners, period = 'all') {
     if (!orders) orders = await AdminData.getOrders();
-    allAdminOrders = orders;
+    allAdminOrders = orders; 
     if (!products) products = await AdminData.getProducts();
     if (!clients) clients = await AdminData.getClients();
     if (!banners) banners = await AdminData.getBanners();
 
+    // Filtro de Período para os Pedidos Pendentes e Novos Clientes no Dashboard
     const now = new Date();
-    const filteredOrders = orders.filter(o => o.status !== 'cancelado');
-    const salesTotal = filteredOrders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
-    
-    const pending = orders.filter(o => ['aguardando', 'separacao', 'processando'].includes(o.status)).length;
+    const pending = orders.filter(o => {
+        const isPending = ['aguardando','separacao','processando'].includes(o.status);
+        if (!isPending) return false;
+        if (period === 'all') return true;
+        const oDate = new Date(o.created_at);
+        if (period === 'today') return oDate.toDateString() === now.toDateString();
+        const diffDays = (now - oDate) / (1000 * 60 * 60 * 24);
+        if (period === '7days') return diffDays <= 7;
+        if (period === '30days') return diffDays <= 30;
+        if (period === 'year') return oDate.getFullYear() === now.getFullYear();
+        return true;
+    }).length;
+
     const activeBanners = banners.filter(b => b.active).length;
 
-    document.getElementById('kpi-sales').textContent = fmt(salesTotal);
-    document.getElementById('kpi-pending').textContent = pending;
-    document.getElementById('kpi-clients').textContent = clients.length;
-    document.getElementById('kpi-banners').textContent = activeBanners;
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setVal('kpi-pending', pending);
+    setVal('kpi-clients', clients.length);
+    setVal('kpi-banners', activeBanners);
 
     const tbody = document.getElementById('dashboard-orders-table');
     tbody.innerHTML = orders.slice(0, 5).map(o =>
