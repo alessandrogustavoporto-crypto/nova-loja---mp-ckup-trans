@@ -130,7 +130,7 @@ body { background: var(--pdv-bg); color: var(--pdv-text); height: 100vh; overflo
 /* MODAL */
 .suggestions-list {
     position: absolute;
-    top: 45px;
+    top: 70px;
     left: 0;
     background: white;
     width: 100%;
