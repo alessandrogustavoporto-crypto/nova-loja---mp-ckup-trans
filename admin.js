@@ -410,7 +410,15 @@ async function loadDashboard(orders, products, clients, banners) {
 async function loadProducts(filter, preloadedProds) {
     const fmt = v => 'R$ ' + (isNaN(v) ? '0,00' : v.toFixed(2).replace('.', ','));
     let prods = preloadedProds || await AdminData.getProducts();
-    if (filter) prods = prods.filter(p => p.name.toLowerCase().includes(filter.toLowerCase()));
+    if (filter) {
+        const f = filter.toLowerCase();
+        prods = prods.filter(p => 
+            p.name.toLowerCase().includes(f) || 
+            (p.category || '').toLowerCase().includes(f) ||
+            (p.brand || '').toLowerCase().includes(f) ||
+            (p.barcode || '').toLowerCase().includes(f)
+        );
+    }
     const tbody = document.getElementById('products-table');
     if (!tbody) return;
     tbody.innerHTML = prods.length === 0 ? '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">Nenhum produto encontrado.</td></tr>' :
