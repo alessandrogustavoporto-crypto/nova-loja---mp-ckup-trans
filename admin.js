@@ -1122,7 +1122,7 @@ function loadProductsFinance(orders, products) {
         });
     });
 
-    const sorted = Object.entries(ranking).sort((a,b) => b[1].revenue - a[1].revenue).slice(0, 5);
+    const sorted = Object.entries(ranking).sort((a,b) => b[1].qty - a[1].qty).slice(0, 5);
     const tbody = document.getElementById('fin-products-ranking');
     if (tbody) tbody.innerHTML = sorted.map(([name, data]) => {
         const profitColor = data.profit < 0 ? '#e74c3c' : '#27ae60';
