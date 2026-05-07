@@ -966,8 +966,9 @@ function loadCustomersFinance(orders, clients) {
     `).join('');
 
     const totalBilling = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    const purchasingClientsCount = Object.keys(customerValue).length;
     const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
-    setVal('fin-ltv', fmt(totalBilling / (clients.length || 1)));
+    setVal('fin-ltv', fmt(totalBilling / (purchasingClientsCount || 1)));
     
     const recurring = Object.values(customerValue).filter(v => v.orders > 1).length;
     setVal('fin-recurring-clients', recurring);
