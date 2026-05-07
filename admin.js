@@ -404,6 +404,7 @@ async function loadDashboard(orders, products, clients, banners, period = 'all')
     const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     setVal('kpi-pending', pending);
     setVal('kpi-clients', clients.length);
+    setVal('kpi-total-products', products.length);
     setVal('kpi-banners', activeBanners);
 
     const tbody = document.getElementById('dashboard-orders-table');
