@@ -1245,7 +1245,6 @@ function loadCustomersFinance(orders, clients, period = '7days') {
         if (period === 'year') return cDate.getFullYear() === now.getFullYear();
         return true;
     }).length;
-
     const purchasingClientsCount = Object.keys(customerValue).length;
     const recurring = Object.values(customerValue).filter(v => v.orders > 1).length;
 
@@ -1253,7 +1252,7 @@ function loadCustomersFinance(orders, clients, period = '7days') {
     const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     setVal('fin-ltv', fmt(totalBilling / (purchasingClientsCount || 1)));
     setVal('fin-recurring-clients', recurring);
-    setVal('fin-new-clients', newClients);
+    setVal('fin-new-clients', clients.length);
     setVal('fin-return-rate', (purchasingClientsCount > 0 ? (recurring / purchasingClientsCount * 100).toFixed(0) : 0) + '%');
 }
 
