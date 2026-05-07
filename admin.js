@@ -253,6 +253,21 @@ async function initAdminDashboard() {
     await loadClients();
     await loadOrders();
     await loadBanners();
+    await loadFinanceData();
+
+    // Finance Tabs Navigation
+    const fTabBtns = document.querySelectorAll('.f-tab-btn');
+    fTabBtns.forEach(btn => btn.addEventListener('click', () => {
+        fTabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.f-tab-content').forEach(c => c.classList.remove('active'));
+        const tab = document.getElementById('f-tab-' + btn.dataset.fTab);
+        if (tab) tab.classList.add('active');
+    }));
+
+    // Sales Period Filter
+    const salesFilter = document.getElementById('sales-period-filter');
+    if (salesFilter) salesFilter.addEventListener('change', () => loadSalesCharts(salesFilter.value));
 }
 
 // ---- Dashboard KPIs ----
@@ -799,6 +814,182 @@ window.saveBanner = async function() {
     await loadBanners();
     adminToast('Banner salvo com sucesso!');
 };
+
+
+// ============================================================
+// FINANCE MODULE
+// ============================================================
+let financeCharts = {};
+
+async function loadFinanceData() {
+    const orders = await AdminData.getOrders();
+    const products = await AdminData.getProducts();
+    const clients = await AdminData.getClients();
+
+    const totalBilling = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    const avgTicket = orders.length > 0 ? totalBilling / orders.length : 0;
+    
+    let totalProfit = 0;
+    orders.forEach(o => {
+        (o.items || []).forEach(item => {
+            const p = products.find(prod => prod.name === item.name);
+            if (p) {
+                const cost = parseFloat(p.cost || 0);
+                const price = parseFloat(item.price || 0);
+                totalProfit += (price - cost) * (item.qty || 1);
+            }
+        });
+    });
+
+    const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    setVal('fin-total-billing', fmt(totalBilling));
+    setVal('fin-avg-ticket', fmt(avgTicket));
+    setVal('fin-total-orders', orders.length);
+    setVal('fin-total-profit', fmt(totalProfit));
+
+    initOverviewCharts(orders);
+    loadSalesCharts('7days');
+    loadProductsFinance(orders, products);
+    loadCustomersFinance(orders, clients);
+}
+
+function initOverviewCharts(orders) {
+    const payments = {};
+    orders.forEach(o => {
+        const method = o.payment_method || 'Outros';
+        payments[method] = (payments[method] || 0) + 1;
+    });
+
+    renderChart('chart-payment-methods', 'pie', {
+        labels: Object.keys(payments),
+        datasets: [{
+            data: Object.values(payments),
+            backgroundColor: ['#27ae60', '#3498db', '#f1c40f', '#e67e22', '#95a5a6']
+        }]
+    }, { plugins: { title: { display: true, text: 'Formas de Pagamento' } } });
+
+    const last7 = {};
+    for(let i=6; i>=0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        last7[d.toLocaleDateString('pt-BR').substring(0, 5)] = 0;
+    }
+    orders.forEach(o => {
+        const day = o.date.substring(0, 5);
+        if (last7[day] !== undefined) last7[day] += parseFloat(o.total || 0);
+    });
+
+    renderChart('chart-billing-overview', 'line', {
+        labels: Object.keys(last7),
+        datasets: [{
+            label: 'Faturamento R$',
+            data: Object.values(last7),
+            borderColor: '#27ae60',
+            tension: 0.3,
+            fill: true,
+            backgroundColor: 'rgba(39, 174, 96, 0.1)'
+        }]
+    });
+}
+
+function loadSalesCharts(period) {
+    const labels = period === 'year' ? ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'] : ['Seg','Ter','Qua','Qui','Sex','Sab','Dom'];
+    const dummyData = labels.map(() => Math.floor(Math.random() * 5000) + 1000);
+
+    renderChart('chart-sales-history', 'bar', {
+        labels: labels,
+        datasets: [{ label: 'Vendas por Período', data: dummyData, backgroundColor: '#3498db' }]
+    });
+
+    const dow = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+    renderChart('chart-dow-analysis', 'radar', {
+        labels: dow,
+        datasets: [{ label: 'Vendas por Dia da Semana', data: [12, 19, 15, 17, 25, 30, 20], borderColor: '#e67e22' }]
+    });
+}
+
+function loadProductsFinance(orders, products) {
+    const ranking = {};
+    orders.forEach(o => {
+        (o.items || []).forEach(item => {
+            if (!ranking[item.name]) ranking[item.name] = { qty: 0, revenue: 0, profit: 0 };
+            ranking[item.name].qty += item.qty;
+            ranking[item.name].revenue += item.price * item.qty;
+            
+            const p = products.find(prod => prod.name === item.name);
+            if (p) {
+                ranking[item.name].profit += (item.price - (p.cost || 0)) * item.qty;
+            }
+        });
+    });
+
+    const sorted = Object.entries(ranking).sort((a,b) => b[1].revenue - a[1].revenue).slice(0, 5);
+    const tbody = document.getElementById('fin-products-ranking');
+    if (tbody) tbody.innerHTML = sorted.map(([name, data]) => `
+        <tr>
+            <td>${name}</td>
+            <td>${data.qty}</td>
+            <td>${fmt(data.revenue)}</td>
+            <td style="color: #27ae60; font-weight: 700;">${fmt(data.profit)}</td>
+        </tr>
+    `).join('');
+
+    const lowStock = products.filter(p => p.stock <= 5);
+    const container = document.getElementById('fin-low-stock-container');
+    if (container) {
+        if (lowStock.length > 0) {
+            container.innerHTML = `<h4><i class="fas fa-exclamation-triangle"></i> Alerta de Estoque Baixo</h4>` + 
+                lowStock.map(p => `<p>• ${p.name}: <strong>${p.stock} unidades</strong> restantes.</p>`).join('');
+        } else {
+            container.innerHTML = `<p style="color: #27ae60"><i class="fas fa-check-circle"></i> Estoque em dia.</p>`;
+        }
+    }
+}
+
+function loadCustomersFinance(orders, clients) {
+    const customerValue = {};
+    orders.forEach(o => {
+        if (!o.clientEmail) return;
+        if (!customerValue[o.clientEmail]) customerValue[o.clientEmail] = { name: o.clientName, orders: 0, total: 0 };
+        customerValue[o.clientEmail].orders++;
+        customerValue[o.clientEmail].total += parseFloat(o.total || 0);
+    });
+
+    const vips = Object.entries(customerValue).sort((a,b) => b[1].total - a[1].total).slice(0, 5);
+    const tbody = document.getElementById('fin-vip-ranking');
+    if (tbody) tbody.innerHTML = vips.map(([email, data]) => `
+        <tr>
+            <td>${data.name} <br><small>${email}</small></td>
+            <td>${data.orders}</td>
+            <td>${fmt(data.total)}</td>
+            <td>${fmt(data.total / (data.orders || 1))}</td>
+        </tr>
+    `).join('');
+
+    const totalBilling = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    setVal('fin-ltv', fmt(totalBilling / (clients.length || 1)));
+    
+    const recurring = Object.values(customerValue).filter(v => v.orders > 1).length;
+    setVal('fin-recurring-clients', recurring);
+    setVal('fin-new-clients', clients.length - recurring);
+    setVal('fin-return-rate', Math.round((recurring / (clients.length || 1)) * 100) + '%');
+}
+
+function renderChart(id, type, data, options = {}) {
+    if (financeCharts[id]) financeCharts[id].destroy();
+    const el = document.getElementById(id);
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    financeCharts[id] = new Chart(ctx, {
+        type: type,
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            ...options
+        }
+    });
+}
 
 window.deleteBanner = async function(id) {
     if (!confirm('Excluir este banner permanentemente?')) return;

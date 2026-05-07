@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="admin.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="admin-body">
 
@@ -24,6 +25,7 @@
         <button class="sidebar-btn" data-section="marcas"><i class="fas fa-copyright"></i> Marcas</button>
         <button class="sidebar-btn" data-section="clientes"><i class="fas fa-users"></i> Clientes</button>
         <button class="sidebar-btn" data-section="pedidos"><i class="fas fa-file-invoice"></i> Pedidos</button>
+        <button class="sidebar-btn" data-section="financeiro"><i class="fas fa-chart-pie"></i> Financeiro</button>
         <button class="sidebar-btn" data-section="banners"><i class="fas fa-image"></i> Banners</button>
     </nav>
     <div class="sidebar-footer">
@@ -202,6 +204,78 @@
                 <table class="admin-table">
                     <thead><tr><th>Miniatura</th><th>Título</th><th>Subtítulo</th><th>Status</th><th>Ações</th></tr></thead>
                     <tbody id="banners-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Financeiro -->
+    <section id="section-financeiro" class="admin-section">
+        <div class="finance-tabs">
+            <button class="f-tab-btn active" data-f-tab="overview">Visão Geral</button>
+            <button class="f-tab-btn" data-f-tab="sales">Vendas</button>
+            <button class="f-tab-btn" data-f-tab="products">Produtos</button>
+            <button class="f-tab-btn" data-f-tab="customers">Clientes</button>
+        </div>
+
+        <!-- F-TAB: Overview -->
+        <div id="f-tab-overview" class="f-tab-content active">
+            <div class="kpi-grid">
+                <div class="kpi-card"><span>Faturamento Total</span><strong id="fin-total-billing">R$ 0,00</strong></div>
+                <div class="kpi-card"><span>Ticket Médio</span><strong id="fin-avg-ticket">R$ 0,00</strong></div>
+                <div class="kpi-card"><span>Total Pedidos</span><strong id="fin-total-orders">0</strong></div>
+                <div class="kpi-card"><span>Lucro Estimado</span><strong id="fin-total-profit">R$ 0,00</strong></div>
+            </div>
+            <div class="charts-row">
+                <div class="chart-container-main"><canvas id="chart-billing-overview"></canvas></div>
+                <div class="chart-container-side"><canvas id="chart-payment-methods"></canvas></div>
+            </div>
+        </div>
+
+        <!-- F-TAB: Sales -->
+        <div id="f-tab-sales" class="f-tab-content">
+            <div class="filter-bar-fin">
+                <select id="sales-period-filter" class="admin-select">
+                    <option value="7days">Últimos 7 dias</option>
+                    <option value="30days">Últimos 30 dias</option>
+                    <option value="year">Este Ano</option>
+                </select>
+            </div>
+            <div class="chart-full-width"><canvas id="chart-sales-history"></canvas></div>
+            <div class="charts-row">
+                <div class="chart-container-half"><canvas id="chart-dow-analysis"></canvas></div>
+                <div class="chart-container-half"><canvas id="chart-hour-analysis"></canvas></div>
+            </div>
+        </div>
+
+        <!-- F-TAB: Products -->
+        <div id="f-tab-products" class="f-tab-content">
+            <div class="charts-row">
+                <div class="chart-container-half">
+                    <h3>Ranking de Vendidos</h3>
+                    <table class="admin-table-min">
+                        <thead><tr><th>Produto</th><th>Vendas</th><th>Receita</th><th>Margem</th></tr></thead>
+                        <tbody id="fin-products-ranking"></tbody>
+                    </table>
+                </div>
+                <div class="chart-container-half"><canvas id="chart-cat-revenue"></canvas></div>
+            </div>
+            <div class="low-stock-alert" id="fin-low-stock-container"></div>
+        </div>
+
+        <!-- F-TAB: Customers -->
+        <div id="f-tab-customers" class="f-tab-content">
+            <div class="kpi-grid">
+                <div class="kpi-card"><span>LTV Médio</span><strong id="fin-ltv">R$ 0,00</strong></div>
+                <div class="kpi-card"><span>Taxa de Retorno</span><strong id="fin-return-rate">0%</strong></div>
+                <div class="kpi-card"><span>Novos Clientes</span><strong id="fin-new-clients">0</strong></div>
+                <div class="kpi-card"><span>Clientes Recorrentes</span><strong id="fin-recurring-clients">0</strong></div>
+            </div>
+            <div class="chart-full-width">
+                <h3>Top Clientes (VIP)</h3>
+                <table class="admin-table-min">
+                    <thead><tr><th>Cliente</th><th>Pedidos</th><th>Total Gasto</th><th>LTV</th></tr></thead>
+                    <tbody id="fin-vip-ranking"></tbody>
                 </table>
             </div>
         </div>
