@@ -367,6 +367,11 @@ function openCheckoutModal() {
         alert('Adicione pelo menos um item para finalizar!');
         return;
     }
+    if (!selectedCustomer) {
+        alert('Por favor, identifique o cliente antes de finalizar a venda.');
+        document.getElementById('pdv-cust-search').focus();
+        return;
+    }
     document.getElementById('modal-checkout').classList.remove('hidden');
     document.getElementById('pdv-amount-received').focus();
 }
