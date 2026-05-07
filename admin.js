@@ -1140,7 +1140,7 @@ function loadProductsFinance(orders, products) {
     const container = document.getElementById('fin-low-stock-container');
     if (container) {
         if (lowStock.length > 0) {
-            container.innerHTML = `<h4><i class="fas fa-exclamation-triangle"></i> Alerta de Estoque Baixo</h4>` + 
+            container.innerHTML = `<h4><i class="fas fa-exclamation-triangle"></i> Alerta de Estoque Baixo (Menos de 5 und)</h4>` + 
                 lowStock.map(p => `<p>• ${p.name}: <strong>${p.stock} unidades</strong> restantes.</p>`).join('');
         } else {
             container.innerHTML = `<p style="color: #27ae60"><i class="fas fa-check-circle"></i> Estoque em dia.</p>`;
