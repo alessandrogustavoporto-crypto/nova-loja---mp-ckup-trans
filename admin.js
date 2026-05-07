@@ -1011,7 +1011,7 @@ function renderFinanceDashboard(data, period) {
     initOverviewCharts(orders, period);
     loadSalesCharts('7days', allOrders); // Passa allOrders para o gráfico real
     loadProductsFinance(orders, products);
-    loadCustomersFinance(orders, clients);
+    loadCustomersFinance(orders, clients, period);
 }
 
 function initOverviewCharts(orders, period = '7days') {
@@ -1155,7 +1155,7 @@ function loadProductsFinance(orders, products) {
     }
 }
 
-function loadCustomersFinance(orders, clients) {
+function loadCustomersFinance(orders, clients, period = '7days') {
     const customerValue = {};
     orders.forEach(o => {
         if (!o.clientEmail) return;
@@ -1166,24 +1166,39 @@ function loadCustomersFinance(orders, clients) {
 
     const vips = Object.entries(customerValue).sort((a,b) => b[1].total - a[1].total).slice(0, 5);
     const tbody = document.getElementById('fin-vip-ranking');
-    if (tbody) tbody.innerHTML = vips.map(([email, data]) => `
-        <tr>
-            <td>${data.name} <br><small>${email}</small></td>
-            <td>${data.orders}</td>
-            <td>${fmt(data.total)}</td>
-            <td>${fmt(data.total / (data.orders || 1))}</td>
-        </tr>
-    `).join('');
+    if (tbody) tbody.innerHTML = vips.map(([email, data]) => {
+        const avg = data.total / (data.orders || 1);
+        return `
+            <tr>
+                <td>${data.name} <br><small>${email}</small></td>
+                <td>${data.orders}</td>
+                <td>${fmt(data.total)}</td>
+                <td>${fmt(avg)}</td>
+            </tr>
+        `;
+    }).join('');
 
-    const totalBilling = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    const now = new Date();
+    const newClients = clients.filter(c => {
+        if (period === 'all') return true;
+        const cDate = new Date(c.created_at);
+        if (period === 'today') return cDate.toDateString() === now.toDateString();
+        const diffDays = (now - cDate) / (1000 * 60 * 60 * 24);
+        if (period === '7days') return diffDays <= 7;
+        if (period === '30days') return diffDays <= 30;
+        if (period === 'year') return cDate.getFullYear() === now.getFullYear();
+        return true;
+    }).length;
+
     const purchasingClientsCount = Object.keys(customerValue).length;
+    const recurring = Object.values(customerValue).filter(v => v.orders > 1).length;
+    
+    const totalBilling = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
     const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
     setVal('fin-ltv', fmt(totalBilling / (purchasingClientsCount || 1)));
-    
-    const recurring = Object.values(customerValue).filter(v => v.orders > 1).length;
     setVal('fin-recurring-clients', recurring);
-    setVal('fin-new-clients', clients.length - recurring);
-    setVal('fin-return-rate', Math.round((recurring / (clients.length || 1)) * 100) + '%');
+    setVal('fin-new-clients', newClients);
+    setVal('fin-return-rate', (purchasingClientsCount > 0 ? (recurring / purchasingClientsCount * 100).toFixed(0) : 0) + '%');
 }
 
 function renderChart(id, type, data, options = {}) {
