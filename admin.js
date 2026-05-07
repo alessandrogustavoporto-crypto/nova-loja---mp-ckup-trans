@@ -307,7 +307,7 @@ async function loadDashboard(orders, products, clients, banners) {
     if (!clients) clients = await AdminData.getClients();
     if (!banners) banners = await AdminData.getBanners();
 
-    const salesTotal = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    const salesTotal = orders.filter(o => o.status !== 'cancelado').reduce((s, o) => s + parseFloat(o.total || 0), 0);
     const pending = orders.filter(o => ['aguardando','separacao','processando'].includes(o.status)).length;
     const activeBanners = banners.filter(b => b.active).length;
 
