@@ -1758,14 +1758,27 @@ window.trackOrder = function(orderId) {
 
     html += '</div>';
     
-    // Tracking History
+    // Tracking History (Cumulativo)
     html += '<div class="tracking-details"><h3>Últimas Atualizações</h3><ul class="tracking-list">';
-    if (s === 'entregue') html += '<li><strong>' + order.date + '</strong> - Pedido entregue com sucesso!</li>';
-    if (s === 'enviado' || s === 'saiu') html += '<li><strong>' + order.date + '</strong> - Pedido em trânsito para o seu endereço.</li>';
-    if (s === 'separacao') html += '<li><strong>' + order.date + '</strong> - Pedido em fase de separação e embalagem.</li>';
-    if (s === 'processando') html += '<li><strong>' + order.date + '</strong> - Pagamento confirmado. Seu pedido está sendo processado.</li>';
-    if (s === 'aguardando') html += '<li><strong>' + order.date + '</strong> - Aguardando confirmação de pagamento.</li>';
-    if (s === 'cancelado') html += '<li style="color:#c0392b"><strong>' + order.date + '</strong> - Este pedido foi cancelado.</li>';
+    
+    const currentIdx = flow.indexOf(s);
+    
+    // Mostra as mensagens de acordo com o progresso (do mais novo para o mais antigo)
+    if (currentIdx >= flow.indexOf('entregue')) 
+        html += '<li><strong>' + order.date + '</strong> - Pedido entregue com sucesso!</li>';
+        
+    if (currentIdx >= flow.indexOf('enviado')) 
+        html += '<li><strong>' + order.date + '</strong> - Pedido em trânsito para o seu endereço.</li>';
+        
+    if (currentIdx >= flow.indexOf('separacao')) 
+        html += '<li><strong>' + order.date + '</strong> - Pedido em fase de separação e embalagem.</li>';
+        
+    if (currentIdx >= flow.indexOf('processando')) 
+        html += '<li><strong>' + order.date + '</strong> - Pagamento aprovado e confirmado.</li>';
+        
+    if (s === 'cancelado') 
+        html += '<li style="color:#c0392b"><strong>' + order.date + '</strong> - Este pedido foi cancelado.</li>';
+        
     html += '<li><strong>' + order.date + '</strong> - Pedido recebido em nosso sistema.</li>';
     html += '</ul></div>';
 
