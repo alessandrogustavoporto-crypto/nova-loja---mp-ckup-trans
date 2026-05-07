@@ -242,11 +242,22 @@ window.selectCustomer = function(id) {
     const cust = allCustomers.find(c => c.id === id);
     if (cust) {
         selectedCustomer = cust;
-        document.getElementById('selected-customer-info').classList.remove('hidden');
-        document.getElementById('selected-cust-name').textContent = cust.name;
+        
+        // Esconde a busca e mostra o crachá do cliente
+        document.getElementById('cust-search-container').classList.add('hidden');
+        document.getElementById('selected-customer-badge').classList.remove('hidden');
+        document.getElementById('selected-cust-name-badge').textContent = cust.name;
+        
         document.getElementById('cust-suggestions').classList.add('hidden');
         document.getElementById('pdv-cust-search').value = '';
     }
+}
+
+window.removeSelectedCustomer = function() {
+    selectedCustomer = null;
+    document.getElementById('cust-search-container').classList.remove('hidden');
+    document.getElementById('selected-customer-badge').classList.add('hidden');
+    document.getElementById('pdv-cust-search').focus();
 }
 
 function renderTotals() {
@@ -336,12 +347,11 @@ async function finishSale() {
 
 function clearPDV() {
     pdvItems = [];
-    selectedCustomer = null;
+    removeSelectedCustomer();
     document.getElementById('pdv-items-body').innerHTML = '';
     document.getElementById('pdv-global-discount').value = '0.00';
     document.getElementById('pdv-amount-received').value = '';
     document.getElementById('pdv-cust-search').value = '';
-    document.getElementById('selected-customer-info').classList.add('hidden');
     renderItems();
 }
 
