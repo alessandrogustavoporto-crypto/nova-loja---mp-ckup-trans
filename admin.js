@@ -401,7 +401,7 @@ window.openProductModal = async function(id) {
 
     if (!id) {
         document.getElementById('product-modal-title').textContent = 'Novo Produto';
-        ['prod-id','prod-name','prod-image-base64','prod-desc'].forEach(f => { const el = document.getElementById(f); if(el) el.value = ''; });
+        ['prod-id','prod-name','prod-image-base64','prod-desc','prod-barcode'].forEach(f => { const el = document.getElementById(f); if(el) el.value = ''; });
         ['prod-price','prod-promo-price','prod-stock','prod-cost'].forEach(f => { const el = document.getElementById(f); if(el) el.value = ''; });
         document.getElementById('prod-promo-active').checked = false;
         renderVariations([]);
@@ -418,6 +418,7 @@ window.openProductModal = async function(id) {
     document.getElementById('prod-promo-price').value = prod.promoPrice || '';
     document.getElementById('prod-stock').value = prod.stock || 0;
     document.getElementById('prod-cost').value = prod.cost || 0;
+    document.getElementById('prod-barcode').value = prod.barcode || '';
     document.getElementById('prod-image-base64').value = prod.image || '';
     document.getElementById('prod-desc').value = prod.description || '';
     document.getElementById('prod-category').value = prod.category || '';
@@ -481,6 +482,7 @@ window.saveProduct = async function() {
         brand: document.getElementById('prod-brand').value,
         promo_active: document.getElementById('prod-promo-active').checked,
         cost: parseFloat(document.getElementById('prod-cost').value) || 0,
+        barcode: document.getElementById('prod-barcode').value,
         variations: getVariationsData()
     };
 
