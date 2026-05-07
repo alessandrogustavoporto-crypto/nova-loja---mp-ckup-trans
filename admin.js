@@ -235,14 +235,27 @@ async function initAdminDashboard() {
     const nameEl = document.getElementById('admin-name-display');
     if (nameEl && admin) nameEl.textContent = admin.name;
 
-    await loadDashboard();
-    await loadProducts();
-    await loadCategories();
-    await loadBrands();
-    await loadClients();
-    await loadOrders();
-    await loadBanners();
-    // await loadFinanceData(); // Removido do boot inicial para performance
+    // 1. Busca todos os dados em paralelo (MUITO MAIS RÁPIDO)
+    const [orders, products, categories, brands, clients, banners] = await Promise.all([
+        AdminData.getOrders(),
+        AdminData.getProducts(),
+        AdminData.getCategories(),
+        AdminData.getBrands(),
+        AdminData.getClients(),
+        AdminData.getBanners()
+    ]);
+
+    // 2. Renderiza as seções usando os dados já carregados
+    await loadDashboard(orders, products, clients, banners);
+    await loadProducts(null, products);
+    await loadCategories(categories, products);
+    await loadBrands(brands);
+    await loadClients(null, null, clients);
+    await loadOrders(null, null, orders);
+    await loadBanners(banners);
+
+    // Cache para o financeiro usar sem baixar de novo
+    cachedFinanceData = { orders, products, clients };
 
     // Sidebar navigation
     const btns = document.querySelectorAll('.sidebar-btn[data-section]');
@@ -255,7 +268,7 @@ async function initAdminDashboard() {
         if (sec) sec.classList.add('active');
         document.getElementById('admin-page-title').textContent = btn.textContent.trim();
 
-        // Carregamento sob demanda para o financeiro
+        // Carregamento instantâneo via cache
         if (sectionId === 'financeiro') loadFinanceData('7days');
     }));
 
@@ -279,12 +292,12 @@ async function initAdminDashboard() {
 }
 
 // ---- Dashboard KPIs ----
-async function loadDashboard() {
-    const orders   = await AdminData.getOrders();
-    allAdminOrders = orders; // Garante que os dados estejam disponíveis para o modal de detalhes
-    const products = await AdminData.getProducts();
-    const clients  = await AdminData.getClients();
-    const banners  = await AdminData.getBanners();
+async function loadDashboard(orders, products, clients, banners) {
+    if (!orders) orders = await AdminData.getOrders();
+    allAdminOrders = orders; 
+    if (!products) products = await AdminData.getProducts();
+    if (!clients) clients = await AdminData.getClients();
+    if (!banners) banners = await AdminData.getBanners();
 
     const salesTotal = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
     const pending = orders.filter(o => ['aguardando','separacao','processando'].includes(o.status)).length;
@@ -309,9 +322,9 @@ async function loadDashboard() {
 }
 
 // ---- Products ----
-async function loadProducts(filter) {
+async function loadProducts(filter, preloadedProds) {
     const fmt = v => 'R$ ' + (isNaN(v) ? '0,00' : v.toFixed(2).replace('.', ','));
-    let prods = await AdminData.getProducts();
+    let prods = preloadedProds || await AdminData.getProducts();
     if (filter) prods = prods.filter(p => p.name.toLowerCase().includes(filter.toLowerCase()));
     const tbody = document.getElementById('products-table');
     if (!tbody) return;
@@ -489,9 +502,9 @@ window.deleteProduct = async function(id) {
 };
 
 // ---- Categories ----
-async function loadCategories() {
-    const cats = await AdminData.getCategories();
-    const prods = await AdminData.getProducts();
+async function loadCategories(preloadedCats, preloadedProds) {
+    const cats = preloadedCats || await AdminData.getCategories();
+    const prods = preloadedProds || await AdminData.getProducts();
     const tbody = document.getElementById('categories-table');
     if (!tbody) return;
     tbody.innerHTML = cats.map((c, i) => {
@@ -545,8 +558,8 @@ window.deleteCategory = async function(id) {
 };
 
 // ---- Clients ----
-async function loadClients(nameFilter, typeFilter) {
-    let clients = await AdminData.getClients();
+async function loadClients(nameFilter, typeFilter, preloadedClients) {
+    let clients = preloadedClients || await AdminData.getClients();
     if (nameFilter) clients = clients.filter(c => c.name.toLowerCase().includes(nameFilter.toLowerCase()) || c.email.toLowerCase().includes(nameFilter.toLowerCase()));
     if (typeFilter) clients = clients.filter(c => c.type === typeFilter);
     const tbody = document.getElementById('clients-table');
@@ -630,8 +643,8 @@ window.deleteClient = async function(email) {
 // ---- Orders ----
 let allAdminOrders = [];
 
-async function loadOrders(statusFilter, searchFilter) {
-    allAdminOrders = await AdminData.getOrders();
+async function loadOrders(statusFilter, searchFilter, preloadedOrders) {
+    allAdminOrders = preloadedOrders || await AdminData.getOrders();
     let orders = allAdminOrders;
     if (statusFilter) orders = orders.filter(o => o.status === statusFilter);
     if (searchFilter) orders = orders.filter(o => 
@@ -722,8 +735,8 @@ window.printOrder = function() {
 };
 
 // ---- Banners ----
-async function loadBanners() {
-    const banners = await AdminData.getBanners();
+async function loadBanners(preloadedBanners) {
+    const banners = preloadedBanners || await AdminData.getBanners();
     const tbody = document.getElementById('banners-table');
     if (!tbody) return;
 
