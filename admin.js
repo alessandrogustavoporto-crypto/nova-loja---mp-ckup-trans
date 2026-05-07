@@ -1,6 +1,13 @@
-// ============================================================
-// ADMIN MODULE — EcoStore
-// ============================================================
+// Global Cache
+let cachedAdminData = {
+    orders: null,
+    products: null,
+    categories: null,
+    brands: null,
+    clients: null,
+    banners: null
+};
+
 function logErrorToDOM(msg) {
     const div = document.createElement('div');
     div.style.position = 'fixed'; div.style.top = '0'; div.style.left = '0'; div.style.right = '0'; div.style.background = 'red'; div.style.color = 'white'; div.style.padding = '20px'; div.style.zIndex = '999999'; div.style.fontSize = '24px'; div.style.fontWeight = 'bold';
@@ -245,6 +252,10 @@ async function initAdminDashboard() {
         AdminData.getBanners()
     ]);
 
+    // Salva no cache global
+    cachedAdminData = { orders, products, categories, brands, clients, banners };
+    cachedFinanceData = { orders, products, clients };
+
     // 2. Renderiza as seções usando os dados já carregados
     await loadDashboard(orders, products, clients, banners);
     await loadProducts(null, products);
@@ -253,9 +264,6 @@ async function initAdminDashboard() {
     await loadClients(null, null, clients);
     await loadOrders(null, null, orders);
     await loadBanners(banners);
-
-    // Cache para o financeiro usar sem baixar de novo
-    cachedFinanceData = { orders, products, clients };
 
     // Sidebar navigation
     const btns = document.querySelectorAll('.sidebar-btn[data-section]');
@@ -559,9 +567,17 @@ window.deleteCategory = async function(id) {
 
 // ---- Clients ----
 async function loadClients(nameFilter, typeFilter, preloadedClients) {
-    let clients = preloadedClients || await AdminData.getClients();
-    if (nameFilter) clients = clients.filter(c => c.name.toLowerCase().includes(nameFilter.toLowerCase()) || c.email.toLowerCase().includes(nameFilter.toLowerCase()));
-    if (typeFilter) clients = clients.filter(c => c.type === typeFilter);
+    let clients = preloadedClients || cachedAdminData.clients || await AdminData.getClients();
+    
+    // Filtro local (INSTANTÂNEO)
+    if (nameFilter) {
+        const nf = nameFilter.toLowerCase();
+        clients = clients.filter(c => (c.name || '').toLowerCase().includes(nf) || (c.email || '').toLowerCase().includes(nf));
+    }
+    if (typeFilter) {
+        clients = clients.filter(c => c.type === typeFilter);
+    }
+
     const tbody = document.getElementById('clients-table');
     if (!tbody) return;
     tbody.innerHTML = clients.map(c =>
