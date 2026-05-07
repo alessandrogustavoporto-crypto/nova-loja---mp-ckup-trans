@@ -1124,14 +1124,17 @@ function loadProductsFinance(orders, products) {
 
     const sorted = Object.entries(ranking).sort((a,b) => b[1].revenue - a[1].revenue).slice(0, 5);
     const tbody = document.getElementById('fin-products-ranking');
-    if (tbody) tbody.innerHTML = sorted.map(([name, data]) => `
-        <tr>
-            <td>${name}</td>
-            <td>${data.qty}</td>
-            <td>${fmt(data.revenue)}</td>
-            <td style="color: #27ae60; font-weight: 700;">${fmt(data.profit)}</td>
-        </tr>
-    `).join('');
+    if (tbody) tbody.innerHTML = sorted.map(([name, data]) => {
+        const profitColor = data.profit < 0 ? '#e74c3c' : '#27ae60';
+        return `
+            <tr>
+                <td>${name}</td>
+                <td>${data.qty}</td>
+                <td>${fmt(data.revenue)}</td>
+                <td style="color: ${profitColor}; font-weight: 700;">${fmt(data.profit)}</td>
+            </tr>
+        `;
+    }).join('');
 
     const lowStock = products.filter(p => p.stock <= 5);
     const container = document.getElementById('fin-low-stock-container');
