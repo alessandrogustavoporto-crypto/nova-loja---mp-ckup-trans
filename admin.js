@@ -235,17 +235,6 @@ async function initAdminDashboard() {
     const nameEl = document.getElementById('admin-name-display');
     if (nameEl && admin) nameEl.textContent = admin.name;
 
-    // Sidebar navigation
-    const btns = document.querySelectorAll('.sidebar-btn[data-section]');
-    btns.forEach(btn => btn.addEventListener('click', () => {
-        btns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-        const sec = document.getElementById('section-' + btn.dataset.section);
-        if (sec) sec.classList.add('active');
-        document.getElementById('admin-page-title').textContent = btn.textContent.trim();
-    }));
-
     await loadDashboard();
     await loadProducts();
     await loadCategories();
@@ -253,7 +242,22 @@ async function initAdminDashboard() {
     await loadClients();
     await loadOrders();
     await loadBanners();
-    await loadFinanceData();
+    // await loadFinanceData(); // Removido do boot inicial para performance
+
+    // Sidebar navigation
+    const btns = document.querySelectorAll('.sidebar-btn[data-section]');
+    btns.forEach(btn => btn.addEventListener('click', () => {
+        btns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+        const sectionId = btn.dataset.section;
+        const sec = document.getElementById('section-' + sectionId);
+        if (sec) sec.classList.add('active');
+        document.getElementById('admin-page-title').textContent = btn.textContent.trim();
+
+        // Carregamento sob demanda para o financeiro
+        if (sectionId === 'financeiro') loadFinanceData('7days');
+    }));
 
     // Finance Tabs Navigation
     const fTabBtns = document.querySelectorAll('.f-tab-btn');
@@ -824,11 +828,44 @@ window.saveBanner = async function() {
 // FINANCE MODULE
 // ============================================================
 let financeCharts = {};
+let cachedFinanceData = null; // Cache para performance
 
-async function loadFinanceData(period = '7days') {
-    const allOrders = await AdminData.getOrders();
-    const products = await AdminData.getProducts();
-    const clients = await AdminData.getClients();
+async function loadFinanceData(period = '7days', forceRefresh = false) {
+    const container = document.getElementById('section-financeiro');
+    if (!container) return;
+
+    // Se já temos os dados e não é um refresh forçado, renderiza instantâneo
+    if (cachedFinanceData && !forceRefresh) {
+        renderFinanceDashboard(cachedFinanceData, period);
+        return;
+    }
+
+    // Feedback visual de carregamento
+    const btn = document.querySelector('.sidebar-btn[data-section="financeiro"]');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
+    btn.disabled = true;
+
+    try {
+        const [orders, products, clients] = await Promise.all([
+            AdminData.getOrders(),
+            AdminData.getProducts(),
+            AdminData.getClients()
+        ]);
+
+        cachedFinanceData = { orders, products, clients };
+        renderFinanceDashboard(cachedFinanceData, period);
+    } catch (err) {
+        console.error("Erro ao carregar financeiro:", err);
+        adminToast("Erro ao carregar dados financeiros.", "error");
+    } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    }
+}
+
+function renderFinanceDashboard(data, period) {
+    const { orders: allOrders, products, clients } = data;
 
     // Filtro de Período
     const now = new Date();
