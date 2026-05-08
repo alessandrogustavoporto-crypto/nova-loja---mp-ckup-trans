@@ -455,13 +455,15 @@ async function finishSale() {
             client_email: selectedCustomer ? selectedCustomer.email : 'venda_pdv@ecostore.com',
             total: total,
             status: 'concluido',
+            status_label: 'Concluído',
             payment_method: 'PDV - ' + paymentMethod,
             items: pdvItems.map(i => ({
                 id: i.id,
                 name: i.name,
                 qty: i.qty,
                 price: i.price
-            }))
+            })),
+            address: {}
         };
 
         const { data: order, error } = await supabase.from('orders').insert([orderData]).select().single();
