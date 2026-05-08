@@ -454,19 +454,22 @@ async function finishSale() {
             client_name: selectedCustomer ? selectedCustomer.name : 'Consumidor Final',
             client_email: selectedCustomer ? selectedCustomer.email : 'venda_pdv@ecostore.com',
             total: total,
-            status: 'concluido', // Venda local ja sai concluida
+            status: 'concluido',
             payment_method: 'PDV - ' + paymentMethod,
-            items: JSON.stringify(pdvItems.map(i => ({
+            items: pdvItems.map(i => ({
                 id: i.id,
                 name: i.name,
                 qty: i.qty,
                 price: i.price
-            })))
+            }))
         };
 
         const { data: order, error } = await supabase.from('orders').insert([orderData]).select().single();
 
-        if (error) throw error;
+        if (error) {
+            console.error('Erro detalhado do Supabase:', error);
+            throw error;
+        }
 
         // 2. Update Stock
         for (const item of pdvItems) {
