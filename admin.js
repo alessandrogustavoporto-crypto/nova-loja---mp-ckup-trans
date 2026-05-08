@@ -1056,6 +1056,14 @@ function getFilteredOrders(allOrders, period, startDate, endDate, includeCancele
 
 function updateFinanceOverview(period, startDate, endDate) {
     if (!cachedFinanceData) return;
+    
+    // Limpar datas se um período pré-definido for escolhido
+    if (period !== 'custom') {
+        const s = document.getElementById('overview-start');
+        const e = document.getElementById('overview-end');
+        if (s) s.value = ""; if (e) e.value = "";
+    }
+
     const { orders: allOrders, products } = cachedFinanceData;
     const orders = getFilteredOrders(allOrders, period, startDate, endDate);
     const canceled = getFilteredOrders(allOrders, period, startDate, endDate, true);
@@ -1084,17 +1092,38 @@ function updateFinanceOverview(period, startDate, endDate) {
 
 function updateFinanceSales(period, startDate, endDate) {
     if (!cachedFinanceData) return;
+    
+    if (period !== 'custom') {
+        const s = document.getElementById('sales-start');
+        const e = document.getElementById('sales-end');
+        if (s) s.value = ""; if (e) e.value = "";
+    }
+
     loadSalesCharts(period, cachedFinanceData.orders, startDate, endDate);
 }
 
 function updateFinanceProducts(period, startDate, endDate) {
     if (!cachedFinanceData) return;
+    
+    if (period !== 'custom') {
+        const s = document.getElementById('prod-start');
+        const e = document.getElementById('prod-end');
+        if (s) s.value = ""; if (e) e.value = "";
+    }
+
     const orders = getFilteredOrders(cachedFinanceData.orders, period, startDate, endDate);
     loadProductsFinance(orders, cachedFinanceData.products);
 }
 
 function updateFinanceCustomers(period, startDate, endDate) {
     if (!cachedFinanceData) return;
+    
+    if (period !== 'custom') {
+        const s = document.getElementById('cust-start');
+        const e = document.getElementById('cust-end');
+        if (s) s.value = ""; if (e) e.value = "";
+    }
+
     const orders = getFilteredOrders(cachedFinanceData.orders, period, startDate, endDate);
     loadCustomersFinance(orders, cachedFinanceData.clients, period, startDate, endDate);
 }
@@ -1104,6 +1133,11 @@ window.applyCustomFilter = function(tab) {
     const end = document.getElementById(`${tab}-end`).value;
     if (!start || !end) { adminToast('Selecione ambas as datas.', 'error'); return; }
     if (new Date(start) > new Date(end)) { adminToast('Início maior que fim.', 'error'); return; }
+
+    // Limpar o select de período ao aplicar datas customizadas
+    const selId = (tab === 'prod' ? 'prod' : tab === 'cust' ? 'cust' : tab) + '-period-filter';
+    const sel = document.getElementById(selId);
+    if (sel) sel.value = "";
 
     if (tab === 'overview') updateFinanceOverview('custom', start, end);
     if (tab === 'sales') updateFinanceSales('custom', start, end);
