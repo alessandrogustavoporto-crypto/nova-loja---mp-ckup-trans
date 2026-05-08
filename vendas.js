@@ -451,12 +451,11 @@ async function finishSale() {
     try {
         // 1. Create Order in Supabase
         const orderData = {
-            clientName: selectedCustomer ? selectedCustomer.name : 'Consumidor Final',
-            clientEmail: selectedCustomer ? selectedCustomer.email : 'venda_pdv@ecostore.com',
+            client_name: selectedCustomer ? selectedCustomer.name : 'Consumidor Final',
+            client_email: selectedCustomer ? selectedCustomer.email : 'venda_pdv@ecostore.com',
             total: total,
             status: 'concluido', // Venda local ja sai concluida
-            date: new Date().toLocaleDateString('pt-BR'),
-            paymentMethod: 'PDV - ' + paymentMethod,
+            payment_method: 'PDV - ' + paymentMethod,
             items: JSON.stringify(pdvItems.map(i => ({
                 id: i.id,
                 name: i.name,
