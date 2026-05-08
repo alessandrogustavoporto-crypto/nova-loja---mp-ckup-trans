@@ -463,7 +463,7 @@ async function finishSale() {
                 qty: i.qty,
                 price: i.price
             })),
-            address: {}
+            address: 'Compra Presencial'
         };
 
         const { data: order, error } = await supabase.from('orders').insert([orderData]).select().single();
