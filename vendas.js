@@ -461,8 +461,8 @@ async function finishSale() {
             client_name: selectedCustomer ? selectedCustomer.name : 'Consumidor Final',
             client_email: selectedCustomer ? selectedCustomer.email : 'venda_pdv@ecostore.com',
             total: total,
-            status: 'concluido',
-            status_label: 'Concluído',
+            status: 'entregue',
+            status_label: 'Entregue',
             payment_method: 'PDV - ' + paymentMethod,
             items: pdvItems.map(i => ({
                 id: i.id,
