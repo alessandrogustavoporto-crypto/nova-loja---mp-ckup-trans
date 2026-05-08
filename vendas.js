@@ -10,6 +10,7 @@ let pdvItems = [];
 let allProducts = [];
 let allCustomers = [];
 let selectedCustomer = null;
+let editingItemIndex = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -152,7 +153,18 @@ window.selectProduct = function(id) {
     if (product) {
         const qty = parseInt(document.getElementById('pdv-prod-qty').value) || 1;
         const priceOverride = parseFloat(document.getElementById('pdv-prod-price').value);
-        addItem(product, qty, priceOverride);
+        
+        if (editingItemIndex !== null) {
+            // Update
+            pdvItems[editingItemIndex].qty = qty;
+            pdvItems[editingItemIndex].price = !isNaN(priceOverride) && priceOverride > 0 ? priceOverride : product.price;
+            pdvItems[editingItemIndex].subtotal = pdvItems[editingItemIndex].qty * pdvItems[editingItemIndex].price;
+            editingItemIndex = null;
+            document.getElementById('pdv-add-btn').innerHTML = '<i class="fas fa-plus"></i> ADICIONAR';
+            renderItems();
+        } else {
+            addItem(product, qty, priceOverride);
+        }
         
         document.getElementById('pdv-prod-search').value = '';
         document.getElementById('pdv-prod-qty').value = '1';
@@ -176,7 +188,21 @@ function addItemFromSearch() {
     );
 
     if (product) {
-        addItem(product, qty, priceOverride);
+        if (editingItemIndex !== null) {
+            // Update existing item
+            pdvItems[editingItemIndex].qty = qty;
+            pdvItems[editingItemIndex].price = !isNaN(priceOverride) && priceOverride > 0 ? priceOverride : product.price;
+            pdvItems[editingItemIndex].subtotal = pdvItems[editingItemIndex].qty * pdvItems[editingItemIndex].price;
+            
+            editingItemIndex = null;
+            const addBtn = document.getElementById('pdv-add-btn');
+            if (addBtn) addBtn.innerHTML = '<i class="fas fa-plus"></i> ADICIONAR';
+            
+            renderItems();
+        } else {
+            addItem(product, qty, priceOverride);
+        }
+        
         document.getElementById('pdv-prod-search').value = '';
         document.getElementById('pdv-prod-qty').value = '1';
         document.getElementById('pdv-prod-price').value = '';
@@ -186,6 +212,22 @@ function addItemFromSearch() {
         alert('Produto não encontrado!');
     }
 }
+
+window.editItem = function(index) {
+    const item = pdvItems[index];
+    if (!item) return;
+
+    editingItemIndex = index;
+    
+    document.getElementById('pdv-prod-search').value = item.name;
+    document.getElementById('pdv-prod-qty').value = item.qty;
+    document.getElementById('pdv-prod-price').value = item.price;
+    
+    const addBtn = document.getElementById('pdv-add-btn');
+    if (addBtn) addBtn.innerHTML = '<i class="fas fa-check"></i> ATUALIZAR';
+    
+    document.getElementById('pdv-prod-qty').focus();
+};
 
 function addItem(product, qty, priceOverride) {
     const price = !isNaN(priceOverride) && priceOverride > 0 ? priceOverride : product.price;
@@ -233,7 +275,8 @@ function renderItems() {
                 <td>${item.qty}</td>
                 <td><strong>${fmt(item.subtotal)}</strong></td>
                 <td style="text-align:right;">
-                    <i class="fas fa-times-circle btn-icon-remove" onclick="removeItem(${index})"></i>
+                    <i class="fas fa-edit" style="color:var(--pdv-primary); cursor:pointer; margin-right:10px; font-size:18px;" onclick="editItem(${index})" title="Editar Item"></i>
+                    <i class="fas fa-times-circle btn-icon-remove" onclick="removeItem(${index})" title="Remover Item"></i>
                 </td>
             </tr>
         `).join('');
