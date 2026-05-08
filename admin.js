@@ -299,68 +299,30 @@ async function initAdminDashboard() {
 
     // Sales Period Filter
     const salesFilter = document.getElementById('sales-period-filter');
-    if (salesFilter) {
-        if (!salesFilter._bound) {
-            salesFilter._bound = true;
-            salesFilter.addEventListener('change', () => loadSalesCharts(salesFilter.value, cachedAdminData.orders));
-        }
+    if (salesFilter && !salesFilter._bound) {
+        salesFilter._bound = true;
+        salesFilter.addEventListener('change', () => updateFinanceSales(salesFilter.value));
     }
 
     // Customer Period Filter
     const custFilter = document.getElementById('cust-period-filter');
-    if (custFilter) {
-        if (!custFilter._bound) {
-            custFilter._bound = true;
-            custFilter.addEventListener('change', () => {
-                const now = new Date();
-                const filtered = cachedAdminData.orders.filter(o => {
-                    if (o.status === 'cancelado') return false;
-                    const period = custFilter.value;
-                    if (period === 'all') return true;
-                    const oDate = new Date(o.created_at);
-                    if (period === 'today') return oDate.toDateString() === now.toDateString();
-                    const diffDays = (now - oDate) / (1000 * 60 * 60 * 24);
-                    if (period === '7days') return diffDays <= 7;
-                    if (period === '30days') return diffDays <= 30;
-                    if (period === 'year') return oDate.getFullYear() === now.getFullYear();
-                    return true;
-                });
-                loadCustomersFinance(filtered, cachedAdminData.clients, custFilter.value);
-            });
-        }
+    if (custFilter && !custFilter._bound) {
+        custFilter._bound = true;
+        custFilter.addEventListener('change', () => updateFinanceCustomers(custFilter.value));
     }
 
     // Overview Period Filter
     const ovFilter = document.getElementById('overview-period-filter');
-    if (ovFilter) {
-        if (!ovFilter._bound) {
-            ovFilter._bound = true;
-            ovFilter.addEventListener('change', () => loadFinanceData(ovFilter.value));
-        }
+    if (ovFilter && !ovFilter._bound) {
+        ovFilter._bound = true;
+        ovFilter.addEventListener('change', () => updateFinanceOverview(ovFilter.value));
     }
 
     // Product Period Filter
     const prodFilter = document.getElementById('prod-period-filter');
-    if (prodFilter) {
-        if (!prodFilter._bound) {
-            prodFilter._bound = true;
-            prodFilter.addEventListener('change', () => {
-                const now = new Date();
-                const filtered = cachedAdminData.orders.filter(o => {
-                    if (o.status === 'cancelado') return false;
-                    const period = prodFilter.value;
-                    if (period === 'all') return true;
-                    const oDate = new Date(o.created_at);
-                    if (period === 'today') return oDate.toDateString() === now.toDateString();
-                    const diffDays = (now - oDate) / (1000 * 60 * 60 * 24);
-                    if (period === '7days') return diffDays <= 7;
-                    if (period === '30days') return diffDays <= 30;
-                    if (period === 'year') return oDate.getFullYear() === now.getFullYear();
-                    return true;
-                });
-                loadProductsFinance(filtered, cachedAdminData.products);
-            });
-        }
+    if (prodFilter && !prodFilter._bound) {
+        prodFilter._bound = true;
+        prodFilter.addEventListener('change', () => updateFinanceProducts(prodFilter.value));
     }
 
     // Orders Pagination Listeners
@@ -1033,13 +995,14 @@ async function loadFinanceData(period = '7days', forceRefresh = false) {
     const container = document.getElementById('section-financeiro');
     if (!container) return;
 
-    // Se já temos os dados e não é um refresh forçado, renderiza instantâneo
     if (cachedFinanceData && !forceRefresh) {
-        renderFinanceDashboard(cachedFinanceData, period);
+        updateFinanceOverview(period);
+        updateFinanceSales(period);
+        updateFinanceProducts(period);
+        updateFinanceCustomers(period);
         return;
     }
 
-    // Feedback visual de carregamento
     const btn = document.querySelector('.sidebar-btn[data-section="financeiro"]');
     const originalContent = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
@@ -1051,9 +1014,12 @@ async function loadFinanceData(period = '7days', forceRefresh = false) {
             AdminData.getProducts(),
             AdminData.getClients()
         ]);
-
         cachedFinanceData = { orders, products, clients };
-        renderFinanceDashboard(cachedFinanceData, period);
+        
+        updateFinanceOverview(period);
+        updateFinanceSales(period);
+        updateFinanceProducts(period);
+        updateFinanceCustomers(period);
     } catch (err) {
         console.error("Erro ao carregar financeiro:", err);
         adminToast("Erro ao carregar dados financeiros.", "error");
@@ -1063,14 +1029,12 @@ async function loadFinanceData(period = '7days', forceRefresh = false) {
     }
 }
 
-function renderFinanceDashboard(data, period, startDate = null, endDate = null) {
-    const { orders: allOrders, products, clients } = data;
-
-    // Filtro de Período + Filtro de Cancelados
+function getFilteredOrders(allOrders, period, startDate, endDate, includeCanceled = false) {
     const now = new Date();
-    const orders = allOrders.filter(o => {
-        if (o.status === 'cancelado') return false;
-        
+    return allOrders.filter(o => {
+        if (!includeCanceled && o.status === 'cancelado') return false;
+        if (includeCanceled && o.status !== 'cancelado') return false;
+
         if (period === 'custom' && startDate && endDate) {
             const oDate = new Date(o.created_at);
             const start = new Date(startDate + 'T00:00:00');
@@ -1088,41 +1052,23 @@ function renderFinanceDashboard(data, period, startDate = null, endDate = null) 
         if (period === 'year') return oDate.getFullYear() === now.getFullYear();
         return true;
     });
+}
+
+function updateFinanceOverview(period, startDate, endDate) {
+    if (!cachedFinanceData) return;
+    const { orders: allOrders, products } = cachedFinanceData;
+    const orders = getFilteredOrders(allOrders, period, startDate, endDate);
+    const canceled = getFilteredOrders(allOrders, period, startDate, endDate, true);
 
     const totalBilling = orders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
     const avgTicket = orders.length > 0 ? totalBilling / orders.length : 0;
-
-    // Calculo de Cancelados (dentro do período selecionado)
-    const canceledOrders = allOrders.filter(o => {
-        if (o.status !== 'cancelado') return false;
-
-        if (period === 'custom' && startDate && endDate) {
-            const oDate = new Date(o.created_at);
-            const start = new Date(startDate + 'T00:00:00');
-            const end = new Date(endDate + 'T23:59:59');
-            return oDate >= start && oDate <= end;
-        }
-
-        if (period === 'all') return true;
-        const oDate = new Date(o.created_at);
-        if (period === 'today') return oDate.toDateString() === now.toDateString();
-        const diffDays = (now - oDate) / (1000 * 60 * 60 * 24);
-        if (period === '7days') return diffDays <= 7;
-        if (period === '30days') return diffDays <= 30;
-        if (period === 'year') return oDate.getFullYear() === now.getFullYear();
-        return true;
-    });
-    const totalCanceled = canceledOrders.reduce((s, o) => s + parseFloat(o.total || 0), 0);
+    const totalCanceled = canceled.reduce((s, o) => s + parseFloat(o.total || 0), 0);
 
     let totalProfit = 0;
     orders.forEach(o => {
         (o.items || []).forEach(item => {
             const p = products.find(prod => prod.name === item.name);
-            if (p) {
-                const cost = parseFloat(p.cost || 0);
-                const price = parseFloat(item.price || 0);
-                totalProfit += (price - cost) * (item.qty || 1);
-            }
+            if (p) totalProfit += (parseFloat(item.price || 0) - parseFloat(p.cost || 0)) * (item.qty || 1);
         });
     });
 
@@ -1134,26 +1080,35 @@ function renderFinanceDashboard(data, period, startDate = null, endDate = null) 
     setVal('fin-total-canceled', fmt(totalCanceled));
 
     initOverviewCharts(orders, period, startDate, endDate);
-    loadSalesCharts(period, allOrders, startDate, endDate); 
-    loadProductsFinance(orders, products);
-    loadCustomersFinance(orders, clients, period, startDate, endDate);
+}
+
+function updateFinanceSales(period, startDate, endDate) {
+    if (!cachedFinanceData) return;
+    loadSalesCharts(period, cachedFinanceData.orders, startDate, endDate);
+}
+
+function updateFinanceProducts(period, startDate, endDate) {
+    if (!cachedFinanceData) return;
+    const orders = getFilteredOrders(cachedFinanceData.orders, period, startDate, endDate);
+    loadProductsFinance(orders, cachedFinanceData.products);
+}
+
+function updateFinanceCustomers(period, startDate, endDate) {
+    if (!cachedFinanceData) return;
+    const orders = getFilteredOrders(cachedFinanceData.orders, period, startDate, endDate);
+    loadCustomersFinance(orders, cachedFinanceData.clients, period, startDate, endDate);
 }
 
 window.applyCustomFilter = function(tab) {
     const start = document.getElementById(`${tab}-start`).value;
     const end = document.getElementById(`${tab}-end`).value;
-    
-    if (!start || !end) {
-        adminToast('Selecione ambas as datas para filtrar.', 'error');
-        return;
-    }
+    if (!start || !end) { adminToast('Selecione ambas as datas.', 'error'); return; }
+    if (new Date(start) > new Date(end)) { adminToast('Início maior que fim.', 'error'); return; }
 
-    if (new Date(start) > new Date(end)) {
-        adminToast('A data de início não pode ser maior que a data de fim.', 'error');
-        return;
-    }
-
-    renderFinanceDashboard(cachedFinanceData, 'custom', start, end);
+    if (tab === 'overview') updateFinanceOverview('custom', start, end);
+    if (tab === 'sales') updateFinanceSales('custom', start, end);
+    if (tab === 'prod') updateFinanceProducts('custom', start, end);
+    if (tab === 'cust') updateFinanceCustomers('custom', start, end);
 };
 
 function initOverviewCharts(orders, period = '7days', startDate, endDate) {
