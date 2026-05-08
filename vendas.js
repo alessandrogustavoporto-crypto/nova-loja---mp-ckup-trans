@@ -57,8 +57,14 @@ function setupEventListeners() {
     prodSearch.addEventListener('input', (e) => showProductSuggestions(e.target.value));
 
     // Add item on Enter in search
-    prodSearch.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') addItemFromSearch();
+    const inputs = ['pdv-prod-search', 'pdv-prod-qty', 'pdv-prod-price'];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addItemFromSearch();
+            });
+        }
     });
 
     addBtn.addEventListener('click', addItemFromSearch);
