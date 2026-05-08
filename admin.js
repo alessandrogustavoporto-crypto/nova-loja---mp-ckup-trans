@@ -843,6 +843,7 @@ window.viewOrder = function (id) {
         '<h4><i class="fas fa-user"></i> Dados do Cliente</h4>' +
         '<p><strong>Nome:</strong> ' + (o.clientName || '—') + '</p>' +
         '<p><strong>E-mail:</strong> ' + (o.clientEmail || '—') + '</p>' +
+        '<p><strong>Pagamento:</strong> ' + (o.payment_method || '—') + '</p>' +
         '<p><strong>WhatsApp:</strong> ' + (o.clientPhone ? '<a href="https://wa.me/55' + o.clientPhone.replace(/\D/g, '') + '" target="_blank" style="color:#25D366"><i class="fab fa-whatsapp"></i> ' + o.clientPhone + '</a>' : '—') + '</p>' +
         '</div>' +
         '<div class="order-detail-section">' +
