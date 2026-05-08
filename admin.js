@@ -1063,13 +1063,21 @@ async function loadFinanceData(period = '7days', forceRefresh = false) {
     }
 }
 
-function renderFinanceDashboard(data, period) {
+function renderFinanceDashboard(data, period, startDate = null, endDate = null) {
     const { orders: allOrders, products, clients } = data;
 
     // Filtro de Período + Filtro de Cancelados
     const now = new Date();
     const orders = allOrders.filter(o => {
-        if (o.status === 'cancelado') return false; // Ignora cancelados
+        if (o.status === 'cancelado') return false;
+        
+        if (period === 'custom' && startDate && endDate) {
+            const oDate = new Date(o.created_at);
+            const start = new Date(startDate + 'T00:00:00');
+            const end = new Date(endDate + 'T23:59:59');
+            return oDate >= start && oDate <= end;
+        }
+
         if (period === 'all') return true;
         const oDate = new Date(o.created_at);
         if (period === 'today') return oDate.toDateString() === now.toDateString();
@@ -1087,6 +1095,14 @@ function renderFinanceDashboard(data, period) {
     // Calculo de Cancelados (dentro do período selecionado)
     const canceledOrders = allOrders.filter(o => {
         if (o.status !== 'cancelado') return false;
+
+        if (period === 'custom' && startDate && endDate) {
+            const oDate = new Date(o.created_at);
+            const start = new Date(startDate + 'T00:00:00');
+            const end = new Date(endDate + 'T23:59:59');
+            return oDate >= start && oDate <= end;
+        }
+
         if (period === 'all') return true;
         const oDate = new Date(o.created_at);
         if (period === 'today') return oDate.toDateString() === now.toDateString();
@@ -1117,13 +1133,30 @@ function renderFinanceDashboard(data, period) {
     setVal('fin-total-profit', fmt(totalProfit));
     setVal('fin-total-canceled', fmt(totalCanceled));
 
-    initOverviewCharts(orders, period);
-    loadSalesCharts('7days', allOrders); // Passa allOrders para o gráfico real
+    initOverviewCharts(orders, period, startDate, endDate);
+    loadSalesCharts(period, allOrders, startDate, endDate); 
     loadProductsFinance(orders, products);
-    loadCustomersFinance(orders, clients, period);
+    loadCustomersFinance(orders, clients, period, startDate, endDate);
 }
 
-function initOverviewCharts(orders, period = '7days') {
+window.applyCustomFilter = function(tab) {
+    const start = document.getElementById(`${tab}-start`).value;
+    const end = document.getElementById(`${tab}-end`).value;
+    
+    if (!start || !end) {
+        adminToast('Selecione ambas as datas para filtrar.', 'error');
+        return;
+    }
+
+    if (new Date(start) > new Date(end)) {
+        adminToast('A data de início não pode ser maior que a data de fim.', 'error');
+        return;
+    }
+
+    renderFinanceDashboard(cachedFinanceData, 'custom', start, end);
+};
+
+function initOverviewCharts(orders, period = '7days', startDate, endDate) {
     const payments = {};
     orders.forEach(o => {
         const method = o.payment_method || 'Outros';
@@ -1138,16 +1171,30 @@ function initOverviewCharts(orders, period = '7days') {
         }]
     }, { plugins: { title: { display: true, text: 'Formas de Pagamento' } } });
 
-    // Billing Chart adjustment based on period
     let lastDays = {};
     let count = 7;
-    if (period === 'today') count = 1;
-    if (period === '30days') count = 30;
-    if (period === 'all' || period === 'year') count = 30; // Max 30 for visualization
 
-    for (let i = count - 1; i >= 0; i--) {
-        const d = new Date(); d.setDate(d.getDate() - i);
-        lastDays[d.toLocaleDateString('pt-BR').substring(0, 5)] = 0;
+    if (period === 'custom' && startDate && endDate) {
+        const start = new Date(startDate + 'T00:00:00');
+        const end = new Date(endDate + 'T00:00:00');
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        count = Math.min(diffDays, 60); // Limite de 60 dias para o gráfico não quebrar
+
+        for (let i = 0; i < count; i++) {
+            const d = new Date(start);
+            d.setDate(d.getDate() + i);
+            lastDays[d.toLocaleDateString('pt-BR').substring(0, 5)] = 0;
+        }
+    } else {
+        if (period === 'today') count = 1;
+        if (period === '30days') count = 30;
+        if (period === 'all' || period === 'year') count = 30;
+
+        for (let i = count - 1; i >= 0; i--) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            lastDays[d.toLocaleDateString('pt-BR').substring(0, 5)] = 0;
+        }
     }
 
     orders.forEach(o => {
@@ -1168,7 +1215,7 @@ function initOverviewCharts(orders, period = '7days') {
     });
 }
 
-function loadSalesCharts(period, allOrders) {
+function loadSalesCharts(period, allOrders, startDate, endDate) {
     if (!allOrders) return;
     const orders = allOrders.filter(o => o.status !== 'cancelado');
 
@@ -1184,6 +1231,30 @@ function loadSalesCharts(period, allOrders) {
             if (d.getFullYear() === currentYear) monthly[d.getMonth()] += parseFloat(o.total || 0);
         });
         data = monthly;
+    } else if (period === 'custom' && startDate && endDate) {
+        const start = new Date(startDate + 'T00:00:00');
+        const end = new Date(endDate + 'T00:00:00');
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        const daysToCount = Math.min(diffDays, 60);
+
+        const timeline = [];
+        for (let i = 0; i < daysToCount; i++) {
+            const d = new Date(start);
+            d.setDate(d.getDate() + i);
+            timeline.push({
+                label: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                key: d.toLocaleDateString('pt-BR').substring(0, 5),
+                val: 0
+            });
+        }
+        orders.forEach(o => {
+            const dayKey = o.date.substring(0, 5);
+            const entry = timeline.find(l => l.key === dayKey);
+            if (entry) entry.val += parseFloat(o.total || 0);
+        });
+        labels = timeline.map(l => l.label);
+        data = timeline.map(l => l.val);
     } else {
         const daysToCount = period === '30days' ? 30 : 7;
         const timeline = [];
@@ -1264,7 +1335,7 @@ function loadProductsFinance(orders, products) {
     }
 }
 
-function loadCustomersFinance(orders, clients, period = '7days') {
+function loadCustomersFinance(orders, clients, period = '7days', startDate, endDate) {
     const customerValue = {};
     orders.forEach(o => {
         if (!o.clientEmail) return;
@@ -1289,6 +1360,13 @@ function loadCustomersFinance(orders, clients, period = '7days') {
 
     const now = new Date();
     const newClients = clients.filter(c => {
+        if (period === 'custom' && startDate && endDate) {
+            const cDate = new Date(c.created_at);
+            const start = new Date(startDate + 'T00:00:00');
+            const end = new Date(endDate + 'T23:59:59');
+            return cDate >= start && cDate <= end;
+        }
+
         if (period === 'all') return true;
         const cDate = new Date(c.created_at);
         if (period === 'today') return cDate.toDateString() === now.toDateString();

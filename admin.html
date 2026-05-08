@@ -318,6 +318,13 @@
             <!-- F-TAB: Overview -->
             <div id="f-tab-overview" class="f-tab-content active">
                 <div class="filter-bar-fin">
+                    <div class="date-filter-group">
+                        <label>De:</label>
+                        <input type="date" id="overview-start" class="admin-input-date">
+                        <label>Até:</label>
+                        <input type="date" id="overview-end" class="admin-input-date">
+                        <button class="btn-primary btn-sm" onclick="applyCustomFilter('overview')">Filtrar</button>
+                    </div>
                     <select id="overview-period-filter" class="admin-select">
                         <option value="today">Hoje</option>
                         <option value="7days" selected>Últimos 7 dias</option>
@@ -345,6 +352,13 @@
             <!-- F-TAB: Sales -->
             <div id="f-tab-sales" class="f-tab-content">
                 <div class="filter-bar-fin">
+                    <div class="date-filter-group">
+                        <label>De:</label>
+                        <input type="date" id="sales-start" class="admin-input-date">
+                        <label>Até:</label>
+                        <input type="date" id="sales-end" class="admin-input-date">
+                        <button class="btn-primary btn-sm" onclick="applyCustomFilter('sales')">Filtrar</button>
+                    </div>
                     <select id="sales-period-filter" class="admin-select">
                         <option value="7days">Últimos 7 dias</option>
                         <option value="30days">Últimos 30 dias</option>
@@ -361,6 +375,13 @@
             <!-- F-TAB: Products -->
             <div id="f-tab-products" class="f-tab-content">
                 <div class="filter-bar-fin">
+                    <div class="date-filter-group">
+                        <label>De:</label>
+                        <input type="date" id="prod-start" class="admin-input-date">
+                        <label>Até:</label>
+                        <input type="date" id="prod-end" class="admin-input-date">
+                        <button class="btn-primary btn-sm" onclick="applyCustomFilter('prod')">Filtrar</button>
+                    </div>
                     <select id="prod-period-filter" class="admin-select">
                         <option value="today">Hoje</option>
                         <option value="7days" selected>Últimos 7 dias</option>
@@ -392,6 +413,13 @@
             <!-- F-TAB: Customers -->
             <div id="f-tab-customers" class="f-tab-content">
                 <div class="filter-bar-fin">
+                    <div class="date-filter-group">
+                        <label>De:</label>
+                        <input type="date" id="cust-start" class="admin-input-date">
+                        <label>Até:</label>
+                        <input type="date" id="cust-end" class="admin-input-date">
+                        <button class="btn-primary btn-sm" onclick="applyCustomFilter('cust')">Filtrar</button>
+                    </div>
                     <select id="cust-period-filter" class="admin-select">
                         <option value="today">Hoje</option>
                         <option value="7days" selected>Últimos 7 dias</option>
