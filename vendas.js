@@ -274,9 +274,13 @@ function renderItems() {
                 <td>${fmt(item.price)}</td>
                 <td>${item.qty}</td>
                 <td><strong>${fmt(item.subtotal)}</strong></td>
-                <td style="text-align:right;">
-                    <i class="fas fa-edit" style="color:var(--pdv-primary); cursor:pointer; margin-right:10px; font-size:18px;" onclick="editItem(${index})" title="Editar Item"></i>
-                    <i class="fas fa-times-circle btn-icon-remove" onclick="removeItem(${index})" title="Remover Item"></i>
+                <td class="pdv-item-actions">
+                    <button class="btn-action btn-edit" onclick="editItem(${index})" title="Editar Item">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-action btn-remove" onclick="removeItem(${index})" title="Remover Item">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </td>
             </tr>
         `).join('');

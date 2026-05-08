@@ -74,6 +74,23 @@ body { background: var(--pdv-bg); color: var(--pdv-text); height: 100vh; overflo
 }
 .pdv-table td { padding: 15px; border-bottom: 1px solid var(--pdv-border); font-size: 14px; }
 .pdv-table tr:hover { background: #f9f9f9; }
+.pdv-item-actions { display: flex; gap: 8px; justify-content: flex-end; padding-top: 10px !important; }
+.btn-action {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+.btn-edit { background: rgba(39, 174, 96, 0.1); color: var(--pdv-primary); }
+.btn-edit:hover { background: var(--pdv-primary); color: white; }
+.btn-remove { background: rgba(231, 76, 60, 0.1); color: var(--pdv-danger); }
+.btn-remove:hover { background: var(--pdv-danger); color: white; }
 
 /* RIGHT SIDE: SUMMARY */
 .pdv-sidebar {
