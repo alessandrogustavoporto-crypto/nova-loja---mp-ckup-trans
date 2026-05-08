@@ -127,7 +127,7 @@ function showProductSuggestions(query) {
             <div class="suggestion-item" data-id="${p.id}">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span>${p.name}</span>
-                    <strong style="color:var(--pdv-primary);">${fmt(p.price)}</strong>
+                    <strong class="suggestion-price">${fmt(p.price)}</strong>
                 </div>
                 <small>Estoque: ${p.stock || 0} | EAN: ${p.barcode || '—'}</small>
             </div>

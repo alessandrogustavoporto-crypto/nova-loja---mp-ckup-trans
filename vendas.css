@@ -158,6 +158,8 @@ body { background: var(--pdv-bg); color: var(--pdv-text); height: 100vh; overflo
     color: rgba(255,255,255,0.8);
 }
 .suggestion-item span { font-size: 14px; font-weight: 600; }
+.suggestion-price { color: #000; font-size: 14px; }
+.suggestion-item:hover .suggestion-price { color: #fff; }
 .suggestion-item small { font-size: 11px; color: var(--pdv-text-muted); }
 
 .modal-overlay {
