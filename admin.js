@@ -1323,6 +1323,27 @@ function loadProductsFinance(orders, products) {
             container.innerHTML = `<p style="color: #27ae60"><i class="fas fa-check-circle"></i> Estoque em dia.</p>`;
         }
     }
+
+    // Relatório de Pagamentos
+    const payments = {};
+    orders.forEach(o => {
+        const rawMethod = o.payment_method || 'Outros';
+        const method = rawMethod.replace('PDV - ', '');
+        payments[method] = (payments[method] || 0) + parseFloat(o.total || 0);
+    });
+
+    const reportBody = document.getElementById('fin-payments-report');
+    if (reportBody) {
+        reportBody.innerHTML = Object.entries(payments).length === 0 ? '<tr><td colspan="2" style="text-align:center">Sem dados</td></tr>' :
+            Object.entries(payments)
+                .sort((a, b) => b[1] - a[1])
+                .map(([method, total]) => `
+                <tr>
+                    <td><strong>${method.toUpperCase()}</strong></td>
+                    <td>${fmt(total)}</td>
+                </tr>
+            `).join('');
+    }
 }
 
 function loadCustomersFinance(orders, clients, period = '7days', startDate, endDate) {
