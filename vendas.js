@@ -447,6 +447,13 @@ async function finishSale() {
 
     const total = pdvItems.reduce((acc, item) => acc + item.subtotal, 0) - (parseFloat(document.getElementById('pdv-global-discount').value) || 0);
     const paymentMethod = document.getElementById('pdv-payment-method').value;
+    const received = parseFloat(document.getElementById('pdv-amount-received').value) || 0;
+
+    if (paymentMethod === 'dinheiro' && received < total) {
+        alert('Para vendas em DINHEIRO, o valor recebido deve ser igual ou maior que o total da venda!');
+        document.getElementById('pdv-amount-received').focus();
+        return;
+    }
 
     try {
         // 1. Create Order in Supabase
