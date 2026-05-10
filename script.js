@@ -1724,7 +1724,8 @@ function renderOrdersList(orders, container) {
         '<div class="order-details hidden"><div class="details-grid">' +
         '<div class="details-items"><h4>Itens do Pedido</h4><ul>' + order.items.map(i => '<li>' + i.qty + 'x ' + i.name + ' — ' + fmt(i.price) + '</li>').join('') + '</ul></div>' +
         '<div class="details-address"><h4>Endereço de Entrega</h4><p>' + order.address.logradouro + ', ' + order.address.numero + '</p><p>' + order.address.bairro + ' — ' + order.address.cidade + ' / ' + order.address.estado + '</p><p>CEP: ' + order.address.cep + '</p></div>' +
-        '</div><div class="details-actions" style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; text-align:right;">' +
+        '</div>' + (order.discount_amount > 0 ? '<div style="text-align:right; font-size:13px; color:#e74c3c; margin-bottom:5px;"><strong>Desconto:</strong> - ' + fmt(order.discount_amount) + '</div>' : '') +
+        '<div class="details-actions" style="margin-top:10px; border-top:1px solid #eee; padding-top:15px; text-align:right;">' +
         '<button class="btn-primary" onclick="trackOrder(\'' + order.id + '\')"><i class="fas fa-truck-fast"></i> Acompanhar Entrega</button>' +
         '</div></div></div>').join('');
 }

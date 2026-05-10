@@ -463,7 +463,7 @@ function closeCheckoutModal() {
 async function finishSale() {
     if (!confirm('Confirmar finalização de venda?')) return;
 
-    const { total } = calculateTotal();
+    const { subtotal, discountAmount, total } = calculateTotal();
     const paymentMethod = document.getElementById('pdv-payment-method').value;
     const received = parseFloat(document.getElementById('pdv-amount-received').value) || 0;
 
@@ -479,6 +479,7 @@ async function finishSale() {
             client_name: selectedCustomer ? selectedCustomer.name : 'Consumidor Final',
             client_email: selectedCustomer ? selectedCustomer.email : 'venda_pdv@ecostore.com',
             total: total,
+            discount_amount: discountAmount,
             status: 'entregue',
             status_label: 'Entregue',
             payment_method: 'PDV - ' + paymentMethod,

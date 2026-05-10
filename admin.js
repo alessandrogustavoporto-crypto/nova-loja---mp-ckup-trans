@@ -857,7 +857,8 @@ window.viewOrder = function (id) {
         (o.items || []).map(i => '<tr><td>' + i.name + '</td><td>' + i.qty + '</td><td>' + fmt(i.price) + '</td><td>' + fmt(i.price * i.qty) + '</td></tr>').join('') +
         '</tbody></table>' +
         '</div>' +
-        '<div style="text-align:right;font-size:18px;font-weight:700;color:var(--primary-green);margin-top:10px;">Total: ' + fmt(o.total) + '</div>';
+        (o.discount_amount > 0 ? '<div style="text-align:right;font-size:14px;color:#e74c3c;margin-top:5px;">Desconto: - ' + fmt(o.discount_amount) + '</div>' : '') +
+        '<div style="text-align:right;font-size:18px;font-weight:700;color:var(--primary-green);margin-top:5px;">Total: ' + fmt(o.total) + '</div>';
 
     // Store for print
     window._currentOrder = o;
