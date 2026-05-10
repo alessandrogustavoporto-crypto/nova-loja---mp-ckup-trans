@@ -271,7 +271,7 @@ async function initAdminDashboard() {
     await loadClients(null, null, clients);
     await loadOrders(null, null, orders);
     await loadBanners(banners);
-    loadStoreSettings(); // Pré-carrega dados da empresa no cache
+    // Dados da empresa são carregados apenas ao abrir a aba (evita salvar dados vazios)
 
     // Sidebar navigation
     const btns = document.querySelectorAll('.sidebar-btn[data-section]');
@@ -1545,8 +1545,15 @@ window.loadStoreSettings = async function () {
 };
 
 window.saveStoreSettings = async function () {
+    const storeName = document.getElementById('set-store-name').value.trim();
+
+    if (!storeName) {
+        adminToast('Preencha ao menos o Nome Fantasia antes de salvar.', 'error');
+        return;
+    }
+
     const settings = {
-        store_name: document.getElementById('set-store-name').value.trim(),
+        store_name: storeName,
         company_name: document.getElementById('set-company-name').value.trim(),
         cnpj: document.getElementById('set-cnpj').value.trim(),
         state_registration: document.getElementById('set-ie').value.trim(),
@@ -1568,7 +1575,9 @@ window.saveStoreSettings = async function () {
     if (error) {
         adminToast('Erro ao salvar: ' + error.message, 'error');
     } else {
-        adminToast('Dados da empresa atualizados com sucesso!');
+        // Atualiza o cache global imediatamente
+        window._storeSettings = { id: 1, ...settings };
+        adminToast('Dados da empresa atualizados com sucesso! ✅');
     }
 };
 
