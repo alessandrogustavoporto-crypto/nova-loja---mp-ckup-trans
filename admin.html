@@ -29,6 +29,7 @@
             <button class="sidebar-btn" data-section="clientes"><i class="fas fa-users"></i> Clientes</button>
             <button class="sidebar-btn" data-section="pedidos"><i class="fas fa-file-invoice"></i> Pedidos</button>
             <button class="sidebar-btn" data-section="financeiro"><i class="fas fa-chart-pie"></i> Financeiro</button>
+            <button class="sidebar-btn" data-section="empresa"><i class="fas fa-building"></i> Dados da Empresa</button>
             <button class="sidebar-btn" data-section="banners"><i class="fas fa-image"></i> Banners</button>
             <button class="sidebar-btn" onclick="window.location.href='vendas.html'" style="background: rgba(39, 174, 96, 0.1); color: #27ae60; font-weight: 700; margin-top: 10px;">
                 <i class="fas fa-cash-register"></i> Ponto de Venda (PDV)
@@ -268,6 +269,77 @@
                         </thead>
                         <tbody id="marcas-table"></tbody>
                     </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: Empresa -->
+        <section id="section-empresa" class="admin-section">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h2><i class="fas fa-building"></i> Cadastro da Empresa</h2>
+                </div>
+                <div class="admin-card-body">
+                    <form id="store-settings-form">
+                        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label>Nome Fantasia</label>
+                                <input type="text" id="set-store-name" class="admin-input" placeholder="Ex: Minha Loja">
+                            </div>
+                            <div class="form-group">
+                                <label>Razão Social</label>
+                                <input type="text" id="set-company-name" class="admin-input" placeholder="Ex: Nome da Empresa LTDA">
+                            </div>
+                            <div class="form-group">
+                                <label>CNPJ</label>
+                                <input type="text" id="set-cnpj" class="admin-input" placeholder="00.000.000/0000-00">
+                            </div>
+                            <div class="form-group">
+                                <label>Inscrição Estadual</label>
+                                <input type="text" id="set-ie" class="admin-input" placeholder="Isento ou Número">
+                            </div>
+                            <div class="form-group">
+                                <label>E-mail de Contato</label>
+                                <input type="email" id="set-email" class="admin-input" placeholder="contato@empresa.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Telefone / WhatsApp</label>
+                                <input type="text" id="set-phone" class="admin-input" placeholder="(00) 00000-0000">
+                            </div>
+                        </div>
+
+                        <h3 style="margin: 25px 0 15px 0; padding-top: 15px; border-top: 1px solid #eee;">Endereço da Sede</h3>
+                        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label>Logradouro (Rua/Av)</label>
+                                <input type="text" id="set-addr-street" class="admin-input">
+                            </div>
+                            <div class="form-group">
+                                <label>Número</label>
+                                <input type="text" id="set-addr-num" class="admin-input">
+                            </div>
+                            <div class="form-group">
+                                <label>Bairro</label>
+                                <input type="text" id="set-addr-bairro" class="admin-input">
+                            </div>
+                            <div class="form-group">
+                                <label>Cidade</label>
+                                <input type="text" id="set-addr-city" class="admin-input">
+                            </div>
+                            <div class="form-group">
+                                <label>Estado (UF)</label>
+                                <input type="text" id="set-addr-uf" class="admin-input" maxlength="2">
+                            </div>
+                            <div class="form-group">
+                                <label>CEP</label>
+                                <input type="text" id="set-addr-cep" class="admin-input">
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 30px; text-align: right;">
+                            <button type="button" class="btn-primary" onclick="saveStoreSettings()"><i class="fas fa-save"></i> SALVAR DADOS DA EMPRESA</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </section>

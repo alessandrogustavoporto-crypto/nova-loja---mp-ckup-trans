@@ -285,6 +285,7 @@ async function initAdminDashboard() {
 
         // Carregamento instantâneo via cache
         if (sectionId === 'financeiro') loadFinanceData('7days');
+        if (sectionId === 'empresa') loadStoreSettings();
     }));
 
     // Finance Tabs Navigation
@@ -1420,6 +1421,58 @@ window.deleteBanner = async function (id) {
     await supabase.from('banners').delete().eq('id', id);
     await loadBanners();
     adminToast('Banner removido.', 'error');
+};
+
+// ============================================================
+// SECTION: Empresa (Store Settings)
+// ============================================================
+window.loadStoreSettings = async function () {
+    const { data, error } = await supabase.from('store_settings').select('*').eq('id', 1).single();
+    if (error || !data) return;
+
+    document.getElementById('set-store-name').value = data.store_name || '';
+    document.getElementById('set-company-name').value = data.company_name || '';
+    document.getElementById('set-cnpj').value = data.cnpj || '';
+    document.getElementById('set-ie').value = data.state_registration || '';
+    document.getElementById('set-email').value = data.email || '';
+    document.getElementById('set-phone').value = data.phone || '';
+
+    if (data.address) {
+        document.getElementById('set-addr-street').value = data.address.street || '';
+        document.getElementById('set-addr-num').value = data.address.number || '';
+        document.getElementById('set-addr-bairro').value = data.address.neighborhood || '';
+        document.getElementById('set-addr-city').value = data.address.city || '';
+        document.getElementById('set-addr-uf').value = data.address.uf || '';
+        document.getElementById('set-addr-cep').value = data.address.cep || '';
+    }
+};
+
+window.saveStoreSettings = async function () {
+    const settings = {
+        store_name: document.getElementById('set-store-name').value.trim(),
+        company_name: document.getElementById('set-company-name').value.trim(),
+        cnpj: document.getElementById('set-cnpj').value.trim(),
+        state_registration: document.getElementById('set-ie').value.trim(),
+        email: document.getElementById('set-email').value.trim(),
+        phone: document.getElementById('set-phone').value.trim(),
+        address: {
+            street: document.getElementById('set-addr-street').value.trim(),
+            number: document.getElementById('set-addr-num').value.trim(),
+            neighborhood: document.getElementById('set-addr-bairro').value.trim(),
+            city: document.getElementById('set-addr-city').value.trim(),
+            uf: document.getElementById('set-addr-uf').value.trim().toUpperCase(),
+            cep: document.getElementById('set-addr-cep').value.trim()
+        },
+        updated_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase.from('store_settings').update(settings).eq('id', 1);
+
+    if (error) {
+        adminToast('Erro ao salvar: ' + error.message, 'error');
+    } else {
+        adminToast('Dados da empresa atualizados com sucesso!');
+    }
 };
 
 // Handle Banner Image Upload
