@@ -72,6 +72,7 @@ function setupEventListeners() {
     // Amount received change (for troco)
     document.getElementById('pdv-amount-received').addEventListener('input', updateChange);
     document.getElementById('pdv-global-discount').addEventListener('input', renderTotals);
+    document.getElementById('pdv-discount-type').addEventListener('change', renderTotals);
 
     // Customer search
     document.getElementById('pdv-cust-search').addEventListener('input', (e) => searchCustomer(e.target.value));
@@ -399,13 +400,30 @@ window.removeSelectedCustomer = function() {
     document.getElementById('pdv-cust-search').focus();
 }
 
-function renderTotals() {
+function calculateTotal() {
     const subtotal = pdvItems.reduce((acc, item) => acc + item.subtotal, 0);
-    const discount = parseFloat(document.getElementById('pdv-global-discount').value) || 0;
-    const total = subtotal - discount;
+    const discVal = parseFloat(document.getElementById('pdv-global-discount').value) || 0;
+    const discType = document.getElementById('pdv-discount-type').value; // 'val' or 'pct'
+    
+    let discountAmount = 0;
+    if (discType === 'pct') {
+        discountAmount = subtotal * (discVal / 100);
+    } else {
+        discountAmount = discVal;
+    }
+    
+    return {
+        subtotal,
+        discountAmount,
+        total: Math.max(0, subtotal - discountAmount)
+    };
+}
+
+function renderTotals() {
+    const { subtotal, discountAmount, total } = calculateTotal();
 
     document.getElementById('pdv-subtotal').textContent = fmt(subtotal);
-    document.getElementById('pdv-discounts').textContent = '- ' + fmt(discount);
+    document.getElementById('pdv-discounts').textContent = '- ' + fmt(discountAmount);
     document.getElementById('pdv-total').textContent = fmt(total);
     document.getElementById('checkout-final-total').textContent = fmt(total);
     
@@ -413,7 +431,7 @@ function renderTotals() {
 }
 
 function updateChange() {
-    const total = pdvItems.reduce((acc, item) => acc + item.subtotal, 0) - (parseFloat(document.getElementById('pdv-global-discount').value) || 0);
+    const { total } = calculateTotal();
     const received = parseFloat(document.getElementById('pdv-amount-received').value) || 0;
     const change = received - total;
     
@@ -445,7 +463,7 @@ function closeCheckoutModal() {
 async function finishSale() {
     if (!confirm('Confirmar finalização de venda?')) return;
 
-    const total = pdvItems.reduce((acc, item) => acc + item.subtotal, 0) - (parseFloat(document.getElementById('pdv-global-discount').value) || 0);
+    const { total } = calculateTotal();
     const paymentMethod = document.getElementById('pdv-payment-method').value;
     const received = parseFloat(document.getElementById('pdv-amount-received').value) || 0;
 
