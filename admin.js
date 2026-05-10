@@ -1550,7 +1550,7 @@ window.saveStoreSettings = async function () {
         updated_at: new Date().toISOString()
     };
 
-    const { error } = await supabase.from('store_settings').update(settings).eq('id', 1);
+    const { error } = await supabase.from('store_settings').upsert({ id: 1, ...settings });
 
     if (error) {
         adminToast('Erro ao salvar: ' + error.message, 'error');
