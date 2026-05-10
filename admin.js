@@ -271,6 +271,7 @@ async function initAdminDashboard() {
     await loadClients(null, null, clients);
     await loadOrders(null, null, orders);
     await loadBanners(banners);
+    loadStoreSettings(); // Pré-carrega dados da empresa no cache
 
     // Sidebar navigation
     const btns = document.querySelectorAll('.sidebar-btn[data-section]');
@@ -881,21 +882,26 @@ window.printOrder = async function () {
     const o = window._currentOrder;
     if (!o) return;
 
-    // Busca dados da empresa (pega o primeiro registro que encontrar)
-    const { data: stores } = await supabase.from('store_settings').select('*').limit(1);
-    const store = (stores && stores.length > 0) ? stores[0] : null;
+    // Usa cache se disponível, senão faz nova busca
+    let store = window._storeSettings;
+    if (!store) {
+        const { data: stores } = await supabase.from('store_settings').select('*').limit(1);
+        store = (stores && stores.length > 0) ? stores[0] : null;
+        window._storeSettings = store;
+    }
 
-    const storeName = store?.store_name || 'ECOSTORE';
+    const storeName = store?.store_name || 'MINHA LOJA';
     const companyName = store?.company_name || 'Razão Social não informada';
-    const cnpj = store?.cnpj || '00.000.000/0000-00';
-    const ie = store?.state_registration || '—';
-    const phone = store?.phone || '—';
-    const email = store?.email || '—';
-    
-    let address = 'Endereço não cadastrado';
+    const cnpj = store?.cnpj || 'Não informado';
+    const ie = store?.state_registration || 'Não informado';
+    const phone = store?.phone || 'Não informado';
+    const email = store?.email || 'Não informado';
+
+    let storeAddress = 'Endereço não cadastrado';
     if (store?.address) {
         const a = store.address;
-        address = `${a.street || ''}, ${a.number || ''} - ${a.neighborhood || ''}, ${a.city || ''}/${a.uf || ''} - CEP: ${a.cep || ''}`;
+        const parts = [a.street, a.number ? `nº ${a.number}` : '', a.neighborhood, a.city, a.uf ? `/ ${a.uf}` : '', a.cep ? `CEP: ${a.cep}` : ''].filter(Boolean);
+        storeAddress = parts.join(', ');
     }
 
     const printArea = document.getElementById('print-area');
@@ -905,9 +911,9 @@ window.printOrder = async function () {
                 <div class="company-info">
                     <h2 style="margin:0; font-size:20px;">${storeName.toUpperCase()}</h2>
                     <p><strong>${companyName}</strong></p>
-                    <p>CNPJ: ${cnpj} | IE: ${ie}</p>
-                    <p>${address}</p>
-                    <p>Fone: ${phone} | Email: ${email}</p>
+                    <p>CNPJ: ${cnpj} &nbsp;|&nbsp; IE: ${ie}</p>
+                    <p>${storeAddress}</p>
+                    <p>Fone: ${phone} &nbsp;|&nbsp; Email: ${email}</p>
                 </div>
                 <div class="order-badge">
                     <p>DOCUMENTO AUXILIAR DE VENDA</p>
@@ -1511,23 +1517,30 @@ window.deleteBanner = async function (id) {
 // SECTION: Empresa (Store Settings)
 // ============================================================
 window.loadStoreSettings = async function () {
-    const { data, error } = await supabase.from('store_settings').select('*').eq('id', 1).single();
-    if (error || !data) return;
+    const { data: stores, error } = await supabase.from('store_settings').select('*').limit(1);
+    if (error) { console.warn('Erro ao carregar dados da empresa:', error.message); return; }
+    const data = (stores && stores.length > 0) ? stores[0] : null;
+    
+    // Armazena no cache global para uso na impressão
+    window._storeSettings = data;
 
-    document.getElementById('set-store-name').value = data.store_name || '';
-    document.getElementById('set-company-name').value = data.company_name || '';
-    document.getElementById('set-cnpj').value = data.cnpj || '';
-    document.getElementById('set-ie').value = data.state_registration || '';
-    document.getElementById('set-email').value = data.email || '';
-    document.getElementById('set-phone').value = data.phone || '';
+    if (!data) return;
+
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+    setVal('set-store-name', data.store_name);
+    setVal('set-company-name', data.company_name);
+    setVal('set-cnpj', data.cnpj);
+    setVal('set-ie', data.state_registration);
+    setVal('set-email', data.email);
+    setVal('set-phone', data.phone);
 
     if (data.address) {
-        document.getElementById('set-addr-street').value = data.address.street || '';
-        document.getElementById('set-addr-num').value = data.address.number || '';
-        document.getElementById('set-addr-bairro').value = data.address.neighborhood || '';
-        document.getElementById('set-addr-city').value = data.address.city || '';
-        document.getElementById('set-addr-uf').value = data.address.uf || '';
-        document.getElementById('set-addr-cep').value = data.address.cep || '';
+        setVal('set-addr-street', data.address.street);
+        setVal('set-addr-num', data.address.number);
+        setVal('set-addr-bairro', data.address.neighborhood);
+        setVal('set-addr-city', data.address.city);
+        setVal('set-addr-uf', data.address.uf);
+        setVal('set-addr-cep', data.address.cep);
     }
 };
 
