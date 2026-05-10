@@ -881,15 +881,22 @@ window.printOrder = async function () {
     const o = window._currentOrder;
     if (!o) return;
 
-    // Busca dados da empresa para o cabeçalho
-    const { data: store } = await supabase.from('store_settings').select('*').eq('id', 1).single();
-    const storeName = store?.store_name || 'EcoStore';
-    const companyName = store?.company_name || '';
-    const cnpj = store?.cnpj || '';
-    const ie = store?.state_registration || '';
-    const phone = store?.phone || '';
-    const email = store?.email || '';
-    const address = store?.address ? `${store.address.street}, ${store.address.number} - ${store.address.neighborhood}, ${store.address.city}/${store.address.uf}` : '';
+    // Busca dados da empresa (pega o primeiro registro que encontrar)
+    const { data: stores } = await supabase.from('store_settings').select('*').limit(1);
+    const store = (stores && stores.length > 0) ? stores[0] : null;
+
+    const storeName = store?.store_name || 'ECOSTORE';
+    const companyName = store?.company_name || 'Razão Social não informada';
+    const cnpj = store?.cnpj || '00.000.000/0000-00';
+    const ie = store?.state_registration || '—';
+    const phone = store?.phone || '—';
+    const email = store?.email || '—';
+    
+    let address = 'Endereço não cadastrado';
+    if (store?.address) {
+        const a = store.address;
+        address = `${a.street || ''}, ${a.number || ''} - ${a.neighborhood || ''}, ${a.city || ''}/${a.uf || ''} - CEP: ${a.cep || ''}`;
+    }
 
     const printArea = document.getElementById('print-area');
     printArea.innerHTML = `
