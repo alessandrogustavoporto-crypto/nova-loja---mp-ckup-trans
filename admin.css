@@ -492,3 +492,104 @@
     border-color: var(--primary-green);
 }
 
+/* ============================================================
+   PRINT STYLES (DANFE-LIKE)
+   ============================================================ */
+@media print {
+    body * { visibility: hidden; }
+    #print-area, #print-area * { visibility: visible; }
+    #print-area {
+        position: absolute !important;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white;
+        z-index: 9999;
+    }
+    .admin-sidebar, .admin-topbar, .admin-main, .modal-overlay, .btn-icon { display: none !important; }
+}
+
+#print-area.hidden { display: none; }
+
+.danfe-container {
+    font-family: 'Inter', Arial, sans-serif;
+    padding: 20px;
+    color: #000;
+    max-width: 800px;
+    margin: 0 auto;
+    border: 1px solid #000;
+    background: #fff;
+}
+
+.danfe-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 2px solid #000;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.company-info p { margin: 2px 0; font-size: 13px; line-height: 1.4; }
+
+.order-badge {
+    text-align: right;
+    border: 1px solid #000;
+    padding: 10px;
+    min-width: 250px;
+}
+.order-badge p { margin: 2px 0; font-size: 11px; text-transform: uppercase; }
+.order-badge h3 { margin: 5px 0; font-size: 18px; }
+
+.danfe-section {
+    margin-bottom: 20px;
+}
+
+.section-title {
+    background: #f0f0f0;
+    font-weight: bold;
+    padding: 5px 10px;
+    border: 1px solid #000;
+    font-size: 12px;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.danfe-grid {
+    padding: 5px 10px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.danfe-grid p { margin: 2px 0; }
+
+.danfe-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.danfe-table th, .danfe-table td {
+    border: 1px solid #000;
+    padding: 8px;
+    text-align: left;
+    font-size: 12px;
+}
+.danfe-table th { background: #f9f9f9; text-transform: uppercase; }
+
+.danfe-footer {
+    margin-top: 20px;
+    border-top: 2px solid #000;
+    padding-top: 10px;
+}
+
+.footer-totals {
+    text-align: right;
+    padding-right: 10px;
+}
+.footer-totals p { margin: 3px 0; font-size: 13px; }
+
+.danfe-obs {
+    margin-top: 20px;
+    font-size: 11px;
+    border: 1px dashed #000;
+    padding: 10px;
+    color: #333;
+}
+

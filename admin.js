@@ -811,6 +811,7 @@ function renderOrdersTable() {
                 </td>
                 <td>
                     <button class="btn-icon btn-icon-view" onclick="viewOrder('${o.id}')" title="Ver detalhes"><i class="fas fa-eye"></i></button>
+                    <button class="btn-icon" onclick="printOrderFromTable('${o.id}')" title="Imprimir Pedido" style="color: #34495e;"><i class="fas fa-print"></i></button>
                     ${o.clientPhone ? ` <a href="https://wa.me/55${o.clientPhone.replace(/\D/g, '')}" target="_blank" class="btn-icon" style="color:#25D366;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>` : ''}
                 </td>
             </tr>
@@ -868,18 +869,94 @@ window.viewOrder = function (id) {
 
 window.closeOrderModal = function () { document.getElementById('order-detail-modal').classList.add('hidden'); };
 
-window.printOrder = function () {
+window.printOrderFromTable = async function (id) {
+    const o = allAdminOrders.find(o => o.id == id);
+    if (o) {
+        window._currentOrder = o;
+        await printOrder();
+    }
+};
+
+window.printOrder = async function () {
     const o = window._currentOrder;
     if (!o) return;
+
+    // Busca dados da empresa para o cabeçalho
+    const { data: store } = await supabase.from('store_settings').select('*').eq('id', 1).single();
+    const storeName = store?.store_name || 'EcoStore';
+    const companyName = store?.company_name || '';
+    const cnpj = store?.cnpj || '';
+    const ie = store?.state_registration || '';
+    const phone = store?.phone || '';
+    const email = store?.email || '';
+    const address = store?.address ? `${store.address.street}, ${store.address.number} - ${store.address.neighborhood}, ${store.address.city}/${store.address.uf}` : '';
+
     const printArea = document.getElementById('print-area');
-    printArea.innerHTML =
-        '<h2>PICK LIST — Pedido ' + o.id + '</h2>' +
-        '<p><strong>Data:</strong> ' + o.date + ' | <strong>Status:</strong> ' + (statusInfo[o.status]?.label || o.status) + '</p>' +
-        '<p><strong>Cliente:</strong> ' + (o.clientName || '—') + ' | <strong>Tel:</strong> ' + (o.clientPhone || '—') + '</p>' +
-        '<p><strong>Entrega:</strong> ' + (o.address || '—') + '</p>' +
-        '<br><table><thead><tr><th>Produto</th><th>Qty</th><th>Preço</th><th>Subtotal</th></tr></thead><tbody>' +
-        (o.items || []).map(i => '<tr><td>' + i.name + '</td><td>' + i.qty + '</td><td>' + fmt(i.price) + '</td><td>' + fmt(i.price * i.qty) + '</td></tr>').join('') +
-        '</tbody></table><br><p><strong>TOTAL: ' + fmt(o.total) + '</strong></p>';
+    printArea.innerHTML = `
+        <div class="danfe-container">
+            <div class="danfe-header">
+                <div class="company-info">
+                    <h2 style="margin:0; font-size:20px;">${storeName.toUpperCase()}</h2>
+                    <p><strong>${companyName}</strong></p>
+                    <p>CNPJ: ${cnpj} | IE: ${ie}</p>
+                    <p>${address}</p>
+                    <p>Fone: ${phone} | Email: ${email}</p>
+                </div>
+                <div class="order-badge">
+                    <p>DOCUMENTO AUXILIAR DE VENDA</p>
+                    <h3>PEDIDO Nº ${String(o.id).padStart(5, '0')}</h3>
+                    <p>Data: ${o.date}</p>
+                </div>
+            </div>
+
+            <div class="danfe-section">
+                <div class="section-title">DADOS DO CLIENTE</div>
+                <div class="danfe-grid">
+                    <p><strong>NOME:</strong> ${o.clientName || 'CONSUMIDOR FINAL'}</p>
+                    <p><strong>E-MAIL:</strong> ${o.clientEmail || '—'}</p>
+                    <p><strong>TELEFONE:</strong> ${o.clientPhone || '—'}</p>
+                    <p><strong>ENDEREÇO:</strong> ${o.address || '—'}</p>
+                </div>
+            </div>
+
+            <div class="danfe-section">
+                <div class="section-title">ITENS DO PEDIDO</div>
+                <table class="danfe-table">
+                    <thead>
+                        <tr>
+                            <th>DESCRIÇÃO DO PRODUTO</th>
+                            <th>VALOR UNIT.</th>
+                            <th>QTD</th>
+                            <th>TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${(o.items || []).map(i => `
+                            <tr>
+                                <td>${i.name}</td>
+                                <td>${fmt(i.price)}</td>
+                                <td>${i.qty}</td>
+                                <td>${fmt(i.price * i.qty)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="danfe-footer">
+                <div class="footer-totals">
+                    <p>VALOR TOTAL DOS PRODUTOS: <strong>${fmt((o.items || []).reduce((acc, i) => acc + (i.price * i.qty), 0))}</strong></p>
+                    ${o.discount_amount > 0 ? `<p>DESCONTO CONCEDIDO: <strong style="color:red">- ${fmt(o.discount_amount)}</strong></p>` : ''}
+                    <h2 style="margin-top:10px;">TOTAL LÍQUIDO: ${fmt(o.total)}</h2>
+                    <p style="margin-top:10px; font-size:12px; font-style:italic;">Forma de Pagamento: ${o.payment_method || '—'}</p>
+                </div>
+                <div class="danfe-obs">
+                    <p><strong>Observações:</strong> Documento sem valor fiscal. Agradecemos a preferência!</p>
+                </div>
+            </div>
+        </div>
+    `;
+
     printArea.classList.remove('hidden');
     window.print();
     printArea.classList.add('hidden');
