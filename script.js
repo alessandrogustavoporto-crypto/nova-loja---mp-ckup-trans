@@ -14,27 +14,6 @@ const PRODUCTS = [
     { id: 10, name: "Kit Shampoo e Condicionador Sólido", category: "Cosméticos", price: 78.00, image: "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=300&q=80" }
 ];
 
-// ============================================================
-// CARREGA CORES DO SITE AO INICIAR
-// ============================================================
-(async function applySavedColors() {
-    try {
-        const { data: stores } = await supabase.from('store_settings').select('primary_color, text_color').limit(1);
-        const store = (stores && stores.length > 0) ? stores[0] : null;
-        const primary = store?.primary_color;
-        const text = store?.text_color;
-        if (primary) document.documentElement.style.setProperty('--primary-green', primary);
-        if (text) document.documentElement.style.setProperty('--text-main', text);
-        if (primary) {
-            const num = parseInt(primary.slice(1), 16);
-            const f = 0.3;
-            const r = Math.max(0, (num >> 16) - Math.round((num >> 16) * f));
-            const g = Math.max(0, ((num >> 8) & 0xFF) - Math.round(((num >> 8) & 0xFF) * f));
-            const b = Math.max(0, (num & 0xFF) - Math.round((num & 0xFF) * f));
-            document.documentElement.style.setProperty('--dark-green', '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1));
-        }
-    } catch(e) { /* silencioso */ }
-})();
 
 // GLOBAL DATA CACHES
 window.APP_DATA = {
