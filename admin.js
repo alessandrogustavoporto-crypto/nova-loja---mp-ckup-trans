@@ -1134,6 +1134,32 @@ window.saveStockRow = async function(productId) {
         // Atualiza cache local
         const p = _allStockProducts.find(x => x.id === productId);
         if (p) { p.stock = newStock; p.cost = newCost; }
+
+        // Atualiza o badge de status e borda do input na linha sem recarregar
+        const row = document.getElementById(`stock-row-${productId}`);
+        if (row) {
+            // Determina novo status
+            let newLabel, newClass, newBorder;
+            if (newStock <= 0) {
+                newLabel = 'Sem Estoque'; newClass = 'badge-cancelado'; newBorder = 'border-color:#e74c3c;';
+            } else if (newStock <= 5) {
+                newLabel = 'Estoque Baixo'; newClass = 'badge-aguardando'; newBorder = 'border-color:#e67e22;';
+            } else {
+                newLabel = 'Em Estoque'; newClass = 'badge-entregue'; newBorder = '';
+            }
+
+            // Atualiza badge
+            const badge = row.querySelector('.badge');
+            if (badge) {
+                badge.className = `badge ${newClass}`;
+                badge.textContent = newLabel;
+            }
+
+            // Atualiza borda do input de estoque
+            const sInput = document.getElementById(`stock-${productId}`);
+            if (sInput) sInput.style.cssText = sInput.style.cssText.replace(/border-color:[^;]+;/g, '') + newBorder;
+        }
+
         // Recarrega KPIs
         const totalValue = _allStockProducts.reduce((acc, p) => acc + ((p.cost || 0) * (p.stock || 0)), 0);
         const zero = _allStockProducts.filter(p => !p.stock || p.stock <= 0).length;
