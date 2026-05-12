@@ -288,6 +288,7 @@ async function initAdminDashboard() {
         if (sectionId === 'financeiro') loadFinanceData('7days');
         if (sectionId === 'empresa') loadStoreSettings();
         if (sectionId === 'estoque') loadStock();
+        if (sectionId === 'colors') loadColorSettings();
     }));
 
     // Finance Tabs Navigation
@@ -1477,6 +1478,156 @@ window.saveBanner = async function () {
     adminToast('Banner salvo com sucesso!');
 };
 
+
+// ============================================================
+// SECTION: Colors do Site
+// ============================================================
+const PRIMARY_COLORS = [
+    { name: 'Verde Floresta',  hex: '#1a5c38' },
+    { name: 'Verde Esmeralda', hex: '#27ae60' },
+    { name: 'Azul Royal',      hex: '#2980b9' },
+    { name: 'Azul Marinho',    hex: '#1a3c5e' },
+    { name: 'Roxo',            hex: '#8e44ad' },
+    { name: 'Índigo',          hex: '#3f51b5' },
+    { name: 'Laranja',         hex: '#e67e22' },
+    { name: 'Vermelho',        hex: '#c0392b' },
+    { name: 'Rosa',            hex: '#e91e8c' },
+    { name: 'Turquesa',        hex: '#16a085' },
+    { name: 'Grafite',         hex: '#2c3e50' },
+    { name: 'Dourado',         hex: '#c9a227' },
+];
+
+const TEXT_COLORS = [
+    { name: 'Cinza Escuro',  hex: '#333333' },
+    { name: 'Quase Preto',   hex: '#1a1a2e' },
+    { name: 'Preto Puro',    hex: '#000000' },
+    { name: 'Cinza Médio',   hex: '#555555' },
+    { name: 'Azul Escuro',   hex: '#1a252f' },
+    { name: 'Marrom',        hex: '#3e2723' },
+];
+
+let _selectedPrimary = '#1a5c38';
+let _selectedText = '#333333';
+
+window.loadColorSettings = async function() {
+    const { data: stores } = await supabase.from('store_settings').select('primary_color, text_color, store_name').limit(1);
+    const store = (stores && stores.length > 0) ? stores[0] : null;
+    _selectedPrimary = store?.primary_color || '#1a5c38';
+    _selectedText = store?.text_color || '#333333';
+
+    const previewName = store?.store_name || 'Minha Loja';
+    const nameEl = document.getElementById('preview-store-name');
+    if (nameEl) nameEl.textContent = previewName;
+
+    renderColorPalette('primary-color-grid', PRIMARY_COLORS, _selectedPrimary, 'primary');
+    renderColorPalette('text-color-grid', TEXT_COLORS, _selectedText, 'text');
+
+    updatePreviewBar(_selectedPrimary, _selectedText);
+
+    // Custom color pickers
+    const cp = document.getElementById('custom-primary-color');
+    const ct = document.getElementById('custom-text-color');
+    if (cp) { cp.value = _selectedPrimary; cp.addEventListener('input', e => { _selectedPrimary = e.target.value; deselectSwatches('primary'); updatePreviewBar(_selectedPrimary, _selectedText); }); }
+    if (ct) { ct.value = _selectedText; ct.addEventListener('input', e => { _selectedText = e.target.value; deselectSwatches('text'); updatePreviewBar(_selectedPrimary, _selectedText); }); }
+};
+
+function renderColorPalette(containerId, colors, selected, type) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = colors.map(c => `
+        <div onclick="selectColor('${type}', '${c.hex}', this)"
+            title="${c.name}"
+            style="
+                width: 48px; height: 48px; border-radius: 10px;
+                background: ${c.hex};
+                cursor: pointer;
+                border: 3px solid ${c.hex === selected ? '#000' : 'transparent'};
+                box-shadow: ${c.hex === selected ? '0 0 0 2px #fff, 0 0 0 4px ' + c.hex : '0 2px 6px rgba(0,0,0,0.15)'};
+                transition: all 0.2s;
+                position: relative;
+            ">
+            ${c.hex === selected ? '<i class="fas fa-check" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-size:16px;text-shadow:0 1px 3px rgba(0,0,0,0.5);"></i>' : ''}
+        </div>
+    `).join('');
+}
+
+function deselectSwatches(type) {
+    const grid = type === 'primary' ? 'primary-color-grid' : 'text-color-grid';
+    document.querySelectorAll(`#${grid} div`).forEach(el => {
+        el.style.border = '3px solid transparent';
+        el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+        el.innerHTML = '';
+    });
+}
+
+window.selectColor = function(type, hex, el) {
+    const grid = type === 'primary' ? 'primary-color-grid' : 'text-color-grid';
+    // Deselect all
+    document.querySelectorAll(`#${grid} > div`).forEach(d => {
+        d.style.border = '3px solid transparent';
+        d.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+        d.innerHTML = '';
+    });
+    // Select this one
+    el.style.border = '3px solid #000';
+    el.style.boxShadow = `0 0 0 2px #fff, 0 0 0 4px ${hex}`;
+    el.innerHTML = '<i class="fas fa-check" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-size:16px;text-shadow:0 1px 3px rgba(0,0,0,0.5);"></i>';
+
+    if (type === 'primary') {
+        _selectedPrimary = hex;
+        const cp = document.getElementById('custom-primary-color');
+        if (cp) cp.value = hex;
+    } else {
+        _selectedText = hex;
+        const ct = document.getElementById('custom-text-color');
+        if (ct) ct.value = hex;
+    }
+    updatePreviewBar(_selectedPrimary, _selectedText);
+};
+
+function updatePreviewBar(primary, text) {
+    const bar = document.getElementById('color-preview-bar');
+    if (bar) bar.style.background = primary;
+    const sample = document.getElementById('preview-text-sample');
+    if (sample) sample.style.color = '#fff';
+}
+
+function applySiteColors(primary, text) {
+    // Deriva tons baseado na cor principal
+    const darken = (hex, factor) => {
+        const num = parseInt(hex.slice(1), 16);
+        const r = Math.max(0, (num >> 16) - Math.round(((num >> 16)) * factor));
+        const g = Math.max(0, ((num >> 8) & 0xFF) - Math.round((((num >> 8) & 0xFF)) * factor));
+        const b = Math.max(0, (num & 0xFF) - Math.round(((num & 0xFF)) * factor));
+        return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    };
+
+    const root = document.documentElement;
+    root.style.setProperty('--primary-green', primary);
+    root.style.setProperty('--light-green', primary + 'cc');
+    root.style.setProperty('--dark-green', darken(primary, 0.3));
+    root.style.setProperty('--text-main', text);
+}
+
+window.saveSiteColors = async function() {
+    const { error } = await supabase.from('store_settings').upsert({
+        id: 1,
+        primary_color: _selectedPrimary,
+        text_color: _selectedText
+    });
+
+    if (error) {
+        adminToast('Erro ao salvar: ' + error.message, 'error');
+    } else {
+        // Atualiza cache e aplica no admin agora
+        if (window._storeSettings) {
+            window._storeSettings.primary_color = _selectedPrimary;
+            window._storeSettings.text_color = _selectedText;
+        }
+        applySiteColors(_selectedPrimary, _selectedText);
+        adminToast('Cores salvas e aplicadas ao site! ✅');
+    }
+};
 
 // ============================================================
 // FINANCE MODULE
