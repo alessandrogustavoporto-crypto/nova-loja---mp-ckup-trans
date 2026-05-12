@@ -1208,11 +1208,53 @@ window.loadStockExitReport = async function() {
         return;
     }
 
-    tbody.innerHTML = sorted.map(([name, d]) => {
+    // Cache do relatório completo para paginação e exportação
+    window._exitReportData = sorted;
+    window._exitCurrentPage = 1;
+    renderExitReportPage();
+};
+
+function renderExitReportPage() {
+    const sorted = window._exitReportData || [];
+    const page = window._exitCurrentPage || 1;
+    const pageSize = 15;
+    const tbody = document.getElementById('stock-exit-body');
+    const pageInfo = document.getElementById('exit-page-info');
+    const pageNumbers = document.getElementById('exit-page-numbers');
+    if (!tbody) return;
+
+    if (sorted.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted)">Nenhuma saída encontrada no período.</td></tr>';
+        if (pageInfo) pageInfo.textContent = '';
+        if (pageNumbers) pageNumbers.innerHTML = '';
+        return;
+    }
+
+    const totalPages = Math.ceil(sorted.length / pageSize);
+    const start = (page - 1) * pageSize;
+    const paginated = sorted.slice(start, start + pageSize);
+
+    if (pageInfo) pageInfo.textContent = `Exibindo ${start + 1}–${Math.min(start + pageSize, sorted.length)} de ${sorted.length} itens`;
+
+    if (pageNumbers) {
+        pageNumbers.innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1).map(p => `
+            <button onclick="goExitPage(${p})" style="
+                min-width:34px; height:34px; border-radius:6px;
+                border:1px solid ${p === page ? 'var(--primary-green)' : '#ddd'};
+                background:${p === page ? 'var(--primary-green)' : '#fff'};
+                color:${p === page ? '#fff' : '#333'};
+                font-weight:${p === page ? '700' : '400'};
+                font-size:13px; cursor:pointer;">${p}</button>
+        `).join('');
+    }
+
+    tbody.innerHTML = paginated.map(([name, d], idx) => {
         const profit = d.revenue - d.cost;
         const profitColor = profit >= 0 ? '#27ae60' : '#e74c3c';
+        const rowNum = start + idx + 1;
         return `
             <tr>
+                <td style="color:var(--text-muted);font-size:12px;">${rowNum}</td>
                 <td><strong>${name}</strong></td>
                 <td>${d.qty} un.</td>
                 <td>${fmt(d.revenue)}</td>
@@ -1221,6 +1263,102 @@ window.loadStockExitReport = async function() {
             </tr>
         `;
     }).join('');
+}
+
+window.goExitPage = function(page) {
+    window._exitCurrentPage = page;
+    renderExitReportPage();
+};
+
+window.printExitReport = async function() {
+    const sorted = window._exitReportData || [];
+    if (sorted.length === 0) { adminToast('Nenhum dado para imprimir.', 'error'); return; }
+
+    const { data: stores } = await supabase.from('store_settings').select('*').limit(1);
+    const store = (stores && stores.length > 0) ? stores[0] : null;
+    const storeName = store?.store_name || 'MINHA LOJA';
+
+    const startVal = document.getElementById('exit-date-start')?.value || '—';
+    const endVal = document.getElementById('exit-date-end')?.value || '—';
+    const periodLabel = `Período: ${startVal} a ${endVal}`;
+
+    const totalReceita = sorted.reduce((acc, [, d]) => acc + d.revenue, 0);
+    const totalCusto = sorted.reduce((acc, [, d]) => acc + d.cost, 0);
+    const totalLucro = totalReceita - totalCusto;
+    const totalQty = sorted.reduce((acc, [, d]) => acc + d.qty, 0);
+
+    const printArea = document.getElementById('print-area');
+    printArea.innerHTML = `
+        <div class="danfe-container">
+            <div class="danfe-header">
+                <div class="company-info">
+                    <h2 style="margin:0; font-size:20px;">${storeName.toUpperCase()}</h2>
+                    <p style="font-size:12px; margin-top:4px;">${periodLabel}</p>
+                </div>
+                <div class="order-badge">
+                    <p>RELATÓRIO DE SAÍDA DE ESTOQUE</p>
+                    <p>Gerado em: ${new Date().toLocaleDateString('pt-BR')}</p>
+                </div>
+            </div>
+            <div class="danfe-section">
+                <div class="section-title">ITENS VENDIDOS NO PERÍODO</div>
+                <table class="danfe-table">
+                    <thead>
+                        <tr>
+                            <th>#</th><th>Produto</th><th>Qty</th><th>Receita</th><th>Custo</th><th>Lucro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sorted.map(([name, d], idx) => {
+                            const profit = d.revenue - d.cost;
+                            return `<tr>
+                                <td>${idx + 1}</td>
+                                <td>${name}</td>
+                                <td>${d.qty} un.</td>
+                                <td>${fmt(d.revenue)}</td>
+                                <td>${fmt(d.cost)}</td>
+                                <td style="color:${profit >= 0 ? '#27ae60' : '#e74c3c'}; font-weight:700;">${fmt(profit)}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <div class="danfe-footer">
+                <div class="footer-totals">
+                    <p>Total de itens vendidos: <strong>${totalQty} un.</strong></p>
+                    <p>Receita Total: <strong>${fmt(totalReceita)}</strong></p>
+                    <p>Custo Total: <strong>${fmt(totalCusto)}</strong></p>
+                    <h2 style="margin-top:8px; color:${totalLucro >= 0 ? '#27ae60' : '#e74c3c'}">Lucro Total: ${fmt(totalLucro)}</h2>
+                </div>
+            </div>
+        </div>
+    `;
+    printArea.classList.remove('hidden');
+    window.print();
+    printArea.classList.add('hidden');
+};
+
+window.saveExitReportCSV = function() {
+    const sorted = window._exitReportData || [];
+    if (sorted.length === 0) { adminToast('Nenhum dado para exportar.', 'error'); return; }
+
+    const rows = [
+        ['#', 'Produto', 'Qty Vendida', 'Receita (R$)', 'Custo Total (R$)', 'Lucro (R$)'],
+        ...sorted.map(([name, d], idx) => {
+            const profit = d.revenue - d.cost;
+            return [idx + 1, name, d.qty, d.revenue.toFixed(2), d.cost.toFixed(2), profit.toFixed(2)];
+        })
+    ];
+
+    const csvContent = '\uFEFF' + rows.map(r => r.join(';')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `relatorio-saida-estoque-${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    adminToast('Relatório exportado com sucesso! ✅');
 };
 
 // ---- Banners ----
