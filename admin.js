@@ -980,6 +980,10 @@ window.printOrder = async function () {
 // SECTION: Estoque
 // ============================================================
 let _allStockProducts = [];
+let _stockCurrentPage = 1;
+const _stockPageSize = 15;
+let _currentStockList = [];
+let _currentStockCategories = [];
 
 async function loadStock() {
     const products = await AdminData.getProducts();
@@ -1000,7 +1004,7 @@ async function loadStock() {
 
     renderStockTable(products, categories);
 
-    // Bind filters
+    // Bind filters (resetam para pág 1)
     const searchEl = document.getElementById('stock-search');
     const filterEl = document.getElementById('stock-status-filter');
     const applyFilter = () => {
@@ -1011,6 +1015,7 @@ async function loadStock() {
         if (s === 'ok') filtered = filtered.filter(p => p.stock > 5);
         if (s === 'low') filtered = filtered.filter(p => p.stock > 0 && p.stock <= 5);
         if (s === 'zero') filtered = filtered.filter(p => !p.stock || p.stock <= 0);
+        _stockCurrentPage = 1;
         renderStockTable(filtered, categories);
     };
     if (searchEl && !searchEl._stockBound) { searchEl._stockBound = true; searchEl.addEventListener('input', applyFilter); }
@@ -1021,46 +1026,81 @@ async function loadStock() {
 }
 
 function renderStockTable(products, categories) {
+    // Atualiza lista e cat em cache (para navegação de páginas)
+    _currentStockList = products;
+    _currentStockCategories = categories;
+
     const tbody = document.getElementById('stock-table-body');
+    const pageInfo = document.getElementById('stock-page-info');
+    const pageNumbers = document.getElementById('stock-page-numbers');
     if (!tbody) return;
 
     if (products.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">Nenhum produto encontrado.</td></tr>';
+        if (pageInfo) pageInfo.textContent = '';
+        if (pageNumbers) pageNumbers.innerHTML = '';
         return;
     }
 
-    tbody.innerHTML = products.map(p => {
+    // --- Paginação ---
+    const totalPages = Math.ceil(products.length / _stockPageSize);
+    if (_stockCurrentPage > totalPages) _stockCurrentPage = totalPages;
+    const start = (_stockCurrentPage - 1) * _stockPageSize;
+    const paginated = products.slice(start, start + _stockPageSize);
+
+    if (pageInfo) pageInfo.textContent = `Exibindo ${start + 1}–${Math.min(start + _stockPageSize, products.length)} de ${products.length} produtos`;
+
+    // Números das páginas
+    if (pageNumbers) {
+        pageNumbers.innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1).map(page => `
+            <button
+                onclick="goStockPage(${page})"
+                style="
+                    min-width:34px; height:34px; border-radius:6px; border:1px solid ${page === _stockCurrentPage ? 'var(--primary-green)' : '#ddd'};
+                    background:${page === _stockCurrentPage ? 'var(--primary-green)' : '#fff'};
+                    color:${page === _stockCurrentPage ? '#fff' : '#333'};
+                    font-weight:${page === _stockCurrentPage ? '700' : '400'};
+                    font-size:13px; cursor:pointer; transition:all 0.2s;
+                ">${page}</button>
+        `).join('');
+    }
+
+    // --- Renderiza linhas ---
+    tbody.innerHTML = paginated.map((p, idx) => {
         const catName = (categories || []).find(c => c.id == p.category_id)?.name || '—';
         const stock = p.stock || 0;
+        const cost = parseFloat(p.cost || 0);
+        const rowNum = start + idx + 1;
+
         let statusBadge, statusClass;
-        if (stock <= 0) {
-            statusBadge = 'Sem Estoque';
-            statusClass = 'badge-cancelado';
-        } else if (stock <= 5) {
-            statusBadge = 'Estoque Baixo';
-            statusClass = 'badge-aguardando';
-        } else {
-            statusBadge = 'Em Estoque';
-            statusClass = 'badge-entregue';
-        }
+        if (stock <= 0) { statusBadge = 'Sem Estoque'; statusClass = 'badge-cancelado'; }
+        else if (stock <= 5) { statusBadge = 'Estoque Baixo'; statusClass = 'badge-aguardando'; }
+        else { statusBadge = 'Em Estoque'; statusClass = 'badge-entregue'; }
+
+        const borderStyle = stock <= 0 ? 'border-color:#e74c3c;' : stock <= 5 ? 'border-color:#e67e22;' : '';
 
         return `
             <tr id="stock-row-${p.id}">
+                <td style="color:var(--text-muted);font-size:12px;width:36px;">${rowNum}</td>
                 <td><strong>${p.name}</strong></td>
                 <td>${catName}</td>
                 <td>
-                    <input type="number" class="admin-input" id="cost-${p.id}" value="${p.cost || 0}" step="0.01" min="0"
-                        style="width:100%; padding:5px 8px; font-size:13px;"
-                        placeholder="R$ Custo">
+                    <div style="display:flex; align-items:center; gap:4px;">
+                        <span style="font-size:12px;color:#666;">R$</span>
+                        <input type="number" class="admin-input" id="cost-${p.id}"
+                            value="${cost.toFixed(2)}" step="0.01" min="0"
+                            style="width:90px; padding:5px 6px; font-size:13px; text-align:right;"
+                            placeholder="0,00">
+                    </div>
                 </td>
                 <td style="color:var(--primary-green); font-weight:600;">${fmt(p.price)}</td>
                 <td>
                     <input type="number" class="admin-input" id="stock-${p.id}" value="${stock}" min="0" step="1"
-                        style="width:100%; padding:5px 8px; font-size:13px; ${stock <= 0 ? 'border-color:#e74c3c;' : stock <= 5 ? 'border-color:#e67e22;' : ''}">
+                        style="width:80px; padding:5px 8px; font-size:13px; text-align:center; ${borderStyle}">
                 </td>
                 <td><span class="badge ${statusClass}">${statusBadge}</span></td>
                 <td>
-                    <button class="btn-icon btn-icon-edit" onclick="saveStockRow(${p.id})" title="Salvar alterações">
+                    <button class="btn-icon btn-icon-edit" onclick="saveStockRow(${p.id})" title="Salvar">
                         <i class="fas fa-save"></i>
                     </button>
                 </td>
@@ -1068,6 +1108,11 @@ function renderStockTable(products, categories) {
         `;
     }).join('');
 }
+
+window.goStockPage = function(page) {
+    _stockCurrentPage = page;
+    renderStockTable(_currentStockList, _currentStockCategories);
+};
 
 window.saveStockRow = async function(productId) {
     const stockInput = document.getElementById(`stock-${productId}`);
