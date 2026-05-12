@@ -11,8 +11,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
 <body class="admin-body">
+    <!-- Overlay para Mobile -->
+    <div class="admin-sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <!-- SIDEBAR -->
     <aside class="admin-sidebar" id="admin-sidebar">
@@ -48,8 +49,7 @@
     <div class="admin-main">
         <!-- Top Bar -->
         <header class="admin-topbar">
-            <button class="sidebar-toggle"
-                onclick="document.getElementById('admin-sidebar').classList.toggle('collapsed')">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
                 <i class="fas fa-bars"></i>
             </button>
             <h1 class="admin-page-title" id="admin-page-title">Dashboard</h1>

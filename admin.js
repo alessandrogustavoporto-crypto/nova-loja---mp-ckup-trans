@@ -24,6 +24,20 @@ function logErrorToDOM(msg) {
 window.addEventListener('error', function (e) { logErrorToDOM(e.message); });
 window.addEventListener('unhandledrejection', function (e) { logErrorToDOM(e.reason ? e.reason.message || e.reason : 'Rejeição de promessa'); });
 
+// ---- Layout / Sidebar ----
+window.toggleSidebar = function() {
+    const sidebar = document.getElementById('admin-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (!sidebar) return;
+
+    if (window.innerWidth <= 768) {
+        sidebar.classList.toggle('mobile-open');
+        if (overlay) overlay.classList.toggle('active');
+    } else {
+        sidebar.classList.toggle('collapsed');
+    }
+};
+
 
 // ---- Auth ----
 const AdminAuth = {
@@ -289,6 +303,11 @@ async function initAdminDashboard() {
         if (sectionId === 'empresa') loadStoreSettings();
         if (sectionId === 'estoque') loadStock();
         if (sectionId === 'colors') loadColorSettings();
+
+        // No mobile, fecha a sidebar automaticamente ao clicar em uma seção
+        if (window.innerWidth <= 768) {
+            window.toggleSidebar();
+        }
     }));
 
     // Finance Tabs Navigation
