@@ -287,6 +287,7 @@ async function initAdminDashboard() {
         // Carregamento instantâneo via cache
         if (sectionId === 'financeiro') loadFinanceData('7days');
         if (sectionId === 'empresa') loadStoreSettings();
+        if (sectionId === 'estoque') loadStock();
     }));
 
     // Finance Tabs Navigation
@@ -973,6 +974,182 @@ window.printOrder = async function () {
     printArea.classList.remove('hidden');
     window.print();
     printArea.classList.add('hidden');
+};
+
+// ============================================================
+// SECTION: Estoque
+// ============================================================
+let _allStockProducts = [];
+
+async function loadStock() {
+    const products = await AdminData.getProducts();
+    const categories = cachedAdminData.categories || await AdminData.getCategories();
+    _allStockProducts = products;
+
+    // KPI Cards
+    const total = products.length;
+    const low = products.filter(p => p.stock > 0 && p.stock <= 5).length;
+    const zero = products.filter(p => !p.stock || p.stock <= 0).length;
+    const totalValue = products.reduce((acc, p) => acc + ((p.cost || 0) * (p.stock || 0)), 0);
+
+    const setKpi = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setKpi('stock-kpi-total', total);
+    setKpi('stock-kpi-low', low);
+    setKpi('stock-kpi-zero', zero);
+    setKpi('stock-kpi-value', fmt(totalValue));
+
+    renderStockTable(products, categories);
+
+    // Bind filters
+    const searchEl = document.getElementById('stock-search');
+    const filterEl = document.getElementById('stock-status-filter');
+    const applyFilter = () => {
+        const q = (searchEl?.value || '').toLowerCase();
+        const s = filterEl?.value || '';
+        let filtered = _allStockProducts;
+        if (q) filtered = filtered.filter(p => p.name.toLowerCase().includes(q));
+        if (s === 'ok') filtered = filtered.filter(p => p.stock > 5);
+        if (s === 'low') filtered = filtered.filter(p => p.stock > 0 && p.stock <= 5);
+        if (s === 'zero') filtered = filtered.filter(p => !p.stock || p.stock <= 0);
+        renderStockTable(filtered, categories);
+    };
+    if (searchEl && !searchEl._stockBound) { searchEl._stockBound = true; searchEl.addEventListener('input', applyFilter); }
+    if (filterEl && !filterEl._stockBound) { filterEl._stockBound = true; filterEl.addEventListener('change', applyFilter); }
+
+    // Load exit report for current month by default
+    loadStockExitReport();
+}
+
+function renderStockTable(products, categories) {
+    const tbody = document.getElementById('stock-table-body');
+    if (!tbody) return;
+
+    if (products.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">Nenhum produto encontrado.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = products.map(p => {
+        const catName = (categories || []).find(c => c.id == p.category_id)?.name || '—';
+        const stock = p.stock || 0;
+        let statusBadge, statusClass;
+        if (stock <= 0) {
+            statusBadge = 'Sem Estoque';
+            statusClass = 'badge-cancelado';
+        } else if (stock <= 5) {
+            statusBadge = 'Estoque Baixo';
+            statusClass = 'badge-aguardando';
+        } else {
+            statusBadge = 'Em Estoque';
+            statusClass = 'badge-entregue';
+        }
+
+        return `
+            <tr id="stock-row-${p.id}">
+                <td><strong>${p.name}</strong></td>
+                <td>${catName}</td>
+                <td>
+                    <input type="number" class="admin-input" id="cost-${p.id}" value="${p.cost || 0}" step="0.01" min="0"
+                        style="width:100%; padding:5px 8px; font-size:13px;"
+                        placeholder="R$ Custo">
+                </td>
+                <td style="color:var(--primary-green); font-weight:600;">${fmt(p.price)}</td>
+                <td>
+                    <input type="number" class="admin-input" id="stock-${p.id}" value="${stock}" min="0" step="1"
+                        style="width:100%; padding:5px 8px; font-size:13px; ${stock <= 0 ? 'border-color:#e74c3c;' : stock <= 5 ? 'border-color:#e67e22;' : ''}">
+                </td>
+                <td><span class="badge ${statusClass}">${statusBadge}</span></td>
+                <td>
+                    <button class="btn-icon btn-icon-edit" onclick="saveStockRow(${p.id})" title="Salvar alterações">
+                        <i class="fas fa-save"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+window.saveStockRow = async function(productId) {
+    const stockInput = document.getElementById(`stock-${productId}`);
+    const costInput = document.getElementById(`cost-${productId}`);
+    if (!stockInput || !costInput) return;
+
+    const newStock = parseInt(stockInput.value) || 0;
+    const newCost = parseFloat(costInput.value) || 0;
+
+    const { error } = await supabase.from('products').update({
+        stock: newStock,
+        cost: newCost
+    }).eq('id', productId);
+
+    if (error) {
+        adminToast('Erro ao salvar: ' + error.message, 'error');
+    } else {
+        adminToast('Estoque atualizado! ✅');
+        // Atualiza cache local
+        const p = _allStockProducts.find(x => x.id === productId);
+        if (p) { p.stock = newStock; p.cost = newCost; }
+        // Recarrega KPIs
+        const totalValue = _allStockProducts.reduce((acc, p) => acc + ((p.cost || 0) * (p.stock || 0)), 0);
+        const zero = _allStockProducts.filter(p => !p.stock || p.stock <= 0).length;
+        const low = _allStockProducts.filter(p => p.stock > 0 && p.stock <= 5).length;
+        const setKpi = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        setKpi('stock-kpi-low', low);
+        setKpi('stock-kpi-zero', zero);
+        setKpi('stock-kpi-value', fmt(totalValue));
+    }
+};
+
+window.loadStockExitReport = async function() {
+    const startVal = document.getElementById('exit-date-start')?.value;
+    const endVal = document.getElementById('exit-date-end')?.value;
+    const productFilter = (document.getElementById('exit-product-filter')?.value || '').toLowerCase();
+    const tbody = document.getElementById('stock-exit-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr>';
+
+    // Busca pedidos com filtro de data
+    let query = supabase.from('orders').select('items, created_at, status').neq('status', 'cancelado');
+    if (startVal) query = query.gte('created_at', startVal + 'T00:00:00');
+    if (endVal) query = query.lte('created_at', endVal + 'T23:59:59');
+    const { data: orders } = await query;
+
+    // Agrega saídas por produto
+    const exits = {};
+    (orders || []).forEach(o => {
+        (o.items || []).forEach(item => {
+            const name = item.name;
+            if (productFilter && !name.toLowerCase().includes(productFilter)) return;
+            if (!exits[name]) exits[name] = { qty: 0, revenue: 0, cost: 0 };
+            exits[name].qty += item.qty || 1;
+            exits[name].revenue += (item.price || 0) * (item.qty || 1);
+            // Busca custo do produto no cache
+            const prod = _allStockProducts.find(p => p.name === name);
+            exits[name].cost += (prod?.cost || 0) * (item.qty || 1);
+        });
+    });
+
+    const sorted = Object.entries(exits).sort((a, b) => b[1].qty - a[1].qty);
+
+    if (sorted.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-muted)">Nenhuma saída encontrada no período.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = sorted.map(([name, d]) => {
+        const profit = d.revenue - d.cost;
+        const profitColor = profit >= 0 ? '#27ae60' : '#e74c3c';
+        return `
+            <tr>
+                <td><strong>${name}</strong></td>
+                <td>${d.qty} un.</td>
+                <td>${fmt(d.revenue)}</td>
+                <td>${fmt(d.cost)}</td>
+                <td style="color:${profitColor}; font-weight:700;">${fmt(profit)}</td>
+            </tr>
+        `;
+    }).join('');
 };
 
 // ---- Banners ----
