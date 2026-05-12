@@ -277,7 +277,7 @@
         <!-- SECTION: Estoque -->
         <section id="section-estoque" class="admin-section">
 
-            <!-- KPI Cards -->
+            <!-- KPI Cards (sempre visíveis) -->
             <div class="kpi-grid" style="margin-bottom:20px;">
                 <div class="kpi-card kpi-blue">
                     <div class="kpi-icon"><i class="fas fa-boxes"></i></div>
@@ -309,91 +309,101 @@
                 </div>
             </div>
 
-            <!-- Stock Control Table -->
-            <div class="admin-card" style="margin-bottom:20px;">
-                <div class="admin-card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2><i class="fas fa-warehouse"></i> Controle de Estoque</h2>
-                    <div style="display:flex; gap:10px;">
-                        <input type="text" id="stock-search" class="admin-search" placeholder="&#128269; Buscar produto..." style="width:220px;">
-                        <select id="stock-status-filter" class="admin-select">
-                            <option value="">Todos os Status</option>
-                            <option value="ok">Em Estoque</option>
-                            <option value="low">Estoque Baixo</option>
-                            <option value="zero">Sem Estoque</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="admin-card-body" style="padding:0;">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th style="width:36px;">#</th>
-                                <th>Produto</th>
-                                <th>Categoria</th>
-                                <th style="width:130px;">Preço de Custo</th>
-                                <th style="width:130px;">Preço de Venda</th>
-                                <th style="width:120px;">Estoque Atual</th>
-                                <th style="width:100px;">Status</th>
-                                <th style="width:80px;">Salvar</th>
-                            </tr>
-                        </thead>
-                        <tbody id="stock-table-body"></tbody>
-                    </table>
-                    <!-- Paginação do Estoque -->
-                    <div id="stock-pagination" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid #eee; flex-wrap:wrap; gap:8px;">
-                        <span id="stock-page-info" style="font-size:13px; color:var(--text-muted);"></span>
-                        <div id="stock-page-numbers" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
-                    </div>
-                </div>
+            <!-- Abas do Estoque -->
+            <div class="f-tab-bar" style="margin-bottom:20px;">
+                <button class="f-tab-btn active" data-stock-tab="controle">
+                    <i class="fas fa-warehouse"></i> Controle de Estoque
+                </button>
+                <button class="f-tab-btn" data-stock-tab="saida">
+                    <i class="fas fa-arrow-trend-down"></i> Relatório de Saída
+                </button>
             </div>
 
-            <!-- Stock Exit Report -->
-            <div class="admin-card">
-                <div class="admin-card-header">
-                    <h2><i class="fas fa-arrow-trend-down"></i> Relatório de Saída de Estoque</h2>
-                </div>
-                <div class="admin-card-body">
-                    <div class="filter-bar-fin" style="margin-bottom:20px;">
-                        <div class="date-filter-group">
-                            <label>De:</label>
-                            <input type="date" id="exit-date-start" class="admin-input-date">
-                            <label>Até:</label>
-                            <input type="date" id="exit-date-end" class="admin-input-date">
-                            <button class="btn-primary btn-sm" onclick="loadStockExitReport()">Filtrar</button>
+            <!-- ABA: Controle de Estoque -->
+            <div id="stock-tab-controle" class="stock-tab-content active">
+                <div class="admin-card">
+                    <div class="admin-card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <h2><i class="fas fa-warehouse"></i> Controle de Estoque</h2>
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="stock-search" class="admin-search" placeholder="&#128269; Buscar produto..." style="width:220px;">
+                            <select id="stock-status-filter" class="admin-select">
+                                <option value="">Todos os Status</option>
+                                <option value="ok">Em Estoque</option>
+                                <option value="low">Estoque Baixo</option>
+                                <option value="zero">Sem Estoque</option>
+                            </select>
                         </div>
-                        <input type="text" id="exit-product-filter" class="admin-search" placeholder="&#128269; Filtrar por produto..." style="width:200px;">
                     </div>
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th style="width:40px;">#</th>
-                                <th>Produto</th>
-                                <th>Qty Vendida</th>
-                                <th>Receita</th>
-                                <th>Custo Total</th>
-                                <th>Lucro</th>
-                            </tr>
-                        </thead>
-                        <tbody id="stock-exit-body"></tbody>
-                    </table>
-
-                    <!-- Paginação do Relatório -->
-                    <div id="exit-pagination" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid #eee; flex-wrap:wrap; gap:8px;">
-                        <span id="exit-page-info" style="font-size:13px; color:var(--text-muted);"></span>
-                        <div id="exit-page-numbers" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
-                    </div>
-
-                    <!-- Botões de Ação -->
-                    <div style="display:flex; gap:12px; justify-content:flex-end; padding:16px; border-top:1px solid #eee;">
-                        <button class="btn-secondary" onclick="saveExitReportCSV()">
-                            <i class="fas fa-file-csv"></i> Salvar Relatório (.CSV)
-                        </button>
-                        <button class="btn-primary" onclick="printExitReport()">
-                            <i class="fas fa-print"></i> Imprimir Relatório
-                        </button>
+                    <div class="admin-card-body" style="padding:0;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:36px;">#</th>
+                                    <th>Produto</th>
+                                    <th>Categoria</th>
+                                    <th style="width:130px;">Preço de Custo</th>
+                                    <th style="width:130px;">Preço de Venda</th>
+                                    <th style="width:120px;">Estoque Atual</th>
+                                    <th style="width:100px;">Status</th>
+                                    <th style="width:80px;">Salvar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stock-table-body"></tbody>
+                        </table>
+                        <div id="stock-pagination" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid #eee; flex-wrap:wrap; gap:8px;">
+                            <span id="stock-page-info" style="font-size:13px; color:var(--text-muted);"></span>
+                            <div id="stock-page-numbers" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- ABA: Relatório de Saída -->
+            <div id="stock-tab-saida" class="stock-tab-content" style="display:none;">
+                <div class="admin-card">
+                    <div class="admin-card-header">
+                        <h2><i class="fas fa-arrow-trend-down"></i> Relatório de Saída de Estoque</h2>
+                    </div>
+                    <div class="admin-card-body">
+                        <div class="filter-bar-fin" style="margin-bottom:20px;">
+                            <div class="date-filter-group">
+                                <label>De:</label>
+                                <input type="date" id="exit-date-start" class="admin-input-date">
+                                <label>Até:</label>
+                                <input type="date" id="exit-date-end" class="admin-input-date">
+                                <button class="btn-primary btn-sm" onclick="loadStockExitReport()">Filtrar</button>
+                            </div>
+                            <input type="text" id="exit-product-filter" class="admin-search" placeholder="&#128269; Filtrar por produto..." style="width:200px;">
+                        </div>
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px;">#</th>
+                                    <th>Produto</th>
+                                    <th>Qty Vendida</th>
+                                    <th>Receita</th>
+                                    <th>Custo Total</th>
+                                    <th>Lucro</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stock-exit-body"></tbody>
+                        </table>
+                        <div id="exit-pagination" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-top:1px solid #eee; flex-wrap:wrap; gap:8px;">
+                            <span id="exit-page-info" style="font-size:13px; color:var(--text-muted);"></span>
+                            <div id="exit-page-numbers" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+                        </div>
+                        <div style="display:flex; gap:12px; justify-content:flex-end; padding:16px; border-top:1px solid #eee;">
+                            <button class="btn-secondary" onclick="saveExitReportCSV()">
+                                <i class="fas fa-file-csv"></i> Salvar (.CSV)
+                            </button>
+                            <button class="btn-primary" onclick="printExitReport()">
+                                <i class="fas fa-print"></i> Imprimir Relatório
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </section>
 
         <!-- SECTION: Empresa -->

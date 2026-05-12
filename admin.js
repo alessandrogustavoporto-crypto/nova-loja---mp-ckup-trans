@@ -1023,6 +1023,20 @@ async function loadStock() {
 
     // Load exit report for current month by default
     loadStockExitReport();
+
+    // Abas internas do estoque
+    const stockTabBtns = document.querySelectorAll('[data-stock-tab]');
+    stockTabBtns.forEach(btn => {
+        if (btn._stockTabBound) return;
+        btn._stockTabBound = true;
+        btn.addEventListener('click', () => {
+            stockTabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.stock-tab-content').forEach(c => c.style.display = 'none');
+            const target = document.getElementById('stock-tab-' + btn.dataset.stockTab);
+            if (target) target.style.display = 'block';
+        });
+    });
 }
 
 function renderStockTable(products, categories) {
