@@ -20,7 +20,7 @@
     }
 
     // Aplica as cores no :root
-    function applyColors(primary, text) {
+    function applyColors(primary, text, admin) {
         var root = document.documentElement;
         if (primary) {
             root.style.setProperty('--primary-green', primary);
@@ -30,6 +30,10 @@
         if (text) {
             root.style.setProperty('--text-main', text);
         }
+        // Cor do painel admin (sidebar, cards, botões)
+        if (admin) {
+            root.style.setProperty('--admin-primary', admin);
+        }
     }
 
     // PASSO 1: Aplica do cache (localStorage) IMEDIATAMENTE — sem flash verde
@@ -37,13 +41,13 @@
         var cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
             var c = JSON.parse(cached);
-            applyColors(c.primary, c.text);
+            applyColors(c.primary, c.text, c.admin);
         }
     } catch (e) {}
 
     // PASSO 2: Sincroniza com o Supabase via fetch nativo
     fetch(
-        SUPABASE_URL + '/rest/v1/store_settings?select=primary_color,text_color&limit=1',
+        SUPABASE_URL + '/rest/v1/store_settings?select=primary_color,text_color,admin_color&limit=1',
         {
             method: 'GET',
             headers: {
@@ -62,13 +66,14 @@
         var row = data[0];
         var primary = row.primary_color;
         var text = row.text_color;
+        var admin = row.admin_color;
 
         // Aplica no DOM
-        applyColors(primary, text);
+        applyColors(primary, text, admin);
 
         // Atualiza o cache local com os dados mais recentes
         try {
-            localStorage.setItem(CACHE_KEY, JSON.stringify({ primary: primary, text: text }));
+            localStorage.setItem(CACHE_KEY, JSON.stringify({ primary: primary, text: text, admin: admin }));
         } catch (e) {}
     })
     .catch(function () {

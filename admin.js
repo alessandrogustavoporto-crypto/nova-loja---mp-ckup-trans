@@ -1527,14 +1527,16 @@ const TEXT_COLORS = [
 
 let _selectedPrimary = '#1a5c38';
 let _selectedText = '#333333';
+let _selectedAdmin = '#1a5c38';
 let _storeSettingsId = null; // ID real da linha no banco
 
 window.loadColorSettings = async function() {
-    const { data: stores } = await supabase.from('store_settings').select('id, primary_color, text_color, store_name').limit(1);
+    const { data: stores } = await supabase.from('store_settings').select('id, primary_color, text_color, admin_color, store_name').limit(1);
     const store = (stores && stores.length > 0) ? stores[0] : null;
-    _storeSettingsId = store?.id || null; // Armazena o ID real da linha
+    _storeSettingsId = store?.id || null;
     _selectedPrimary = store?.primary_color || '#1a5c38';
     _selectedText = store?.text_color || '#333333';
+    _selectedAdmin = store?.admin_color || '#1a5c38';
 
     const previewName = store?.store_name || 'Minha Loja';
     const nameEl = document.getElementById('preview-store-name');
@@ -1542,14 +1544,18 @@ window.loadColorSettings = async function() {
 
     renderColorPalette('primary-color-grid', PRIMARY_COLORS, _selectedPrimary, 'primary');
     renderColorPalette('text-color-grid', TEXT_COLORS, _selectedText, 'text');
+    renderColorPalette('admin-color-grid', PRIMARY_COLORS, _selectedAdmin, 'admin');
 
-    updatePreviewBar(_selectedPrimary, _selectedText);
+    updatePreviewBar(_selectedPrimary, _selectedText, _selectedAdmin);
+    applyAdminColor(_selectedAdmin);
 
     // Custom color pickers
     const cp = document.getElementById('custom-primary-color');
     const ct = document.getElementById('custom-text-color');
-    if (cp) { cp.value = _selectedPrimary; cp.addEventListener('input', e => { _selectedPrimary = e.target.value; deselectSwatches('primary'); updatePreviewBar(_selectedPrimary, _selectedText); }); }
-    if (ct) { ct.value = _selectedText; ct.addEventListener('input', e => { _selectedText = e.target.value; deselectSwatches('text'); updatePreviewBar(_selectedPrimary, _selectedText); }); }
+    const ca = document.getElementById('custom-admin-color');
+    if (cp) { cp.value = _selectedPrimary; cp.addEventListener('input', e => { _selectedPrimary = e.target.value; deselectSwatches('primary'); updatePreviewBar(_selectedPrimary, _selectedText, _selectedAdmin); }); }
+    if (ct) { ct.value = _selectedText; ct.addEventListener('input', e => { _selectedText = e.target.value; deselectSwatches('text'); updatePreviewBar(_selectedPrimary, _selectedText, _selectedAdmin); }); }
+    if (ca) { ca.value = _selectedAdmin; ca.addEventListener('input', e => { _selectedAdmin = e.target.value; deselectSwatches('admin'); updateAdminPreview(_selectedAdmin); applyAdminColor(_selectedAdmin); }); }
 };
 
 function renderColorPalette(containerId, colors, selected, type) {
@@ -1573,7 +1579,8 @@ function renderColorPalette(containerId, colors, selected, type) {
 }
 
 function deselectSwatches(type) {
-    const grid = type === 'primary' ? 'primary-color-grid' : 'text-color-grid';
+    const gridMap = { primary: 'primary-color-grid', text: 'text-color-grid', admin: 'admin-color-grid' };
+    const grid = gridMap[type] || 'primary-color-grid';
     document.querySelectorAll(`#${grid} div`).forEach(el => {
         el.style.border = '3px solid transparent';
         el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
@@ -1582,7 +1589,8 @@ function deselectSwatches(type) {
 }
 
 window.selectColor = function(type, hex, el) {
-    const grid = type === 'primary' ? 'primary-color-grid' : 'text-color-grid';
+    const gridMap = { primary: 'primary-color-grid', text: 'text-color-grid', admin: 'admin-color-grid' };
+    const grid = gridMap[type] || 'primary-color-grid';
     // Deselect all
     document.querySelectorAll(`#${grid} > div`).forEach(d => {
         d.style.border = '3px solid transparent';
@@ -1598,19 +1606,37 @@ window.selectColor = function(type, hex, el) {
         _selectedPrimary = hex;
         const cp = document.getElementById('custom-primary-color');
         if (cp) cp.value = hex;
-    } else {
+    } else if (type === 'text') {
         _selectedText = hex;
         const ct = document.getElementById('custom-text-color');
         if (ct) ct.value = hex;
+    } else if (type === 'admin') {
+        _selectedAdmin = hex;
+        const ca = document.getElementById('custom-admin-color');
+        if (ca) ca.value = hex;
+        updateAdminPreview(hex);
+        applyAdminColor(hex);
     }
-    updatePreviewBar(_selectedPrimary, _selectedText);
+    updatePreviewBar(_selectedPrimary, _selectedText, _selectedAdmin);
 };
 
-function updatePreviewBar(primary, text) {
+function updatePreviewBar(primary, text, admin) {
     const bar = document.getElementById('color-preview-bar');
     if (bar) bar.style.background = primary;
     const sample = document.getElementById('preview-text-sample');
     if (sample) sample.style.color = '#fff';
+    if (admin) updateAdminPreview(admin);
+}
+
+function updateAdminPreview(color) {
+    const sidebar = document.getElementById('admin-preview-sidebar');
+    const header = document.getElementById('admin-preview-card-header');
+    if (sidebar) sidebar.style.background = color;
+    if (header) header.style.background = color;
+}
+
+function applyAdminColor(color) {
+    document.documentElement.style.setProperty('--admin-primary', color);
 }
 
 function applySiteColors(primary, text) {
@@ -1632,22 +1658,24 @@ function applySiteColors(primary, text) {
 
 window.saveSiteColors = async function() {
     let error;
+    const payload = {
+        primary_color: _selectedPrimary,
+        text_color: _selectedText,
+        admin_color: _selectedAdmin
+    };
 
     if (_storeSettingsId) {
-        // UPDATE na linha existente usando o ID real (não sobrescreve outros campos)
         const result = await supabase
             .from('store_settings')
-            .update({ primary_color: _selectedPrimary, text_color: _selectedText })
+            .update(payload)
             .eq('id', _storeSettingsId);
         error = result.error;
     } else {
-        // Nenhuma linha existe ainda: insere uma nova
         const result = await supabase
             .from('store_settings')
-            .insert([{ primary_color: _selectedPrimary, text_color: _selectedText }]);
+            .insert([payload]);
         error = result.error;
         if (!error) {
-            // Busca o ID recém-criado para as próximas chamadas
             const { data: s } = await supabase.from('store_settings').select('id').limit(1);
             if (s && s.length > 0) _storeSettingsId = s[0].id;
         }
@@ -1659,8 +1687,18 @@ window.saveSiteColors = async function() {
         if (window._storeSettings) {
             window._storeSettings.primary_color = _selectedPrimary;
             window._storeSettings.text_color = _selectedText;
+            window._storeSettings.admin_color = _selectedAdmin;
         }
         applySiteColors(_selectedPrimary, _selectedText);
+        applyAdminColor(_selectedAdmin);
+        // Atualiza cache do theme.js
+        try {
+            localStorage.setItem('otmake10_site_colors', JSON.stringify({
+                primary: _selectedPrimary,
+                text: _selectedText,
+                admin: _selectedAdmin
+            }));
+        } catch(e) {}
         adminToast('Cores salvas e aplicadas ao site! ✅');
     }
 };
