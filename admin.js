@@ -1527,10 +1527,12 @@ const TEXT_COLORS = [
 
 let _selectedPrimary = '#1a5c38';
 let _selectedText = '#333333';
+let _storeSettingsId = null; // ID real da linha no banco
 
 window.loadColorSettings = async function() {
-    const { data: stores } = await supabase.from('store_settings').select('primary_color, text_color, store_name').limit(1);
+    const { data: stores } = await supabase.from('store_settings').select('id, primary_color, text_color, store_name').limit(1);
     const store = (stores && stores.length > 0) ? stores[0] : null;
+    _storeSettingsId = store?.id || null; // Armazena o ID real da linha
     _selectedPrimary = store?.primary_color || '#1a5c38';
     _selectedText = store?.text_color || '#333333';
 
@@ -1629,16 +1631,31 @@ function applySiteColors(primary, text) {
 }
 
 window.saveSiteColors = async function() {
-    const { error } = await supabase.from('store_settings').upsert({
-        id: 1,
-        primary_color: _selectedPrimary,
-        text_color: _selectedText
-    });
+    let error;
+
+    if (_storeSettingsId) {
+        // UPDATE na linha existente usando o ID real (não sobrescreve outros campos)
+        const result = await supabase
+            .from('store_settings')
+            .update({ primary_color: _selectedPrimary, text_color: _selectedText })
+            .eq('id', _storeSettingsId);
+        error = result.error;
+    } else {
+        // Nenhuma linha existe ainda: insere uma nova
+        const result = await supabase
+            .from('store_settings')
+            .insert([{ primary_color: _selectedPrimary, text_color: _selectedText }]);
+        error = result.error;
+        if (!error) {
+            // Busca o ID recém-criado para as próximas chamadas
+            const { data: s } = await supabase.from('store_settings').select('id').limit(1);
+            if (s && s.length > 0) _storeSettingsId = s[0].id;
+        }
+    }
 
     if (error) {
         adminToast('Erro ao salvar: ' + error.message, 'error');
     } else {
-        // Atualiza cache e aplica no admin agora
         if (window._storeSettings) {
             window._storeSettings.primary_color = _selectedPrimary;
             window._storeSettings.text_color = _selectedText;
@@ -2140,13 +2157,26 @@ window.saveStoreSettings = async function () {
         updated_at: new Date().toISOString()
     };
 
-    const { error } = await supabase.from('store_settings').upsert({ id: 1, ...settings });
-
-    if (error) {
-        adminToast('Erro ao salvar: ' + error.message, 'error');
+    // UPDATE na linha existente (preserva primary_color e text_color)
+    const existingId = window._storeSettings?.id || _storeSettingsId;
+    let saveError;
+    if (existingId) {
+        const result = await supabase.from('store_settings').update(settings).eq('id', existingId);
+        saveError = result.error;
     } else {
-        // Atualiza o cache global imediatamente
-        window._storeSettings = { id: 1, ...settings };
+        const result = await supabase.from('store_settings').insert([settings]);
+        saveError = result.error;
+    }
+
+    if (saveError) {
+        adminToast('Erro ao salvar: ' + saveError.message, 'error');
+    } else {
+        // Atualiza o cache global imediatamente (preserva cores salvas)
+        const colorsCached = {
+            primary_color: window._storeSettings?.primary_color || _selectedPrimary,
+            text_color: window._storeSettings?.text_color || _selectedText
+        };
+        window._storeSettings = { id: existingId, ...settings, ...colorsCached };
         adminToast('Dados da empresa atualizados com sucesso! ✅');
     }
 };
