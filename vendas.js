@@ -312,7 +312,7 @@ function closeNewCustModal() {
 async function saveNewCustomer() {
     const name = document.getElementById('new-cust-name').value.trim();
     const cpf = document.getElementById('new-cust-cpf').value.trim();
-    const email = document.getElementById('new-cust-email').value.trim() || `pdv_${Date.now()}@ecostore.com`;
+    const email = document.getElementById('new-cust-email').value.trim() || `pdv_${Date.now()}@otmake10.com`;
     const phone = document.getElementById('new-cust-phone').value.trim();
 
     if (!name) { alert('O nome é obrigatório!'); return; }
@@ -477,7 +477,7 @@ async function finishSale() {
         // 1. Create Order in Supabase
         const orderData = {
             client_name: selectedCustomer ? selectedCustomer.name : 'Consumidor Final',
-            client_email: selectedCustomer ? selectedCustomer.email : 'venda_pdv@ecostore.com',
+            client_email: selectedCustomer ? selectedCustomer.email : 'venda_pdv@otmake10.com',
             total: total,
             discount_amount: discountAmount,
             status: 'entregue',

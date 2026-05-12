@@ -375,7 +375,7 @@ function initHeroBanner() {
         const title = hero.querySelector('h1');
         const subtitle = hero.querySelector('p');
         const btn = hero.querySelector('.hero-content a.btn-primary');
-        if (title) title.textContent = "Bem-vindo à EcoStore";
+        if (title) title.textContent = "Bem-vindo à OTMake10";
         if (subtitle) subtitle.textContent = "Sua vida mais saudável e natural começa aqui.";
         if (btn) btn.textContent = "Ver Produtos";
         return;
@@ -1206,7 +1206,7 @@ async function processTransparentPayment(formData) {
             body: JSON.stringify({
                 transaction_amount: formData.transaction_amount,
                 token: formData.token,
-                description: 'Compra EcoStore - Pedido ' + order.id,
+                description: 'Compra OTMake10 - Pedido ' + order.id,
                 installments: formData.installments,
                 payment_method_id: formData.payment_method_id,
                 issuer_id: formData.issuer_id,
@@ -1251,12 +1251,12 @@ async function processPixPayment() {
             },
             body: JSON.stringify({
                 transaction_amount: Cart.total(),
-                description: 'Compra EcoStore PIX - Pedido ' + order.id,
+                description: 'Compra OTMake10 PIX - Pedido ' + order.id,
                 payment_method_id: 'pix',
                 payer: { 
                     email: user.email,
                     first_name: user.nome?.split(' ')[0] || 'Cliente',
-                    last_name: user.nome?.split(' ').slice(1).join(' ') || 'EcoStore',
+                    last_name: user.nome?.split(' ').slice(1).join(' ') || 'OTMake10',
                     identification: {
                         type: 'CPF',
                         number: user.cpf?.replace(/\D/g, '') || ''

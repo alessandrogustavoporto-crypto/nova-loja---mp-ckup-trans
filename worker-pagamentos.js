@@ -53,7 +53,7 @@ export default {
         // Se houver token, é cartão. Se não e for pix, é pix.
         const paymentData = {
           transaction_amount: body.transaction_amount,
-          description: body.description || 'Compra EcoStore',
+          description: body.description || 'Compra OTMake10',
           payment_method_id: body.payment_method_id,
           payer: {
             email: body.payer.email,
