@@ -6,7 +6,6 @@
     <title>Natureza & Cia - Loja Virtual</title>
     <meta name="description" content="Sua loja virtual de produtos naturais.">
     <link rel="stylesheet" href="style.css">
-
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +21,7 @@
             </div>
             
             <div class="search-bar">
-                <input type="text" id="main-search-input" placeholder="O que vocÃª estÃ¡ procurando?">
+                <input type="text" id="main-search-input" placeholder="O que você está procurando?">
                 <button type="button" id="main-search-btn"><i class="fas fa-search"></i></button>
             </div>
             
@@ -33,7 +32,7 @@
                     <li class="has-dropdown">
                         <a href="javascript:void(0)" id="btn-categories">Categorias <i class="fas fa-chevron-down"></i></a>
                         <ul class="dropdown-menu" id="categories-dropdown">
-                            <!-- Categorias serÃ£o inseridas aqui via JS -->
+                            <!-- Categorias serão inseridas aqui via JS -->
                         </ul>
                     </li>
                 </ul>
@@ -61,12 +60,12 @@
                 <p style="transition: opacity 0.4s ease;"></p>
                 <a href="#produtos" class="btn-primary">...</a>
             </div>
-            <button class="banner-nav next" id="banner-next" aria-label="PrÃ³ximo"><i class="fas fa-chevron-right"></i></button>
+            <button class="banner-nav next" id="banner-next" aria-label="Próximo"><i class="fas fa-chevron-right"></i></button>
         </section>
 
 
 
-        <!-- SeÃ§Ã£o de Todos os Produtos -->
+        <!-- Seção de Todos os Produtos -->
         <section id="all-products-section" class="products-section">
             <div class="container">
                 <div class="section-header">
@@ -79,7 +78,7 @@
             </div>
         </section>
 
-        <!-- VisualizaÃ§Ã£o Ãšnica do Produto (Inicialmente oculta) -->
+        <!-- Visualização Única do Produto (Inicialmente oculta) -->
         <section id="single-product-view-section" class="container hidden">
             <div id="single-product-view">
                 <button class="btn-back" onclick="backToGrid()">
@@ -90,7 +89,7 @@
                         <div class="single-product-img" style="flex-direction: column;">
                             <img id="single-img" src="" alt="">
                             
-                            <!-- BotÃ£o de Compra movido para baixo da foto -->
+                            <!-- Botão de Compra movido para baixo da foto -->
                             <div class="single-product-actions" style="display:flex; gap:15px; align-items:center; background:var(--white); padding:20px; border-radius:var(--radius-md); box-shadow:var(--shadow-sm); width:100%; margin-top:20px; border:1px solid #eee;">
                                 <div class="qty-selector">
                                     <button onclick="changeDetailQty(-1)">-</button>
@@ -114,20 +113,20 @@
 
                             <!-- VARIATIONS CONTAINER -->
                             <div id="single-variations-container" class="hidden" style="margin-bottom: 25px;">
-                                <label style="display: block; font-weight: 700; margin-bottom: 12px; color: var(--primary-green); font-size: 14px; text-transform: uppercase;">Selecione uma opÃ§Ã£o:</label>
+                                <label style="display: block; font-weight: 700; margin-bottom: 12px; color: var(--primary-green); font-size: 14px; text-transform: uppercase;">Selecione uma opção:</label>
                                 <div id="single-variations-list" style="display: flex; gap: 12px; flex-wrap: wrap;">
-                                    <!-- OpÃ§Ãµes injetadas via JS -->
+                                    <!-- Opções injetadas via JS -->
                                 </div>
                             </div>
 
                             <div class="drawer-desc" style="background:#fff; padding:20px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
-                                <h4 style="color:var(--primary-green); font-size:14px; text-transform:uppercase; margin-bottom:10px;">DescriÃ§Ã£o Detalhada</h4>
+                                <h4 style="color:var(--primary-green); font-size:14px; text-transform:uppercase; margin-bottom:10px;">Descrição Detalhada</h4>
                                 <p id="single-description" style="font-size:16px;">Carregando...</p>
                             </div>
 
                             <div class="product-detail-features" style="margin: 30px 0;">
-                                <span><i class="fas fa-truck"></i> Entrega expressa disponÃ­vel para sua regiÃ£o</span>
-                                <span><i class="fas fa-shield-alt"></i> Garantia de satisfaÃ§Ã£o OTMake10</span>
+                                <span><i class="fas fa-truck"></i> Entrega expressa disponível para sua região</span>
+                                <span><i class="fas fa-shield-alt"></i> Garantia de satisfação OTMake10</span>
                             </div>
                         </div>
                     </div>
@@ -141,7 +140,7 @@
             <div class="footer-col">
                 <h3>Institucional</h3>
                 <ul>
-                    <li><a href="#">Sobre NÃ³s</a></li>
+                    <li><a href="#">Sobre Nós</a></li>
                     <li><a href="#">Sustentabilidade</a></li>
                     <li><a href="#">Trabalhe Conosco</a></li>
                 </ul>
@@ -150,7 +149,7 @@
                 <h3>Atendimento</h3>
                 <ul>
                     <li><a href="#">Central de Ajuda</a></li>
-                    <li><a href="#">Trocas e DevoluÃ§Ãµes</a></li>
+                    <li><a href="#">Trocas e Devoluções</a></li>
                     <li><a href="#">Fale Conosco</a></li>
                 </ul>
             </div>
