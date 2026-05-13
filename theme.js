@@ -47,14 +47,16 @@
 
     // PASSO 2: Sincroniza com o Supabase via fetch nativo
     fetch(
-        SUPABASE_URL + '/rest/v1/store_settings?select=primary_color,text_color,admin_color&limit=1',
+        SUPABASE_URL + '/rest/v1/store_settings?select=primary_color,text_color,admin_color&limit=1&_t=' + new Date().getTime(),
         {
             method: 'GET',
             headers: {
                 'apikey': SUPABASE_KEY,
                 'Authorization': 'Bearer ' + SUPABASE_KEY,
-                'Content-Type': 'application/json'
-            }
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+            },
+            cache: 'no-store'
         }
     )
     .then(function (res) {
