@@ -33,6 +33,7 @@
             <button class="sidebar-btn" data-section="financeiro"><i class="fas fa-chart-pie"></i> Financeiro</button>
             <button class="sidebar-btn" data-section="estoque"><i class="fas fa-boxes"></i> Estoque</button>
             <button class="sidebar-btn" data-section="empresa"><i class="fas fa-building"></i> Dados da Empresa</button>
+            <button class="sidebar-btn" data-section="colors"><i class="fas fa-palette"></i> Cores do Site</button>
             <button class="sidebar-btn" data-section="banners"><i class="fas fa-image"></i> Banners</button>
             <button class="sidebar-btn" onclick="window.location.href='vendas.html'" style="background: rgba(39, 174, 96, 0.1); color: #27ae60; font-weight: 700; margin-top: 10px;">
                 <i class="fas fa-cash-register"></i> Ponto de Venda (PDV)
@@ -512,7 +513,102 @@
             </div>
         </section>
 
+        <!-- SECTION: Colors -->
+        <section id="section-colors" class="admin-section">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h2><i class="fas fa-palette"></i> Cores do Site</h2>
+                </div>
+                <div class="admin-card-body">
 
+                    <!-- Preview ao vivo -->
+                    <div id="color-preview-bar" style="
+                        border-radius: 10px; padding: 20px 24px; margin-bottom: 30px;
+                        display: flex; align-items: center; gap: 16px;
+                        background: #1a5c38; color: white; transition: background 0.3s;">
+                        <i class="fas fa-store" style="font-size:24px;"></i>
+                        <div>
+                            <strong style="font-size:16px;" id="preview-store-name">Minha Loja</strong>
+                            <p id="preview-text-sample" style="font-size:13px; opacity:0.85; margin-top:2px; color:#fff;">
+                                Prévia: assim ficará o cabeçalho e os botões do seu site
+                            </p>
+                        </div>
+                        <button id="preview-btn" style="margin-left:auto; padding:8px 18px; border:none; border-radius:6px; background:white; font-weight:700; cursor:default;">
+                            Botão de Compra
+                        </button>
+                    </div>
+
+                    <!-- Cor Primária -->
+                    <div style="margin-bottom: 32px;">
+                        <h3 style="margin-bottom:8px; font-size:15px;"><i class="fas fa-brush"></i> Cor Principal do Site (Header, Botões, Destaques)</h3>
+                        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Esta cor é aplicada no cabeçalho, botões de compra e elementos de destaque.</p>
+                        <div id="primary-color-grid" style="display:flex; flex-wrap:wrap; gap:12px;">
+                        </div>
+                        <div style="margin-top:16px; display:flex; align-items:center; gap:12px;">
+                            <label style="font-size:13px; font-weight:600;">Cor personalizada:</label>
+                            <input type="color" id="custom-primary-color" style="width:50px; height:38px; border:1px solid #ddd; border-radius:8px; cursor:pointer; padding:2px;">
+                            <span style="font-size:12px; color:var(--text-muted);">Selecione qualquer cor</span>
+                        </div>
+                    </div>
+
+                    <!-- Cor do Texto -->
+                    <div style="margin-bottom: 32px;">
+                        <h3 style="margin-bottom:8px; font-size:15px;"><i class="fas fa-font"></i> Cor dos Textos do Site</h3>
+                        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Esta cor é aplicada nos títulos, parágrafos e textos gerais do site.</p>
+                        <div id="text-color-grid" style="display:flex; flex-wrap:wrap; gap:12px;">
+                        </div>
+                        <div style="margin-top:16px; display:flex; align-items:center; gap:12px;">
+                            <label style="font-size:13px; font-weight:600;">Cor personalizada:</label>
+                            <input type="color" id="custom-text-color" value="#333333" style="width:50px; height:38px; border:1px solid #ddd; border-radius:8px; cursor:pointer; padding:2px;">
+                            <span style="font-size:12px; color:var(--text-muted);">Selecione qualquer cor</span>
+                        </div>
+                    </div>
+
+                    <!-- Cor do Admin -->
+                    <div style="margin-bottom: 32px;">
+                        <h3 style="margin-bottom:8px; font-size:15px;"><i class="fas fa-shield-alt"></i> Cor do Painel Administrativo</h3>
+                        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Esta cor é aplicada na barra lateral, cabeçalhos de cards e botões do painel admin (Dashboard, Financeiro, Estoque, etc.).</p>
+
+                        <!-- Admin Preview -->
+                        <div id="admin-color-preview" style="border-radius:10px; overflow:hidden; display:flex; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                            <div id="admin-preview-sidebar" style="width:120px; background:#1a5c38; padding:14px 10px; flex-shrink:0; transition:background 0.3s;">
+                                <div style="color:white; font-weight:700; font-size:12px; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                                    <i class="fas fa-leaf"></i> OTMake10
+                                </div>
+                                <div style="background:rgba(255,255,255,0.15); border-radius:5px; padding:6px 8px; color:white; font-size:11px; margin-bottom:5px;">
+                                    <i class="fas fa-chart-line" style="margin-right:4px;"></i> Dashboard
+                                </div>
+                                <div style="color:rgba(255,255,255,0.65); font-size:11px; padding:5px 8px; margin-bottom:3px;"><i class="fas fa-boxes" style="margin-right:4px;"></i> Estoque</div>
+                                <div style="color:rgba(255,255,255,0.65); font-size:11px; padding:5px 8px;"><i class="fas fa-chart-pie" style="margin-right:4px;"></i> Financeiro</div>
+                            </div>
+                            <div style="flex:1; background:#f0f2f5; padding:14px;">
+                                <div id="admin-preview-card-header" style="background:#1a5c38; color:white; padding:10px 14px; border-radius:8px 8px 0 0; font-size:13px; font-weight:600; transition:background 0.3s;">
+                                    <i class="fas fa-warehouse"></i> Controle de Estoque
+                                </div>
+                                <div style="background:white; padding:10px 14px; border-radius:0 0 8px 8px; font-size:12px; color:#666;">
+                                    Produto A · Produto B · Produto C...
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="admin-color-grid" style="display:flex; flex-wrap:wrap; gap:12px;"></div>
+                        <div style="margin-top:16px; display:flex; align-items:center; gap:12px;">
+                            <label style="font-size:13px; font-weight:600;">Cor personalizada:</label>
+                            <input type="color" id="custom-admin-color" style="width:50px; height:38px; border:1px solid #ddd; border-radius:8px; cursor:pointer; padding:2px;">
+                            <span style="font-size:12px; color:var(--text-muted);">Selecione qualquer cor</span>
+                        </div>
+                    </div>
+
+                    <!-- Botão Salvar -->
+                    <div style="border-top:1px solid #eee; padding-top:20px; text-align:right;">
+                        <button class="btn-primary" onclick="saveSiteColors()">
+                            <i class="fas fa-save"></i> SALVAR E APLICAR CORES
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </section>
 
         <!-- SECTION: Financeiro -->
         <section id="section-financeiro" class="admin-section">
