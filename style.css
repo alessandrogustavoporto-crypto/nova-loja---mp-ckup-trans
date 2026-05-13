@@ -1,8 +1,8 @@
 :root {
     /* Color Palette */
-    --primary-green: #1a5c38; /* Predominant Green */
-    --light-green: #2a8a55;
-    --dark-green: #103a23;
+    --primary-green: #D4AF37; /* Predominant Color */
+    --light-green: #e6c863;
+    --dark-green: #b3922c;
     
     --primary-orange: #ff6b00; /* CTA Orange */
     --hover-orange: #e56000;
@@ -1267,7 +1267,7 @@ input:checked + .slider:before {
 @media (max-width: 600px) { .cart-table thead { display: none !important; } .cart-table td { display: block !important; padding: 8px 15px; border: none; } .cart-row { border-bottom: 1px solid var(--border-color); } }
 
 /* ============================================================
-   USER NAV WRAPPER â€” tooltip + logged-in indicator
+   USER NAV WRAPPER Ã¢â‚¬â€ tooltip + logged-in indicator
    ============================================================ */
 .user-nav-wrapper {
     position: relative;
@@ -1429,7 +1429,7 @@ input:checked + .slider:before {
 @media (max-width: 600px) { .cart-table thead { display: none !important; } .cart-table td { display: block !important; padding: 8px 15px; border: none; } .cart-row { border-bottom: 1px solid var(--border-color); } }
 
 /* ============================================================
-   USER NAV WRAPPER â€” tooltip + logged-in indicator
+   USER NAV WRAPPER Ã¢â‚¬â€ tooltip + logged-in indicator
    ============================================================ */
 .user-nav-wrapper {
     position: relative;
@@ -1705,7 +1705,7 @@ input:checked + .slider:before {
     min-height: 200px;
 }
 
-/* Forçar remoção de elementos de promoção e newsletter */
+/* ForÃ§ar remoÃ§Ã£o de elementos de promoÃ§Ã£o e newsletter */
 #promo-section, 
 .newsletter {
     display: none !important;
