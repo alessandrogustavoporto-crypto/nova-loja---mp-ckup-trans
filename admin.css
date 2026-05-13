@@ -4,7 +4,7 @@
 :root {
     --admin-sidebar-w: 240px;
     --admin-topbar-h: 64px;
-    --admin-primary: var(--admin-primary); /* Controlado pela aba Cores do Admin */
+    --admin-primary: #1a5c38;
 }
 
 /* ---- Layout ---- */
