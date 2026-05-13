@@ -1531,18 +1531,12 @@ let _selectedAdmin = '#1a5c38';
 let _storeSettingsId = null; // ID real da linha no banco
 
 window.loadColorSettings = async function() {
-    const { data: stores } = await supabase.from('store_settings').select('id, primary_color, text_color, store_name').limit(1);
+    const { data: stores } = await supabase.from('store_settings').select('id, primary_color, text_color, admin_color, store_name').limit(1);
     const store = (stores && stores.length > 0) ? stores[0] : null;
     _storeSettingsId = store?.id || null;
     _selectedPrimary = store?.primary_color || '#1a5c38';
     _selectedText = store?.text_color || '#333333';
-    
-    let cachedAdmin = '#1a5c38';
-    try {
-        const cached = localStorage.getItem('otmake10_site_colors');
-        if (cached) cachedAdmin = JSON.parse(cached).admin || '#1a5c38';
-    } catch(e) {}
-    _selectedAdmin = cachedAdmin;
+    _selectedAdmin = store?.admin_color || '#1a5c38';
 
     const previewName = store?.store_name || 'Minha Loja';
     const nameEl = document.getElementById('preview-store-name');
@@ -1666,7 +1660,8 @@ window.saveSiteColors = async function() {
     let error;
     const payload = {
         primary_color: _selectedPrimary,
-        text_color: _selectedText
+        text_color: _selectedText,
+        admin_color: _selectedAdmin
     };
 
     if (_storeSettingsId) {

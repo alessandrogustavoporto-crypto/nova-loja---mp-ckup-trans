@@ -47,7 +47,7 @@
 
     // PASSO 2: Sincroniza com o Supabase via fetch nativo
     fetch(
-        SUPABASE_URL + '/rest/v1/store_settings?select=primary_color,text_color&limit=1&_t=' + new Date().getTime(),
+        SUPABASE_URL + '/rest/v1/store_settings?select=primary_color,text_color,admin_color&limit=1&_t=' + new Date().getTime(),
         {
             method: 'GET',
             headers: {
@@ -68,12 +68,7 @@
         var row = data[0];
         var primary = row.primary_color;
         var text = row.text_color;
-        
-        var admin = null;
-        try {
-            var cached = localStorage.getItem(CACHE_KEY);
-            if (cached) admin = JSON.parse(cached).admin;
-        } catch(e) {}
+        var admin = row.admin_color;
 
         // Aplica no DOM
         applyColors(primary, text, admin);
