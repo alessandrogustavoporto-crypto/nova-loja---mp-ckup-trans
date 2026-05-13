@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Área do Cliente - OTMake10</title>
+    <title>Ãrea do Cliente - OTMake10</title>
     <link rel="stylesheet" href="style.css">
-    <script src="theme.js" defer></script>
+    <script src="theme.js?v=2" defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -36,8 +36,8 @@
             <div class="user-greeting">
                 <i class="fas fa-user-circle user-avatar"></i>
                 <div class="greeting-text">
-                    <span>Olá,</span>
-                    <strong id="dash-user-name">João Silva</strong>
+                    <span>OlÃ¡,</span>
+                    <strong id="dash-user-name">JoÃ£o Silva</strong>
                 </div>
             </div>
             <nav class="dashboard-nav">
@@ -58,7 +58,7 @@
                 <div class="filters-bar">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="order-search" placeholder="Buscar por número do pedido">
+                        <input type="text" id="order-search" placeholder="Buscar por nÃºmero do pedido">
                     </div>
                     <div class="filter-box" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                         <div style="display: flex; align-items: center; gap: 5px;">
@@ -66,14 +66,14 @@
                             <input type="date" id="order-date-start" class="admin-search" style="padding: 5px; font-size: 13px; width: 130px;">
                         </div>
                         <div style="display: flex; align-items: center; gap: 5px;">
-                            <label style="font-size: 12px; color: var(--text-muted);">Até:</label>
+                            <label style="font-size: 12px; color: var(--text-muted);">AtÃ©:</label>
                             <input type="date" id="order-date-end" class="admin-search" style="padding: 5px; font-size: 13px; width: 130px;">
                         </div>
                         <select id="order-status-filter" style="padding: 8px; border-radius: 4px; border: 1px solid var(--border-color);">
                             <option value="">Todos os Status</option>
                             <option value="processando">Processando</option>
                             <option value="aguardando">Aguardando Pagamento</option>
-                            <option value="separacao">Em Separação</option>
+                            <option value="separacao">Em SeparaÃ§Ã£o</option>
                             <option value="saiu">Saiu para Entrega</option>
                             <option value="enviado">Enviado</option>
                             <option value="entregue">Entregue</option>
@@ -105,16 +105,16 @@
                 
                 <div class="data-card">
                     <div class="data-header">
-                        <h3>Informações Pessoais</h3>
+                        <h3>InformaÃ§Ãµes Pessoais</h3>
                     </div>
                     <div class="data-body form-grid">
                         <div class="info-group">
                             <span class="info-label">Nome Completo</span>
-                            <span class="info-value" id="dash-full-name">João Silva</span>
+                            <span class="info-value" id="dash-full-name">JoÃ£o Silva</span>
                         </div>
                         <div class="info-group">
                             <span class="info-label">CPF</span>
-                            <span class="info-value" id="dash-cpf">—</span>
+                            <span class="info-value" id="dash-cpf">â€”</span>
                         </div>
                         <div class="info-group">
                             <span class="info-label">E-mail</span>
@@ -126,29 +126,29 @@
                         </div>
                     </div>
                     <div class="data-actions">
-                        <button class="btn-primary" onclick="openEditUserModal()"><i class="fas fa-edit"></i> Editar Informações</button>
+                        <button class="btn-primary" onclick="openEditUserModal()"><i class="fas fa-edit"></i> Editar InformaÃ§Ãµes</button>
                         <button class="btn-secondary" onclick="openChangePasswordModal()"><i class="fas fa-key"></i> Alterar Senha</button>
                     </div>
                 </div>
 
                 <div class="data-card mt-20">
                     <div class="data-header">
-                        <h3>Endereço Principal</h3>
+                        <h3>EndereÃ§o Principal</h3>
                     </div>
                     <div class="data-body" id="dash-address-box">
                         <p class="info-value">Av. Paulista, 1578 - Apto 42</p>
-                        <p class="info-value">Bela Vista, São Paulo - SP</p>
+                        <p class="info-value">Bela Vista, SÃ£o Paulo - SP</p>
                         <p class="info-value">CEP: 01310-200</p>
                     </div>
                     <div class="data-actions">
-                        <button class="btn-primary" onclick="openEditAddressModal()"><i class="fas fa-map-marker-alt"></i> Editar Endereço</button>
+                        <button class="btn-primary" onclick="openEditAddressModal()"><i class="fas fa-map-marker-alt"></i> Editar EndereÃ§o</button>
                     </div>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- MODAL: Editar Informações do Cliente -->
+    <!-- MODAL: Editar InformaÃ§Ãµes do Cliente -->
     <div id="edit-user-modal" class="modal-overlay hidden">
         <div class="modal-box" style="max-width: 450px; text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -174,7 +174,7 @@
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 30px;">
                     <button type="button" class="btn-secondary btn-block" onclick="closeEditUserModal()">Cancelar</button>
-                    <button type="submit" class="btn-primary btn-block">Salvar Alterações</button>
+                    <button type="submit" class="btn-primary btn-block">Salvar AlteraÃ§Ãµes</button>
                 </div>
             </form>
         </div>
@@ -195,7 +195,7 @@
                 </div>
                 <div class="form-group mt-15">
                     <label>Nova Senha</label>
-                    <input type="password" id="new-password" placeholder="Mínimo 6 caracteres" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:4px;" required minlength="6">
+                    <input type="password" id="new-password" placeholder="MÃ­nimo 6 caracteres" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:4px;" required minlength="6">
                 </div>
                 <div class="form-group mt-15">
                     <label>Confirmar Nova Senha</label>
@@ -209,11 +209,11 @@
         </div>
     </div>
 
-    <!-- MODAL: Editar Endereço -->
+    <!-- MODAL: Editar EndereÃ§o -->
     <div id="edit-address-modal" class="modal-overlay hidden">
         <div class="modal-box" style="max-width: 500px; text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="margin:0; font-size: 1.2rem;">Editar Endereço</h2>
+                <h2 style="margin:0; font-size: 1.2rem;">Editar EndereÃ§o</h2>
                 <button onclick="closeEditAddressModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: var(--text-muted);"><i class="fas fa-times"></i></button>
             </div>
             <form id="edit-address-form">
@@ -232,7 +232,7 @@
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;" class="mt-15">
                     <div class="form-group">
-                        <label>Número</label>
+                        <label>NÃºmero</label>
                         <input type="text" id="edit-addr-numero" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius: 4px;">
                     </div>
                     <div class="form-group">
@@ -252,7 +252,7 @@
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 30px;">
                     <button type="button" class="btn-secondary btn-block" onclick="closeEditAddressModal()">Cancelar</button>
-                    <button type="submit" class="btn-primary btn-block">Salvar Endereço</button>
+                    <button type="submit" class="btn-primary btn-block">Salvar EndereÃ§o</button>
                 </div>
             </form>
         </div>

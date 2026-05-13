@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -7,7 +7,7 @@
     <title>Painel Admin - OTMake10</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="admin.css">
-    <script src="theme.js" defer></script>
+    <script src="theme.js?v=2" defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -108,14 +108,14 @@
                                 <th>Data</th>
                                 <th>Total</th>
                                 <th>Status</th>
-                                <th>Ação</th>
+                                <th>AÃ§Ã£o</th>
                             </tr>
                         </thead>
                         <tbody id="dashboard-orders-table"></tbody>
                     </table>
                 </div>
                 <div id="dashboard-pagination" class="pagination-footer" style="display: flex; justify-content: center; align-items: center; gap: 20px; padding: 20px; border-top: 1px solid #eee;">
-                    <!-- Paginação JS -->
+                    <!-- PaginaÃ§Ã£o JS -->
                 </div>
             </div>
         </section>
@@ -129,7 +129,7 @@
             </div>
             <div class="admin-card">
                 <div class="admin-card-header">
-                    <h2>Catálogo de Produtos</h2>
+                    <h2>CatÃ¡logo de Produtos</h2>
                 </div>
                 <div class="admin-card-body">
                     <table class="admin-table">
@@ -139,10 +139,10 @@
                                 <th>Nome</th>
                                 <th>Categoria</th>
                                 <th>Marca</th>
-                                <th>Preço</th>
+                                <th>PreÃ§o</th>
                                 <th>Estoque</th>
-                                <th>Promoção</th>
-                                <th>Ações</th>
+                                <th>PromoÃ§Ã£o</th>
+                                <th>AÃ§Ãµes</th>
                             </tr>
                         </thead>
                         <tbody id="products-table"></tbody>
@@ -168,7 +168,7 @@
                                 <th>#</th>
                                 <th>Nome</th>
                                 <th>Produtos</th>
-                                <th>Ações</th>
+                                <th>AÃ§Ãµes</th>
                             </tr>
                         </thead>
                         <tbody id="categories-table"></tbody>
@@ -183,8 +183,8 @@
                 <input type="text" id="client-search" placeholder="Buscar por nome ou e-mail..." class="admin-search">
                 <select id="client-type-filter" class="admin-select">
                     <option value="">Todos (PF/PJ)</option>
-                    <option value="PF">Pessoa Física</option>
-                    <option value="PJ">Pessoa Jurídica</option>
+                    <option value="PF">Pessoa FÃ­sica</option>
+                    <option value="PJ">Pessoa JurÃ­dica</option>
                 </select>
             </div>
             <div class="admin-card">
@@ -200,7 +200,7 @@
                                 <th>Tipo</th>
                                 <th>Pedidos</th>
                                 <th>Status</th>
-                                <th>Ações</th>
+                                <th>AÃ§Ãµes</th>
                             </tr>
                         </thead>
                         <tbody id="clients-table"></tbody>
@@ -216,7 +216,7 @@
                 <select id="order-admin-status" class="admin-select">
                     <option value="">Todos os Status</option>
                     <option value="aguardando">Aguardando Pagamento</option>
-                    <option value="separacao">Em Separação</option>
+                    <option value="separacao">Em SeparaÃ§Ã£o</option>
                     <option value="saiu">Saiu para Entrega</option>
                     <option value="entregue">Entregue</option>
                     <option value="cancelado">Cancelado</option>
@@ -224,7 +224,7 @@
             </div>
             <div class="admin-card">
                 <div class="admin-card-header">
-                    <h2>Gestão de Pedidos</h2>
+                    <h2>GestÃ£o de Pedidos</h2>
                 </div>
                 <div class="admin-card-body">
                     <table class="admin-table">
@@ -236,7 +236,7 @@
                                 <th>Data</th>
                                 <th>Total</th>
                                 <th>Status</th>
-                                <th>Ações</th>
+                                <th>AÃ§Ãµes</th>
                             </tr>
                         </thead>
                         <tbody id="orders-admin-table"></tbody>
@@ -246,8 +246,8 @@
                     style="display: flex; justify-content: center; align-items: center; gap: 20px; padding: 20px; border-top: 1px solid #eee;">
                     <button id="prev-orders" class="btn-icon" title="Anterior"><i
                             class="fas fa-chevron-left"></i></button>
-                    <span id="orders-page-info" style="font-weight: 600; font-size: 14px;">Página 1</span>
-                    <button id="next-orders" class="btn-icon" title="Próximo"><i
+                    <span id="orders-page-info" style="font-weight: 600; font-size: 14px;">PÃ¡gina 1</span>
+                    <button id="next-orders" class="btn-icon" title="PrÃ³ximo"><i
                             class="fas fa-chevron-right"></i></button>
                 </div>
             </div>
@@ -260,14 +260,14 @@
             </div>
             <div class="admin-card">
                 <div class="admin-card-header">
-                    <h2>Gestão de Marcas</h2>
+                    <h2>GestÃ£o de Marcas</h2>
                 </div>
                 <div class="admin-card-body">
                     <table class="admin-table">
                         <thead>
                             <tr>
                                 <th>Nome da Marca</th>
-                                <th>Ações</th>
+                                <th>AÃ§Ãµes</th>
                             </tr>
                         </thead>
                         <tbody id="marcas-table"></tbody>
@@ -279,7 +279,7 @@
         <!-- SECTION: Estoque -->
         <section id="section-estoque" class="admin-section">
 
-            <!-- KPI Cards (sempre visíveis) -->
+            <!-- KPI Cards (sempre visÃ­veis) -->
             <div class="kpi-grid" style="margin-bottom:20px;">
                 <div class="kpi-card kpi-blue">
                     <div class="kpi-icon"><i class="fas fa-boxes"></i></div>
@@ -317,7 +317,7 @@
                     <i class="fas fa-warehouse"></i> Controle de Estoque
                 </button>
                 <button class="f-tab-btn" data-stock-tab="saida">
-                    <i class="fas fa-arrow-trend-down"></i> Relatório de Saída
+                    <i class="fas fa-arrow-trend-down"></i> RelatÃ³rio de SaÃ­da
                 </button>
             </div>
 
@@ -343,8 +343,8 @@
                                     <th style="width:36px;">#</th>
                                     <th>Produto</th>
                                     <th>Categoria</th>
-                                    <th style="width:130px;">Preço de Custo</th>
-                                    <th style="width:130px;">Preço de Venda</th>
+                                    <th style="width:130px;">PreÃ§o de Custo</th>
+                                    <th style="width:130px;">PreÃ§o de Venda</th>
                                     <th style="width:120px;">Estoque Atual</th>
                                     <th style="width:100px;">Status</th>
                                     <th style="width:80px;">Salvar</th>
@@ -360,18 +360,18 @@
                 </div>
             </div>
 
-            <!-- ABA: Relatório de Saída -->
+            <!-- ABA: RelatÃ³rio de SaÃ­da -->
             <div id="stock-tab-saida" class="stock-tab-content" style="display:none;">
                 <div class="admin-card">
                     <div class="admin-card-header">
-                        <h2><i class="fas fa-arrow-trend-down"></i> Relatório de Saída de Estoque</h2>
+                        <h2><i class="fas fa-arrow-trend-down"></i> RelatÃ³rio de SaÃ­da de Estoque</h2>
                     </div>
                     <div class="admin-card-body">
                         <div class="filter-bar-fin" style="margin-bottom:20px;">
                             <div class="date-filter-group">
                                 <label>De:</label>
                                 <input type="date" id="exit-date-start" class="admin-input-date">
-                                <label>Até:</label>
+                                <label>AtÃ©:</label>
                                 <input type="date" id="exit-date-end" class="admin-input-date">
                                 <button class="btn-primary btn-sm" onclick="loadStockExitReport()">Filtrar</button>
                             </div>
@@ -399,7 +399,7 @@
                                 <i class="fas fa-file-csv"></i> Salvar (.CSV)
                             </button>
                             <button class="btn-primary" onclick="printExitReport()">
-                                <i class="fas fa-print"></i> Imprimir Relatório
+                                <i class="fas fa-print"></i> Imprimir RelatÃ³rio
                             </button>
                         </div>
                     </div>
@@ -422,7 +422,7 @@
                                 <input type="text" id="set-store-name" class="admin-input" placeholder="Ex: Minha Loja">
                             </div>
                             <div class="form-group">
-                                <label>Razão Social</label>
+                                <label>RazÃ£o Social</label>
                                 <input type="text" id="set-company-name" class="admin-input" placeholder="Ex: Nome da Empresa LTDA">
                             </div>
                             <div class="form-group">
@@ -430,8 +430,8 @@
                                 <input type="text" id="set-cnpj" class="admin-input" placeholder="00.000.000/0000-00">
                             </div>
                             <div class="form-group">
-                                <label>Inscrição Estadual</label>
-                                <input type="text" id="set-ie" class="admin-input" placeholder="Isento ou Número">
+                                <label>InscriÃ§Ã£o Estadual</label>
+                                <input type="text" id="set-ie" class="admin-input" placeholder="Isento ou NÃºmero">
                             </div>
                             <div class="form-group">
                                 <label>E-mail de Contato</label>
@@ -443,14 +443,14 @@
                             </div>
                         </div>
 
-                        <h3 style="margin: 25px 0 15px 0; padding-top: 15px; border-top: 1px solid #eee;">Endereço da Sede</h3>
+                        <h3 style="margin: 25px 0 15px 0; padding-top: 15px; border-top: 1px solid #eee;">EndereÃ§o da Sede</h3>
                         <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
                             <div class="form-group" style="grid-column: span 2;">
                                 <label>Logradouro (Rua/Av)</label>
                                 <input type="text" id="set-addr-street" class="admin-input">
                             </div>
                             <div class="form-group">
-                                <label>Número</label>
+                                <label>NÃºmero</label>
                                 <input type="text" id="set-addr-num" class="admin-input">
                             </div>
                             <div class="form-group">
@@ -484,8 +484,8 @@
             <div class="section-toolbar">
                 <div style="flex:1;">
                     <p style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">
-                        <i class="fas fa-info-circle"></i> <strong>Proporção recomendada:</strong> 1920x450px para
-                        melhor visualização.
+                        <i class="fas fa-info-circle"></i> <strong>ProporÃ§Ã£o recomendada:</strong> 1920x450px para
+                        melhor visualizaÃ§Ã£o.
                     </p>
                 </div>
                 <button class="btn-primary" onclick="openBannerModal()" style="padding: 12px 24px; font-weight: 700;">
@@ -494,17 +494,17 @@
             </div>
             <div class="admin-card">
                 <div class="admin-card-header">
-                    <h2>Gestão de Banners (Hero)</h2>
+                    <h2>GestÃ£o de Banners (Hero)</h2>
                 </div>
                 <div class="admin-card-body">
                     <table class="admin-table">
                         <thead>
                             <tr>
                                 <th>Miniatura</th>
-                                <th>Título</th>
-                                <th>Subtítulo</th>
+                                <th>TÃ­tulo</th>
+                                <th>SubtÃ­tulo</th>
                                 <th>Status</th>
-                                <th>Ações</th>
+                                <th>AÃ§Ãµes</th>
                             </tr>
                         </thead>
                         <tbody id="banners-table"></tbody>
@@ -530,18 +530,18 @@
                         <div>
                             <strong style="font-size:16px;" id="preview-store-name">Minha Loja</strong>
                             <p id="preview-text-sample" style="font-size:13px; opacity:0.85; margin-top:2px; color:#fff;">
-                                Prévia: assim ficará o cabeçalho e os botões do seu site
+                                PrÃ©via: assim ficarÃ¡ o cabeÃ§alho e os botÃµes do seu site
                             </p>
                         </div>
                         <button id="preview-btn" style="margin-left:auto; padding:8px 18px; border:none; border-radius:6px; background:white; font-weight:700; cursor:default;">
-                            Botão de Compra
+                            BotÃ£o de Compra
                         </button>
                     </div>
 
-                    <!-- Cor Primária -->
+                    <!-- Cor PrimÃ¡ria -->
                     <div style="margin-bottom: 32px;">
-                        <h3 style="margin-bottom:8px; font-size:15px;"><i class="fas fa-brush"></i> Cor Principal do Site (Header, Botões, Destaques)</h3>
-                        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Esta cor é aplicada no cabeçalho, botões de compra e elementos de destaque.</p>
+                        <h3 style="margin-bottom:8px; font-size:15px;"><i class="fas fa-brush"></i> Cor Principal do Site (Header, BotÃµes, Destaques)</h3>
+                        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Esta cor Ã© aplicada no cabeÃ§alho, botÃµes de compra e elementos de destaque.</p>
                         <div id="primary-color-grid" style="display:flex; flex-wrap:wrap; gap:12px;">
                         </div>
                         <div style="margin-top:16px; display:flex; align-items:center; gap:12px;">
@@ -554,7 +554,7 @@
                     <!-- Cor do Texto -->
                     <div style="margin-bottom: 32px;">
                         <h3 style="margin-bottom:8px; font-size:15px;"><i class="fas fa-font"></i> Cor dos Textos do Site</h3>
-                        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Esta cor é aplicada nos títulos, parágrafos e textos gerais do site.</p>
+                        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Esta cor Ã© aplicada nos tÃ­tulos, parÃ¡grafos e textos gerais do site.</p>
                         <div id="text-color-grid" style="display:flex; flex-wrap:wrap; gap:12px;">
                         </div>
                         <div style="margin-top:16px; display:flex; align-items:center; gap:12px;">
@@ -567,7 +567,7 @@
                     <!-- Cor do Admin -->
                     <div style="margin-bottom: 32px;">
                         <h3 style="margin-bottom:8px; font-size:15px;"><i class="fas fa-shield-alt"></i> Cor do Painel Administrativo</h3>
-                        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Esta cor é aplicada na barra lateral, cabeçalhos de cards e botões do painel admin (Dashboard, Financeiro, Estoque, etc.).</p>
+                        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Esta cor Ã© aplicada na barra lateral, cabeÃ§alhos de cards e botÃµes do painel admin (Dashboard, Financeiro, Estoque, etc.).</p>
 
                         <!-- Admin Preview -->
                         <div id="admin-color-preview" style="border-radius:10px; overflow:hidden; display:flex; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
@@ -586,7 +586,7 @@
                                     <i class="fas fa-warehouse"></i> Controle de Estoque
                                 </div>
                                 <div style="background:white; padding:10px 14px; border-radius:0 0 8px 8px; font-size:12px; color:#666;">
-                                    Produto A · Produto B · Produto C...
+                                    Produto A Â· Produto B Â· Produto C...
                                 </div>
                             </div>
                         </div>
@@ -599,7 +599,7 @@
                         </div>
                     </div>
 
-                    <!-- Botão Salvar -->
+                    <!-- BotÃ£o Salvar -->
                     <div style="border-top:1px solid #eee; padding-top:20px; text-align:right;">
                         <button class="btn-primary" onclick="saveSiteColors()">
                             <i class="fas fa-save"></i> SALVAR E APLICAR CORES
@@ -613,7 +613,7 @@
         <!-- SECTION: Financeiro -->
         <section id="section-financeiro" class="admin-section">
             <div class="finance-tabs">
-                <button class="f-tab-btn active" data-f-tab="overview">Visão Geral</button>
+                <button class="f-tab-btn active" data-f-tab="overview">VisÃ£o Geral</button>
                 <button class="f-tab-btn" data-f-tab="sales">Vendas</button>
                 <button class="f-tab-btn" data-f-tab="products">Produtos</button>
                 <button class="f-tab-btn" data-f-tab="customers">Clientes</button>
@@ -625,23 +625,23 @@
                     <div class="date-filter-group">
                         <label>De:</label>
                         <input type="date" id="overview-start" class="admin-input-date">
-                        <label>Até:</label>
+                        <label>AtÃ©:</label>
                         <input type="date" id="overview-end" class="admin-input-date">
                         <button class="btn-primary btn-sm" onclick="applyCustomFilter('overview')">Filtrar</button>
                     </div>
                     <select id="overview-period-filter" class="admin-select">
-                        <option value="" hidden>Selecionar Período</option>
+                        <option value="" hidden>Selecionar PerÃ­odo</option>
                         <option value="today">Hoje</option>
-                        <option value="7days" selected>Últimos 7 dias</option>
-                        <option value="30days">Últimos 30 dias</option>
+                        <option value="7days" selected>Ãšltimos 7 dias</option>
+                        <option value="30days">Ãšltimos 30 dias</option>
                         <option value="year">Este Ano</option>
-                        <option value="all">Todo o Período</option>
+                        <option value="all">Todo o PerÃ­odo</option>
                     </select>
                 </div>
                 <div class="kpi-grid kpi-grid-5">
                     <div class="kpi-card"><span>Faturamento Total</span><strong id="fin-total-billing">R$ 0,00</strong>
                     </div>
-                    <div class="kpi-card"><span>Ticket Médio</span><strong id="fin-avg-ticket">R$ 0,00</strong></div>
+                    <div class="kpi-card"><span>Ticket MÃ©dio</span><strong id="fin-avg-ticket">R$ 0,00</strong></div>
                     <div class="kpi-card"><span>Total Pedidos</span><strong id="fin-total-orders">0</strong></div>
                     <div class="kpi-card"><span>Lucro Estimado</span><strong id="fin-total-profit">R$ 0,00</strong>
                     </div>
@@ -660,14 +660,14 @@
                     <div class="date-filter-group">
                         <label>De:</label>
                         <input type="date" id="sales-start" class="admin-input-date">
-                        <label>Até:</label>
+                        <label>AtÃ©:</label>
                         <input type="date" id="sales-end" class="admin-input-date">
                         <button class="btn-primary btn-sm" onclick="applyCustomFilter('sales')">Filtrar</button>
                     </div>
                     <select id="sales-period-filter" class="admin-select">
-                        <option value="" hidden>Selecionar Período</option>
-                        <option value="7days">Últimos 7 dias</option>
-                        <option value="30days">Últimos 30 dias</option>
+                        <option value="" hidden>Selecionar PerÃ­odo</option>
+                        <option value="7days">Ãšltimos 7 dias</option>
+                        <option value="30days">Ãšltimos 30 dias</option>
                         <option value="year">Este Ano</option>
                     </select>
                 </div>
@@ -684,17 +684,17 @@
                     <div class="date-filter-group">
                         <label>De:</label>
                         <input type="date" id="prod-start" class="admin-input-date">
-                        <label>Até:</label>
+                        <label>AtÃ©:</label>
                         <input type="date" id="prod-end" class="admin-input-date">
                         <button class="btn-primary btn-sm" onclick="applyCustomFilter('prod')">Filtrar</button>
                     </div>
                     <select id="prod-period-filter" class="admin-select">
-                        <option value="" hidden>Selecionar Período</option>
+                        <option value="" hidden>Selecionar PerÃ­odo</option>
                         <option value="today">Hoje</option>
-                        <option value="7days" selected>Últimos 7 dias</option>
-                        <option value="30days">Últimos 30 dias</option>
+                        <option value="7days" selected>Ãšltimos 7 dias</option>
+                        <option value="30days">Ãšltimos 30 dias</option>
                         <option value="year">Este Ano</option>
-                        <option value="all">Todo o Período</option>
+                        <option value="all">Todo o PerÃ­odo</option>
                     </select>
                 </div>
                 <div class="charts-row">
@@ -717,7 +717,7 @@
                         <table class="admin-table-min">
                             <thead>
                                 <tr>
-                                    <th>Método</th>
+                                    <th>MÃ©todo</th>
                                     <th>Total</th>
                                 </tr>
                             </thead>
@@ -734,21 +734,21 @@
                     <div class="date-filter-group">
                         <label>De:</label>
                         <input type="date" id="cust-start" class="admin-input-date">
-                        <label>Até:</label>
+                        <label>AtÃ©:</label>
                         <input type="date" id="cust-end" class="admin-input-date">
                         <button class="btn-primary btn-sm" onclick="applyCustomFilter('cust')">Filtrar</button>
                     </div>
                     <select id="cust-period-filter" class="admin-select">
-                        <option value="" hidden>Selecionar Período</option>
+                        <option value="" hidden>Selecionar PerÃ­odo</option>
                         <option value="today">Hoje</option>
-                        <option value="7days" selected>Últimos 7 dias</option>
-                        <option value="30days">Últimos 30 dias</option>
+                        <option value="7days" selected>Ãšltimos 7 dias</option>
+                        <option value="30days">Ãšltimos 30 dias</option>
                         <option value="year">Este Ano</option>
-                        <option value="all">Todo o Período</option>
+                        <option value="all">Todo o PerÃ­odo</option>
                     </select>
                 </div>
                 <div class="kpi-grid kpi-grid-5">
-                    <div class="kpi-card"><span>LTV Médio</span><strong id="fin-ltv">R$ 0,00</strong></div>
+                    <div class="kpi-card"><span>LTV MÃ©dio</span><strong id="fin-ltv">R$ 0,00</strong></div>
                     <div class="kpi-card"><span>Taxa de Retorno</span><strong id="fin-return-rate">0%</strong></div>
                     <div class="kpi-card"><span>Total de Clientes</span><strong id="fin-new-clients">0</strong></div>
                     <div class="kpi-card"><span>Clientes Recorrentes</span><strong id="fin-recurring-clients">0</strong>
@@ -762,7 +762,7 @@
                                 <th>Cliente</th>
                                 <th>Pedidos</th>
                                 <th>Total Gasto</th>
-                                <th>Ticket Médio</th>
+                                <th>Ticket MÃ©dio</th>
                             </tr>
                         </thead>
                         <tbody id="fin-vip-ranking"></tbody>
@@ -784,7 +784,7 @@
                 <div class="form-grid">
                     <div class="form-group col-span-2">
                         <label>Nome do Produto *</label>
-                        <input type="text" id="prod-name" placeholder="Ex: Óleo Essencial de Lavanda">
+                        <input type="text" id="prod-name" placeholder="Ex: Ã“leo Essencial de Lavanda">
                     </div>
                     <div class="form-group">
                         <label>Categoria</label>
@@ -799,19 +799,19 @@
                         <input type="number" id="prod-stock" placeholder="0" min="0">
                     </div>
                     <div class="form-group">
-                        <label>Preço de Custo (R$)</label>
+                        <label>PreÃ§o de Custo (R$)</label>
                         <input type="number" id="prod-cost" placeholder="0.00" step="0.01" min="0">
                     </div>
                     <div class="form-group">
-                        <label>Código de Barras</label>
+                        <label>CÃ³digo de Barras</label>
                         <input type="text" id="prod-barcode" placeholder="Ex: 7891234567890">
                     </div>
                     <div class="form-group">
-                        <label>Preço Normal (R$)</label>
+                        <label>PreÃ§o Normal (R$)</label>
                         <input type="number" id="prod-price" placeholder="0.00" step="0.01" min="0">
                     </div>
                     <div class="form-group">
-                        <label>Preço Promocional (R$)</label>
+                        <label>PreÃ§o Promocional (R$)</label>
                         <input type="number" id="prod-promo-price" placeholder="0.00" step="0.01" min="0">
                     </div>
                     <div class="form-group col-span-2">
@@ -824,32 +824,32 @@
                         <input type="hidden" id="prod-image-base64">
                     </div>
                     <div class="form-group col-span-2">
-                        <label>Descrição</label>
-                        <textarea id="prod-desc" rows="3" placeholder="Descrição técnica do produto..."
+                        <label>DescriÃ§Ã£o</label>
+                        <textarea id="prod-desc" rows="3" placeholder="DescriÃ§Ã£o tÃ©cnica do produto..."
                             style="padding:12px 15px;border:1px solid var(--border-color);border-radius:var(--radius-sm);font-family:var(--font-family);font-size:15px;width:100%;resize:vertical;outline:none;"></textarea>
                     </div>
 
-                    <!-- SEÇÃO DE VARIAÇÕES -->
+                    <!-- SEÃ‡ÃƒO DE VARIAÃ‡Ã•ES -->
                     <div class="form-group col-span-2"
                         style="background: #f0f4f8; padding: 15px; border-radius: 8px; border: 1px solid #d1d9e0; margin-top: 10px;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <label style="font-weight: 700; color: #1a5c38; margin: 0;"><i
-                                    class="fas fa-layer-group"></i> Opções/Variações de Produto</label>
+                                    class="fas fa-layer-group"></i> OpÃ§Ãµes/VariaÃ§Ãµes de Produto</label>
                             <button type="button" class="btn-primary btn-sm" onclick="addVariationRow()"
                                 style="padding: 5px 12px; font-size: 12px;">
-                                <i class="fas fa-plus"></i> Add Opção
+                                <i class="fas fa-plus"></i> Add OpÃ§Ã£o
                             </button>
                         </div>
                         <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Use para cores, tamanhos ou
-                            modelos. Deixe o preço em branco para usar o preço padrão do produto.</p>
+                            modelos. Deixe o preÃ§o em branco para usar o preÃ§o padrÃ£o do produto.</p>
                         <div id="variations-list" style="display: flex; flex-direction: column; gap: 8px;">
-                            <!-- Rows serão inseridas aqui via JS -->
+                            <!-- Rows serÃ£o inseridas aqui via JS -->
                         </div>
                     </div>
                 </div>
                 <div class="promo-toggle-row">
-                    <span><i class="fas fa-tag"></i> Ativar Promoção</span>
+                    <span><i class="fas fa-tag"></i> Ativar PromoÃ§Ã£o</span>
                     <label class="switch">
                         <input type="checkbox" id="prod-promo-active">
                         <span class="slider round"></span>
@@ -930,24 +930,24 @@
             <div class="admin-modal-body">
                 <input type="hidden" id="banner-id">
                 <div class="form-group">
-                    <label>Título do Banner</label>
-                    <input type="text" id="banner-title" placeholder="Ex: Sua vida mais saudável">
+                    <label>TÃ­tulo do Banner</label>
+                    <input type="text" id="banner-title" placeholder="Ex: Sua vida mais saudÃ¡vel">
                 </div>
                 <div class="form-group">
-                    <label>Subtítulo / Descrição</label>
-                    <input type="text" id="banner-subtitle" placeholder="Ex: Confira nossa linha de orgânicos">
+                    <label>SubtÃ­tulo / DescriÃ§Ã£o</label>
+                    <input type="text" id="banner-subtitle" placeholder="Ex: Confira nossa linha de orgÃ¢nicos">
                 </div>
                 <div class="form-group">
-                    <label>Texto do Botão</label>
+                    <label>Texto do BotÃ£o</label>
                     <input type="text" id="banner-btn-text" placeholder="Ex: Comprar Agora">
                 </div>
                 <div class="form-group">
-                    <label>Link do Botão</label>
+                    <label>Link do BotÃ£o</label>
                     <input type="text" id="banner-btn-link" placeholder="Ex: #produtos ou carrinho.html">
                 </div>
                 <div class="form-group">
                     <label>Imagem do Banner (Upload)</label>
-                    <p style="font-size:11px; color:var(--primary-orange); margin-bottom:8px;">Sugestão: 1920x450px</p>
+                    <p style="font-size:11px; color:var(--primary-orange); margin-bottom:8px;">SugestÃ£o: 1920x450px</p>
                     <div
                         style="display: flex; flex-direction: column; gap: 15px; align-items: flex-start; background: #f9f9f9; padding: 15px; border-radius: var(--radius-sm); border: 1px dashed #ddd;">
                         <input type="file" id="banner-image-file" accept="image/*" style="width: 100%;">
@@ -1009,7 +1009,7 @@
             <div class="admin-modal-footer">
                 <button class="btn-secondary" onclick="closeClientModal()">Cancelar</button>
                 <button class="btn-primary" onclick="saveClient()"><i class="fas fa-save"></i> Salvar
-                    Alterações</button>
+                    AlteraÃ§Ãµes</button>
             </div>
         </div>
     </div>

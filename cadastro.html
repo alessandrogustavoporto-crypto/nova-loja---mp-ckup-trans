@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastro - OTMake10</title>
     <link rel="stylesheet" href="style.css">
-    <script src="theme.js" defer></script>
+    <script src="theme.js?v=2" defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -26,18 +26,18 @@
             </div>
             <div class="auth-body">
                 <div class="toggle-container">
-                    <span class="toggle-label" id="label-pf">Pessoa Física</span>
+                    <span class="toggle-label" id="label-pf">Pessoa FÃ­sica</span>
                     <label class="switch">
                         <input type="checkbox" id="pj-toggle">
                         <span class="slider round"></span>
                     </label>
-                    <span class="toggle-label-orange">Sou Pessoa Jurídica</span>
+                    <span class="toggle-label-orange">Sou Pessoa JurÃ­dica</span>
                 </div>
 
                 <div id="feedback-msg" class="feedback-msg hidden"></div>
 
                 <form id="cadastro-form">
-                    <!-- Seção Dados Pessoais / Corporativos -->
+                    <!-- SeÃ§Ã£o Dados Pessoais / Corporativos -->
                     <div class="form-section">
                         <h3><i class="fas fa-user-circle"></i> Dados de Acesso</h3>
                         
@@ -60,16 +60,16 @@
                         <!-- PJ Fields (Hidden by default) -->
                         <div id="pj-fields" class="form-grid hidden">
                             <div class="form-group col-span-2">
-                                <label>Razão Social *</label>
-                                <input type="text" id="razao-social" placeholder="Razão Social da Empresa">
+                                <label>RazÃ£o Social *</label>
+                                <input type="text" id="razao-social" placeholder="RazÃ£o Social da Empresa">
                             </div>
                             <div class="form-group">
                                 <label>CNPJ *</label>
                                 <input type="text" id="cnpj" placeholder="00.000.000/0000-00" data-mask="cnpj" maxlength="18">
                             </div>
                             <div class="form-group">
-                                <label>Inscrição Estadual</label>
-                                <input type="text" id="ie" placeholder="Isento ou Número">
+                                <label>InscriÃ§Ã£o Estadual</label>
+                                <input type="text" id="ie" placeholder="Isento ou NÃºmero">
                             </div>
                             <div class="form-group">
                                 <label>Telefone Comercial *</label>
@@ -90,9 +90,9 @@
                         </div>
                     </div>
 
-                    <!-- Seção Endereço -->
+                    <!-- SeÃ§Ã£o EndereÃ§o -->
                     <div class="form-section">
-                        <h3><i class="fas fa-map-marker-alt"></i> Endereço de Entrega</h3>
+                        <h3><i class="fas fa-map-marker-alt"></i> EndereÃ§o de Entrega</h3>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>CEP *</label>
@@ -106,7 +106,7 @@
                                 <input type="text" id="logradouro" required>
                             </div>
                             <div class="form-group">
-                                <label>Número *</label>
+                                <label>NÃºmero *</label>
                                 <input type="text" id="numero" required>
                             </div>
                             <div class="form-group">
@@ -127,29 +127,29 @@
                                 <datalist id="lista-estados">
                                     <option value="AC">Acre</option>
                                     <option value="AL">Alagoas</option>
-                                    <option value="AP">Amapá</option>
+                                    <option value="AP">AmapÃ¡</option>
                                     <option value="AM">Amazonas</option>
                                     <option value="BA">Bahia</option>
-                                    <option value="CE">Ceará</option>
+                                    <option value="CE">CearÃ¡</option>
                                     <option value="DF">Distrito Federal</option>
-                                    <option value="ES">Espírito Santo</option>
-                                    <option value="GO">Goiás</option>
-                                    <option value="MA">Maranhão</option>
+                                    <option value="ES">EspÃ­rito Santo</option>
+                                    <option value="GO">GoiÃ¡s</option>
+                                    <option value="MA">MaranhÃ£o</option>
                                     <option value="MT">Mato Grosso</option>
                                     <option value="MS">Mato Grosso do Sul</option>
                                     <option value="MG">Minas Gerais</option>
-                                    <option value="PA">Pará</option>
-                                    <option value="PB">Paraíba</option>
-                                    <option value="PR">Paraná</option>
+                                    <option value="PA">ParÃ¡</option>
+                                    <option value="PB">ParaÃ­ba</option>
+                                    <option value="PR">ParanÃ¡</option>
                                     <option value="PE">Pernambuco</option>
-                                    <option value="PI">Piauí</option>
+                                    <option value="PI">PiauÃ­</option>
                                     <option value="RJ">Rio de Janeiro</option>
                                     <option value="RN">Rio Grande do Norte</option>
                                     <option value="RS">Rio Grande do Sul</option>
-                                    <option value="RO">Rondônia</option>
+                                    <option value="RO">RondÃ´nia</option>
                                     <option value="RR">Roraima</option>
                                     <option value="SC">Santa Catarina</option>
-                                    <option value="SP">São Paulo</option>
+                                    <option value="SP">SÃ£o Paulo</option>
                                     <option value="SE">Sergipe</option>
                                     <option value="TO">Tocantins</option>
                                 </datalist>
@@ -160,7 +160,7 @@
                     <button type="submit" class="btn-primary btn-block mt-20">Finalizar Cadastro</button>
                 </form>
                 <div class="auth-footer mt-20 text-center">
-                    <p>Já tem uma conta? <a href="login.html" class="link-orange">Fazer login</a></p>
+                    <p>JÃ¡ tem uma conta? <a href="login.html" class="link-orange">Fazer login</a></p>
                 </div>
             </div>
         </div>
