@@ -1,4 +1,4 @@
-// Global Cache
+﻿// Global Cache
 let cachedAdminData = {
     orders: null,
     products: null,
@@ -18,11 +18,11 @@ let dashPendingOrders = [];
 function logErrorToDOM(msg) {
     const div = document.createElement('div');
     div.style.position = 'fixed'; div.style.top = '0'; div.style.left = '0'; div.style.right = '0'; div.style.background = 'red'; div.style.color = 'white'; div.style.padding = '20px'; div.style.zIndex = '999999'; div.style.fontSize = '24px'; div.style.fontWeight = 'bold';
-    div.textContent = 'ERRO CRÍTICO: ' + msg;
+    div.textContent = 'ERRO CRÃTICO: ' + msg;
     if (document.body) document.body.prepend(div); else window.onload = () => document.body.prepend(div);
 }
 window.addEventListener('error', function (e) { logErrorToDOM(e.message); });
-window.addEventListener('unhandledrejection', function (e) { logErrorToDOM(e.reason ? e.reason.message || e.reason : 'Rejeição de promessa'); });
+window.addEventListener('unhandledrejection', function (e) { logErrorToDOM(e.reason ? e.reason.message || e.reason : 'RejeiÃ§Ã£o de promessa'); });
 
 // ---- Layout / Sidebar ----
 window.toggleSidebar = function() {
@@ -59,7 +59,7 @@ const AdminAuth = {
     },
 
     async register(name, email, password) {
-        if (await this.hasMaster()) { alert('Já existe um master'); return false; }
+        if (await this.hasMaster()) { alert('JÃ¡ existe um master'); return false; }
         const { error } = await supabase.from('admins').insert([{ name, email, password }]);
         if (error) {
             alert('Falha ao cadastrar: ' + error.message);
@@ -147,7 +147,7 @@ const AdminData = {
 const fmt = v => 'R$ ' + parseFloat(v || 0).toFixed(2).replace('.', ',');
 const statusInfo = {
     aguardando: { label: 'Aguardando Pagamento', badge: 'badge-aguardando' },
-    separacao: { label: 'Em Separação', badge: 'badge-separacao' },
+    separacao: { label: 'Em SeparaÃ§Ã£o', badge: 'badge-separacao' },
     saiu: { label: 'Saiu para Entrega', badge: 'badge-saiu' },
     entregue: { label: 'Entregue', badge: 'badge-entregue' },
     cancelado: { label: 'Cancelado', badge: 'badge-cancelado' },
@@ -186,7 +186,7 @@ async function initAdminLogin() {
         regForm.classList.remove('hidden');
         regForm.style.display = 'block';
         if (msgEl) {
-            msgEl.textContent = 'Olá! Crie seu primeiro acesso de Administrador.';
+            msgEl.textContent = 'OlÃ¡! Crie seu primeiro acesso de Administrador.';
             msgEl.style.background = '#e8f5e9';
             msgEl.style.color = '#27ae60';
             msgEl.classList.remove('hidden');
@@ -211,7 +211,7 @@ async function initAdminLogin() {
         const success = await AdminAuth.register(name, email, pass);
         if (success) {
             if (msgEl) {
-                msgEl.textContent = 'Cadastro realizado! Agora faça seu login.';
+                msgEl.textContent = 'Cadastro realizado! Agora faÃ§a seu login.';
                 msgEl.style.background = '#e8f5e9';
                 msgEl.style.color = '#27ae60';
                 msgEl.classList.remove('hidden');
@@ -241,7 +241,7 @@ async function initAdminLogin() {
         } else {
             if (btn) { btn.disabled = false; btn.textContent = 'Entrar no Painel'; }
             if (msgEl) {
-                msgEl.textContent = 'Credenciais inválidas. Verifique e-mail e senha.';
+                msgEl.textContent = 'Credenciais invÃ¡lidas. Verifique e-mail e senha.';
                 msgEl.style.background = '#ffeaea';
                 msgEl.style.color = '#c0392b';
                 msgEl.classList.remove('hidden');
@@ -263,7 +263,7 @@ async function initAdminDashboard() {
     const nameEl = document.getElementById('admin-name-display');
     if (nameEl && admin) nameEl.textContent = admin.name;
 
-    // 1. Busca todos os dados em paralelo (MUITO MAIS RÁPIDO)
+    // 1. Busca todos os dados em paralelo (MUITO MAIS RÃPIDO)
     const [orders, products, categories, brands, clients, banners] = await Promise.all([
         AdminData.getOrders(),
         AdminData.getProducts(),
@@ -277,7 +277,7 @@ async function initAdminDashboard() {
     cachedAdminData = { orders, products, categories, brands, clients, banners };
     cachedFinanceData = { orders, products, clients };
 
-    // 2. Renderiza as seções usando os dados já carregados
+    // 2. Renderiza as seÃ§Ãµes usando os dados jÃ¡ carregados
     await loadDashboard(orders, products, clients, banners);
     await loadProducts(null, products);
     await loadCategories(categories, products);
@@ -285,7 +285,7 @@ async function initAdminDashboard() {
     await loadClients(null, null, clients);
     await loadOrders(null, null, orders);
     await loadBanners(banners);
-    // Dados da empresa são carregados apenas ao abrir a aba (evita salvar dados vazios)
+    // Dados da empresa sÃ£o carregados apenas ao abrir a aba (evita salvar dados vazios)
 
     // Sidebar navigation
     const btns = document.querySelectorAll('.sidebar-btn[data-section]');
@@ -298,13 +298,12 @@ async function initAdminDashboard() {
         if (sec) sec.classList.add('active');
         document.getElementById('admin-page-title').textContent = btn.textContent.trim();
 
-        // Carregamento instantâneo via cache
+        // Carregamento instantÃ¢neo via cache
         if (sectionId === 'financeiro') loadFinanceData('7days');
         if (sectionId === 'empresa') loadStoreSettings();
         if (sectionId === 'estoque') loadStock();
-        if (sectionId === 'colors') loadColorSettings();
 
-        // No mobile, fecha a sidebar automaticamente ao clicar em uma seção
+        // No mobile, fecha a sidebar automaticamente ao clicar em uma seÃ§Ã£o
         if (window.innerWidth <= 768) {
             window.toggleSidebar();
         }
@@ -372,7 +371,7 @@ async function loadDashboard(orders, products, clients, banners, period = 'all')
     if (!clients) clients = await AdminData.getClients();
     if (!banners) banners = await AdminData.getBanners();
 
-    // Filtro de Período para os Pedidos Pendentes e Novos Clientes no Dashboard
+    // Filtro de PerÃ­odo para os Pedidos Pendentes e Novos Clientes no Dashboard
     const now = new Date();
     const pending = orders.filter(o => {
         const isPending = ['aguardando','separacao','processando'].includes(o.status);
@@ -420,7 +419,7 @@ function renderDashboardOrders() {
         '<tr>' +
         '<td>' + (start + index + 1) + '</td>' +
         '<td><strong>#' + String(o.id).padStart(5, '0') + '</strong></td>' +
-        '<td>' + (o.clientName || '—') + '</td>' +
+        '<td>' + (o.clientName || 'â€”') + '</td>' +
         '<td>' + o.date + '</td>' +
         '<td>' + fmt(o.total) + '</td>' +
         '<td>' + statusBadge(o.status) + '</td>' +
@@ -432,7 +431,7 @@ function renderDashboardOrders() {
     const totalPages = Math.ceil(dashPendingOrders.length / dashPageSize);
     let html = `
         <button class="btn-icon" ${dashCurrentPage === 1 ? 'disabled' : ''} onclick="changeDashPage(${dashCurrentPage - 1})"><i class="fas fa-chevron-left"></i></button>
-        <span style="font-weight:600; font-size:14px;">Página ${dashCurrentPage} de ${totalPages}</span>
+        <span style="font-weight:600; font-size:14px;">PÃ¡gina ${dashCurrentPage} de ${totalPages}</span>
         <button class="btn-icon" ${dashCurrentPage === totalPages ? 'disabled' : ''} onclick="changeDashPage(${dashCurrentPage + 1})"><i class="fas fa-chevron-right"></i></button>
     `;
     pagContainer.innerHTML = html;
@@ -464,11 +463,11 @@ async function loadProducts(filter, preloadedProds) {
             '<tr>' +
             '<td><img src="' + (p.image || '') + '" class="product-thumb-sm" alt=""></td>' +
             '<td><strong>' + p.name + '</strong></td>' +
-            '<td>' + (p.category || '—') + '</td>' +
-            '<td>' + (p.brand || '—') + '</td>' +
+            '<td>' + (p.category || 'â€”') + '</td>' +
+            '<td>' + (p.brand || 'â€”') + '</td>' +
             '<td>' + fmt(p.price) + '</td>' +
             '<td>' + (p.stock || 0) + ' un</td>' +
-            '<td><span class="badge ' + (p.promoActive ? 'badge-ativo' : '') + '">' + (p.promoActive ? 'Ativa' : '—') + '</span></td>' +
+            '<td><span class="badge ' + (p.promoActive ? 'badge-ativo' : '') + '">' + (p.promoActive ? 'Ativa' : 'â€”') + '</span></td>' +
             '<td>' +
             '<button class="btn-icon btn-icon-edit" onclick="openProductModal(' + p.id + ')" title="Editar"><i class="fas fa-edit"></i></button> ' +
             '<button class="btn-icon btn-icon-delete" onclick="deleteProduct(' + p.id + ')" title="Excluir"><i class="fas fa-trash"></i></button>' +
@@ -540,7 +539,7 @@ window.addVariationRow = function (name = '', price = '') {
     div.style = 'display: flex; gap: 10px; align-items: center;';
     div.innerHTML = `
         <input type="text" placeholder="Ex: Azul" class="v-name" value="${name}" style="flex: 2; padding: 8px;">
-        <input type="number" placeholder="Preço" class="v-price" value="${price}" step="0.01" style="flex: 1; padding: 8px;">
+        <input type="number" placeholder="PreÃ§o" class="v-price" value="${price}" step="0.01" style="flex: 1; padding: 8px;">
         <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: #e74c3c; cursor: pointer; padding: 5px;">
             <i class="fas fa-times"></i>
         </button>
@@ -585,7 +584,7 @@ window.saveProduct = async function () {
         variations: getVariationsData()
     };
 
-    if (!product.name || isNaN(product.price)) { adminToast('Preencha nome e preço.', 'error'); return; }
+    if (!product.name || isNaN(product.price)) { adminToast('Preencha nome e preÃ§o.', 'error'); return; }
 
     let error;
     if (id) {
@@ -628,9 +627,9 @@ document.addEventListener('change', e => {
 });
 
 window.deleteProduct = async function (id) {
-    if (!confirm('Confirmar exclusão deste produto?')) return;
+    if (!confirm('Confirmar exclusÃ£o deste produto?')) return;
     await supabase.from('products').delete().eq('id', id);
-    adminToast('Produto excluído.');
+    adminToast('Produto excluÃ­do.');
     initAdminDashboard();
 };
 
@@ -694,7 +693,7 @@ window.deleteCategory = async function (id) {
 async function loadClients(nameFilter, typeFilter, preloadedClients) {
     let clients = preloadedClients || cachedAdminData.clients || await AdminData.getClients();
 
-    // Filtro local (INSTANTÂNEO)
+    // Filtro local (INSTANTÃ‚NEO)
     if (nameFilter) {
         const nf = nameFilter.toLowerCase();
         clients = clients.filter(c => (c.name || '').toLowerCase().includes(nf) || (c.email || '').toLowerCase().includes(nf));
@@ -771,12 +770,12 @@ window.toggleClientBlock = async function (email, currentStatus) {
 };
 
 window.deleteClient = async function (email) {
-    if (!confirm('AVISO: Esta ação é irreversível. Deseja excluir permanentemente este cliente e seus dados?')) return;
+    if (!confirm('AVISO: Esta aÃ§Ã£o Ã© irreversÃ­vel. Deseja excluir permanentemente este cliente e seus dados?')) return;
 
     const { error } = await supabase.from('customers').delete().eq('email', email);
     if (error) { adminToast('Erro ao excluir: ' + error.message, 'error'); return; }
 
-    adminToast('Cliente excluído com sucesso!', 'error');
+    adminToast('Cliente excluÃ­do com sucesso!', 'error');
     initAdminDashboard();
 };
 
@@ -821,7 +820,7 @@ function renderOrdersTable() {
             <tr>
                 <td>${rowNum}</td>
                 <td><strong>#${String(o.id).padStart(5, '0')}</strong></td>
-                <td>${o.clientName || '—'}</td>
+                <td>${o.clientName || 'â€”'}</td>
                 <td>${o.date}</td>
                 <td>${fmt(o.total)}</td>
                 <td>
@@ -843,7 +842,7 @@ function renderOrdersTable() {
     // Update pagination info
     const totalPages = Math.ceil(filteredOrdersCount / ordersPageSize) || 1;
     const info = document.getElementById('orders-page-info');
-    if (info) info.textContent = `Página ${ordersCurrentPage} de ${totalPages}`;
+    if (info) info.textContent = `PÃ¡gina ${ordersCurrentPage} de ${totalPages}`;
 
     // Update button states
     const btnPrev = document.getElementById('prev-orders');
@@ -865,19 +864,19 @@ window.viewOrder = function (id) {
     document.getElementById('order-detail-body').innerHTML =
         '<div class="order-detail-section">' +
         '<h4><i class="fas fa-user"></i> Dados do Cliente</h4>' +
-        '<p><strong>Nome:</strong> ' + (o.clientName || '—') + '</p>' +
-        '<p><strong>E-mail:</strong> ' + (o.clientEmail || '—') + '</p>' +
-        '<p><strong>Pagamento:</strong> ' + (o.payment_method || '—') + '</p>' +
-        '<p><strong>WhatsApp:</strong> ' + (o.clientPhone ? '<a href="https://wa.me/55' + o.clientPhone.replace(/\D/g, '') + '" target="_blank" style="color:#25D366"><i class="fab fa-whatsapp"></i> ' + o.clientPhone + '</a>' : '—') + '</p>' +
+        '<p><strong>Nome:</strong> ' + (o.clientName || 'â€”') + '</p>' +
+        '<p><strong>E-mail:</strong> ' + (o.clientEmail || 'â€”') + '</p>' +
+        '<p><strong>Pagamento:</strong> ' + (o.payment_method || 'â€”') + '</p>' +
+        '<p><strong>WhatsApp:</strong> ' + (o.clientPhone ? '<a href="https://wa.me/55' + o.clientPhone.replace(/\D/g, '') + '" target="_blank" style="color:#25D366"><i class="fab fa-whatsapp"></i> ' + o.clientPhone + '</a>' : 'â€”') + '</p>' +
         '</div>' +
         '<div class="order-detail-section">' +
-        '<h4><i class="fas fa-map-marker-alt"></i> Endereço de Entrega</h4>' +
-        '<p>' + (o.address || '—') + '</p>' +
+        '<h4><i class="fas fa-map-marker-alt"></i> EndereÃ§o de Entrega</h4>' +
+        '<p>' + (o.address || 'â€”') + '</p>' +
         '</div>' +
         '<div class="order-detail-section">' +
         '<h4><i class="fas fa-shopping-basket"></i> Itens do Pedido</h4>' +
         '<table class="order-detail-table">' +
-        '<thead><tr><th>Produto</th><th>Qty</th><th>Preço Unit.</th><th>Subtotal</th></tr></thead><tbody>' +
+        '<thead><tr><th>Produto</th><th>Qty</th><th>PreÃ§o Unit.</th><th>Subtotal</th></tr></thead><tbody>' +
         (o.items || []).map(i => '<tr><td>' + i.name + '</td><td>' + i.qty + '</td><td>' + fmt(i.price) + '</td><td>' + fmt(i.price * i.qty) + '</td></tr>').join('') +
         '</tbody></table>' +
         '</div>' +
@@ -903,7 +902,7 @@ window.printOrder = async function () {
     const o = window._currentOrder;
     if (!o) return;
 
-    // Usa cache se disponível, senão faz nova busca
+    // Usa cache se disponÃ­vel, senÃ£o faz nova busca
     let store = window._storeSettings;
     if (!store) {
         const { data: stores } = await supabase.from('store_settings').select('*').limit(1);
@@ -912,16 +911,16 @@ window.printOrder = async function () {
     }
 
     const storeName = store?.store_name || 'MINHA LOJA';
-    const companyName = store?.company_name || 'Razão Social não informada';
-    const cnpj = store?.cnpj || 'Não informado';
-    const ie = store?.state_registration || 'Não informado';
-    const phone = store?.phone || 'Não informado';
-    const email = store?.email || 'Não informado';
+    const companyName = store?.company_name || 'RazÃ£o Social nÃ£o informada';
+    const cnpj = store?.cnpj || 'NÃ£o informado';
+    const ie = store?.state_registration || 'NÃ£o informado';
+    const phone = store?.phone || 'NÃ£o informado';
+    const email = store?.email || 'NÃ£o informado';
 
-    let storeAddress = 'Endereço não cadastrado';
+    let storeAddress = 'EndereÃ§o nÃ£o cadastrado';
     if (store?.address) {
         const a = store.address;
-        const parts = [a.street, a.number ? `nº ${a.number}` : '', a.neighborhood, a.city, a.uf ? `/ ${a.uf}` : '', a.cep ? `CEP: ${a.cep}` : ''].filter(Boolean);
+        const parts = [a.street, a.number ? `nÂº ${a.number}` : '', a.neighborhood, a.city, a.uf ? `/ ${a.uf}` : '', a.cep ? `CEP: ${a.cep}` : ''].filter(Boolean);
         storeAddress = parts.join(', ');
     }
 
@@ -938,7 +937,7 @@ window.printOrder = async function () {
                 </div>
                 <div class="order-badge">
                     <p>DOCUMENTO AUXILIAR DE VENDA</p>
-                    <h3>PEDIDO Nº ${String(o.id).padStart(5, '0')}</h3>
+                    <h3>PEDIDO NÂº ${String(o.id).padStart(5, '0')}</h3>
                     <p>Data: ${o.date}</p>
                 </div>
             </div>
@@ -947,9 +946,9 @@ window.printOrder = async function () {
                 <div class="section-title">DADOS DO CLIENTE</div>
                 <div class="danfe-grid">
                     <p><strong>NOME:</strong> ${o.clientName || 'CONSUMIDOR FINAL'}</p>
-                    <p><strong>E-MAIL:</strong> ${o.clientEmail || '—'}</p>
-                    <p><strong>TELEFONE:</strong> ${o.clientPhone || '—'}</p>
-                    <p><strong>ENDEREÇO:</strong> ${o.address || '—'}</p>
+                    <p><strong>E-MAIL:</strong> ${o.clientEmail || 'â€”'}</p>
+                    <p><strong>TELEFONE:</strong> ${o.clientPhone || 'â€”'}</p>
+                    <p><strong>ENDEREÃ‡O:</strong> ${o.address || 'â€”'}</p>
                 </div>
             </div>
 
@@ -958,7 +957,7 @@ window.printOrder = async function () {
                 <table class="danfe-table">
                     <thead>
                         <tr>
-                            <th>DESCRIÇÃO DO PRODUTO</th>
+                            <th>DESCRIÃ‡ÃƒO DO PRODUTO</th>
                             <th>VALOR UNIT.</th>
                             <th>QTD</th>
                             <th>TOTAL</th>
@@ -981,11 +980,11 @@ window.printOrder = async function () {
                 <div class="footer-totals">
                     <p>VALOR TOTAL DOS PRODUTOS: <strong>${fmt((o.items || []).reduce((acc, i) => acc + (i.price * i.qty), 0))}</strong></p>
                     ${o.discount_amount > 0 ? `<p>DESCONTO CONCEDIDO: <strong style="color:red">- ${fmt(o.discount_amount)}</strong></p>` : ''}
-                    <h2 style="margin-top:10px;">TOTAL LÍQUIDO: ${fmt(o.total)}</h2>
-                    <p style="margin-top:10px; font-size:12px; font-style:italic;">Forma de Pagamento: ${o.payment_method || '—'}</p>
+                    <h2 style="margin-top:10px;">TOTAL LÃQUIDO: ${fmt(o.total)}</h2>
+                    <p style="margin-top:10px; font-size:12px; font-style:italic;">Forma de Pagamento: ${o.payment_method || 'â€”'}</p>
                 </div>
                 <div class="danfe-obs">
-                    <p><strong>Observações:</strong> Documento sem valor fiscal. Agradecemos a preferência!</p>
+                    <p><strong>ObservaÃ§Ãµes:</strong> Documento sem valor fiscal. Agradecemos a preferÃªncia!</p>
                 </div>
             </div>
         </div>
@@ -1024,7 +1023,7 @@ async function loadStock() {
 
     renderStockTable(products, categories);
 
-    // Bind filters (resetam para pág 1)
+    // Bind filters (resetam para pÃ¡g 1)
     const searchEl = document.getElementById('stock-search');
     const filterEl = document.getElementById('stock-status-filter');
     const applyFilter = () => {
@@ -1060,7 +1059,7 @@ async function loadStock() {
 }
 
 function renderStockTable(products, categories) {
-    // Atualiza lista e cat em cache (para navegação de páginas)
+    // Atualiza lista e cat em cache (para navegaÃ§Ã£o de pÃ¡ginas)
     _currentStockList = products;
     _currentStockCategories = categories;
 
@@ -1076,15 +1075,15 @@ function renderStockTable(products, categories) {
         return;
     }
 
-    // --- Paginação ---
+    // --- PaginaÃ§Ã£o ---
     const totalPages = Math.ceil(products.length / _stockPageSize);
     if (_stockCurrentPage > totalPages) _stockCurrentPage = totalPages;
     const start = (_stockCurrentPage - 1) * _stockPageSize;
     const paginated = products.slice(start, start + _stockPageSize);
 
-    if (pageInfo) pageInfo.textContent = `Exibindo ${start + 1}–${Math.min(start + _stockPageSize, products.length)} de ${products.length} produtos`;
+    if (pageInfo) pageInfo.textContent = `Exibindo ${start + 1}â€“${Math.min(start + _stockPageSize, products.length)} de ${products.length} produtos`;
 
-    // Números das páginas
+    // NÃºmeros das pÃ¡ginas
     if (pageNumbers) {
         pageNumbers.innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1).map(page => `
             <button
@@ -1101,7 +1100,7 @@ function renderStockTable(products, categories) {
 
     // --- Renderiza linhas ---
     tbody.innerHTML = paginated.map((p, idx) => {
-        const catName = (categories || []).find(c => c.id == p.category_id)?.name || '—';
+        const catName = (categories || []).find(c => c.id == p.category_id)?.name || 'â€”';
         const stock = p.stock || 0;
         const cost = parseFloat(p.cost || 0);
         const rowNum = start + idx + 1;
@@ -1164,7 +1163,7 @@ window.saveStockRow = async function(productId) {
     if (error) {
         adminToast('Erro ao salvar: ' + error.message, 'error');
     } else {
-        adminToast('Estoque atualizado! ✅');
+        adminToast('Estoque atualizado! âœ…');
         // Atualiza cache local
         const p = _allStockProducts.find(x => x.id === productId);
         if (p) { p.stock = newStock; p.cost = newCost; }
@@ -1220,7 +1219,7 @@ window.loadStockExitReport = async function() {
     if (endVal) query = query.lte('created_at', endVal + 'T23:59:59');
     const { data: orders } = await query;
 
-    // Agrega saídas por produto
+    // Agrega saÃ­das por produto
     const exits = {};
     (orders || []).forEach(o => {
         (o.items || []).forEach(item => {
@@ -1238,11 +1237,11 @@ window.loadStockExitReport = async function() {
     const sorted = Object.entries(exits).sort((a, b) => b[1].qty - a[1].qty);
 
     if (sorted.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-muted)">Nenhuma saída encontrada no período.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-muted)">Nenhuma saÃ­da encontrada no perÃ­odo.</td></tr>';
         return;
     }
 
-    // Cache do relatório completo para paginação e exportação
+    // Cache do relatÃ³rio completo para paginaÃ§Ã£o e exportaÃ§Ã£o
     window._exitReportData = sorted;
     window._exitCurrentPage = 1;
     renderExitReportPage();
@@ -1258,7 +1257,7 @@ function renderExitReportPage() {
     if (!tbody) return;
 
     if (sorted.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted)">Nenhuma saída encontrada no período.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted)">Nenhuma saÃ­da encontrada no perÃ­odo.</td></tr>';
         if (pageInfo) pageInfo.textContent = '';
         if (pageNumbers) pageNumbers.innerHTML = '';
         return;
@@ -1268,7 +1267,7 @@ function renderExitReportPage() {
     const start = (page - 1) * pageSize;
     const paginated = sorted.slice(start, start + pageSize);
 
-    if (pageInfo) pageInfo.textContent = `Exibindo ${start + 1}–${Math.min(start + pageSize, sorted.length)} de ${sorted.length} itens`;
+    if (pageInfo) pageInfo.textContent = `Exibindo ${start + 1}â€“${Math.min(start + pageSize, sorted.length)} de ${sorted.length} itens`;
 
     if (pageNumbers) {
         pageNumbers.innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1).map(p => `
@@ -1312,9 +1311,9 @@ window.printExitReport = async function() {
     const store = (stores && stores.length > 0) ? stores[0] : null;
     const storeName = store?.store_name || 'MINHA LOJA';
 
-    const startVal = document.getElementById('exit-date-start')?.value || '—';
-    const endVal = document.getElementById('exit-date-end')?.value || '—';
-    const periodLabel = `Período: ${startVal} a ${endVal}`;
+    const startVal = document.getElementById('exit-date-start')?.value || 'â€”';
+    const endVal = document.getElementById('exit-date-end')?.value || 'â€”';
+    const periodLabel = `PerÃ­odo: ${startVal} a ${endVal}`;
 
     const totalReceita = sorted.reduce((acc, [, d]) => acc + d.revenue, 0);
     const totalCusto = sorted.reduce((acc, [, d]) => acc + d.cost, 0);
@@ -1330,12 +1329,12 @@ window.printExitReport = async function() {
                     <p style="font-size:12px; margin-top:4px;">${periodLabel}</p>
                 </div>
                 <div class="order-badge">
-                    <p>RELATÓRIO DE SAÍDA DE ESTOQUE</p>
+                    <p>RELATÃ“RIO DE SAÃDA DE ESTOQUE</p>
                     <p>Gerado em: ${new Date().toLocaleDateString('pt-BR')}</p>
                 </div>
             </div>
             <div class="danfe-section">
-                <div class="section-title">ITENS VENDIDOS NO PERÍODO</div>
+                <div class="section-title">ITENS VENDIDOS NO PERÃODO</div>
                 <table class="danfe-table">
                     <thead>
                         <tr>
@@ -1392,7 +1391,7 @@ window.saveExitReportCSV = function() {
     a.download = `relatorio-saida-estoque-${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    adminToast('Relatório exportado com sucesso! ✅');
+    adminToast('RelatÃ³rio exportado com sucesso! âœ…');
 };
 
 // ---- Banners ----
@@ -1405,8 +1404,8 @@ async function loadBanners(preloadedBanners) {
         banners.map(b =>
             '<tr>' +
             '<td><img src="' + b.image + '" style="width:120px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #ddd;"></td>' +
-            '<td><strong>' + (b.title || 'Sem título') + '</strong></td>' +
-            '<td>' + (b.subtitle || '—') + '</td>' +
+            '<td><strong>' + (b.title || 'Sem tÃ­tulo') + '</strong></td>' +
+            '<td>' + (b.subtitle || 'â€”') + '</td>' +
             '<td>' +
             '<button class="badge ' + (b.active ? 'badge-ativo' : 'badge-bloqueado') + '" onclick="toggleBannerActive(' + b.id + ')" style="border:none; cursor:pointer;">' +
             (b.active ? '<i class="fas fa-check-circle"></i> Ativo' : '<i class="fas fa-times-circle"></i> Inativo') +
@@ -1484,7 +1483,7 @@ window.saveBanner = async function () {
         active: document.getElementById('banner-active').checked
     };
 
-    if (!banner.image) { adminToast('É necessário fazer o upload de uma imagem.', 'error'); return; }
+    if (!banner.image) { adminToast('Ã‰ necessÃ¡rio fazer o upload de uma imagem.', 'error'); return; }
 
     if (id) {
         await supabase.from('banners').update(banner).eq('id', id);
@@ -1497,211 +1496,6 @@ window.saveBanner = async function () {
     adminToast('Banner salvo com sucesso!');
 };
 
-
-// ============================================================
-// SECTION: Colors do Site
-// ============================================================
-const PRIMARY_COLORS = [
-    { name: 'Verde Floresta',  hex: '#1a5c38' },
-    { name: 'Verde Esmeralda', hex: '#27ae60' },
-    { name: 'Azul Royal',      hex: '#2980b9' },
-    { name: 'Azul Marinho',    hex: '#1a3c5e' },
-    { name: 'Roxo',            hex: '#8e44ad' },
-    { name: 'Índigo',          hex: '#3f51b5' },
-    { name: 'Laranja',         hex: '#e67e22' },
-    { name: 'Vermelho',        hex: '#c0392b' },
-    { name: 'Rosa',            hex: '#e91e8c' },
-    { name: 'Turquesa',        hex: '#16a085' },
-    { name: 'Grafite',         hex: '#2c3e50' },
-    { name: 'Dourado',         hex: '#c9a227' },
-];
-
-const TEXT_COLORS = [
-    { name: 'Cinza Escuro',  hex: '#333333' },
-    { name: 'Quase Preto',   hex: '#1a1a2e' },
-    { name: 'Preto Puro',    hex: '#000000' },
-    { name: 'Cinza Médio',   hex: '#555555' },
-    { name: 'Azul Escuro',   hex: '#1a252f' },
-    { name: 'Marrom',        hex: '#3e2723' },
-];
-
-let _selectedPrimary = '#1a5c38';
-let _selectedText = '#333333';
-let _selectedAdmin = '#1a5c38';
-let _storeSettingsId = null; // ID real da linha no banco
-
-window.loadColorSettings = async function() {
-    const { data: stores } = await supabase.from('store_settings').select('id, primary_color, text_color, admin_color, store_name').limit(1);
-    const store = (stores && stores.length > 0) ? stores[0] : null;
-    _storeSettingsId = store?.id || null;
-    _selectedPrimary = store?.primary_color || '#1a5c38';
-    _selectedText = store?.text_color || '#333333';
-    _selectedAdmin = store?.admin_color || '#1a5c38';
-
-    const previewName = store?.store_name || 'Minha Loja';
-    const nameEl = document.getElementById('preview-store-name');
-    if (nameEl) nameEl.textContent = previewName;
-
-    renderColorPalette('primary-color-grid', PRIMARY_COLORS, _selectedPrimary, 'primary');
-    renderColorPalette('text-color-grid', TEXT_COLORS, _selectedText, 'text');
-    renderColorPalette('admin-color-grid', PRIMARY_COLORS, _selectedAdmin, 'admin');
-
-    updatePreviewBar(_selectedPrimary, _selectedText, _selectedAdmin);
-    applyAdminColor(_selectedAdmin);
-
-    // Custom color pickers
-    const cp = document.getElementById('custom-primary-color');
-    const ct = document.getElementById('custom-text-color');
-    const ca = document.getElementById('custom-admin-color');
-    if (cp) { cp.value = _selectedPrimary; cp.addEventListener('input', e => { _selectedPrimary = e.target.value; deselectSwatches('primary'); updatePreviewBar(_selectedPrimary, _selectedText, _selectedAdmin); }); }
-    if (ct) { ct.value = _selectedText; ct.addEventListener('input', e => { _selectedText = e.target.value; deselectSwatches('text'); updatePreviewBar(_selectedPrimary, _selectedText, _selectedAdmin); }); }
-    if (ca) { ca.value = _selectedAdmin; ca.addEventListener('input', e => { _selectedAdmin = e.target.value; deselectSwatches('admin'); updateAdminPreview(_selectedAdmin); applyAdminColor(_selectedAdmin); }); }
-};
-
-function renderColorPalette(containerId, colors, selected, type) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    container.innerHTML = colors.map(c => `
-        <div onclick="selectColor('${type}', '${c.hex}', this)"
-            title="${c.name}"
-            style="
-                width: 48px; height: 48px; border-radius: 10px;
-                background: ${c.hex};
-                cursor: pointer;
-                border: 3px solid ${c.hex === selected ? '#000' : 'transparent'};
-                box-shadow: ${c.hex === selected ? '0 0 0 2px #fff, 0 0 0 4px ' + c.hex : '0 2px 6px rgba(0,0,0,0.15)'};
-                transition: all 0.2s;
-                position: relative;
-            ">
-            ${c.hex === selected ? '<i class="fas fa-check" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-size:16px;text-shadow:0 1px 3px rgba(0,0,0,0.5);"></i>' : ''}
-        </div>
-    `).join('');
-}
-
-function deselectSwatches(type) {
-    const gridMap = { primary: 'primary-color-grid', text: 'text-color-grid', admin: 'admin-color-grid' };
-    const grid = gridMap[type] || 'primary-color-grid';
-    document.querySelectorAll(`#${grid} div`).forEach(el => {
-        el.style.border = '3px solid transparent';
-        el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
-        el.innerHTML = '';
-    });
-}
-
-window.selectColor = function(type, hex, el) {
-    const gridMap = { primary: 'primary-color-grid', text: 'text-color-grid', admin: 'admin-color-grid' };
-    const grid = gridMap[type] || 'primary-color-grid';
-    // Deselect all
-    document.querySelectorAll(`#${grid} > div`).forEach(d => {
-        d.style.border = '3px solid transparent';
-        d.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
-        d.innerHTML = '';
-    });
-    // Select this one
-    el.style.border = '3px solid #000';
-    el.style.boxShadow = `0 0 0 2px #fff, 0 0 0 4px ${hex}`;
-    el.innerHTML = '<i class="fas fa-check" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-size:16px;text-shadow:0 1px 3px rgba(0,0,0,0.5);"></i>';
-
-    if (type === 'primary') {
-        _selectedPrimary = hex;
-        const cp = document.getElementById('custom-primary-color');
-        if (cp) cp.value = hex;
-    } else if (type === 'text') {
-        _selectedText = hex;
-        const ct = document.getElementById('custom-text-color');
-        if (ct) ct.value = hex;
-    } else if (type === 'admin') {
-        _selectedAdmin = hex;
-        const ca = document.getElementById('custom-admin-color');
-        if (ca) ca.value = hex;
-        updateAdminPreview(hex);
-        applyAdminColor(hex);
-    }
-    updatePreviewBar(_selectedPrimary, _selectedText, _selectedAdmin);
-};
-
-function updatePreviewBar(primary, text, admin) {
-    const bar = document.getElementById('color-preview-bar');
-    if (bar) bar.style.background = primary;
-    const sample = document.getElementById('preview-text-sample');
-    if (sample) sample.style.color = '#fff';
-    if (admin) updateAdminPreview(admin);
-}
-
-function updateAdminPreview(color) {
-    const sidebar = document.getElementById('admin-preview-sidebar');
-    const header = document.getElementById('admin-preview-card-header');
-    if (sidebar) sidebar.style.background = color;
-    if (header) header.style.background = color;
-}
-
-function applyAdminColor(color) {
-    document.documentElement.style.setProperty('--admin-primary', color);
-}
-
-function applySiteColors(primary, text) {
-    // Deriva tons baseado na cor principal
-    const darken = (hex, factor) => {
-        const num = parseInt(hex.slice(1), 16);
-        const r = Math.max(0, (num >> 16) - Math.round(((num >> 16)) * factor));
-        const g = Math.max(0, ((num >> 8) & 0xFF) - Math.round((((num >> 8) & 0xFF)) * factor));
-        const b = Math.max(0, (num & 0xFF) - Math.round(((num & 0xFF)) * factor));
-        return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-    };
-
-    const root = document.documentElement;
-    root.style.setProperty('--primary-green', primary);
-    root.style.setProperty('--light-green', primary + 'cc');
-    root.style.setProperty('--dark-green', darken(primary, 0.3));
-    root.style.setProperty('--text-main', text);
-}
-
-window.saveSiteColors = async function() {
-    let error;
-    const payload = {
-        primary_color: _selectedPrimary,
-        text_color: _selectedText,
-        admin_color: _selectedAdmin
-    };
-
-    if (_storeSettingsId) {
-        const result = await supabase
-            .from('store_settings')
-            .update(payload)
-            .eq('id', _storeSettingsId);
-        error = result.error;
-    } else {
-        const result = await supabase
-            .from('store_settings')
-            .insert([payload]);
-        error = result.error;
-        if (!error) {
-            const { data: s } = await supabase.from('store_settings').select('id').limit(1);
-            if (s && s.length > 0) _storeSettingsId = s[0].id;
-        }
-    }
-
-    if (error) {
-        adminToast('Erro ao salvar: ' + error.message, 'error');
-    } else {
-        if (window._storeSettings) {
-            window._storeSettings.primary_color = _selectedPrimary;
-            window._storeSettings.text_color = _selectedText;
-            window._storeSettings.admin_color = _selectedAdmin;
-        }
-        applySiteColors(_selectedPrimary, _selectedText);
-        applyAdminColor(_selectedAdmin);
-        // Atualiza cache do theme.js
-        try {
-            localStorage.setItem('otmake10_site_colors', JSON.stringify({
-                primary: _selectedPrimary,
-                text: _selectedText,
-                admin: _selectedAdmin
-            }));
-        } catch(e) {}
-        adminToast('Cores salvas e aplicadas ao site! ✅');
-    }
-};
 
 // ============================================================
 // FINANCE MODULE
@@ -1775,7 +1569,7 @@ function getFilteredOrders(allOrders, period, startDate, endDate, includeCancele
 function updateFinanceOverview(period, startDate, endDate) {
     if (!cachedFinanceData) return;
     
-    // Limpar datas se um período pré-definido for escolhido
+    // Limpar datas se um perÃ­odo prÃ©-definido for escolhido
     if (period !== 'custom') {
         const s = document.getElementById('overview-start');
         const e = document.getElementById('overview-end');
@@ -1850,9 +1644,9 @@ window.applyCustomFilter = function(tab) {
     const start = document.getElementById(`${tab}-start`).value;
     const end = document.getElementById(`${tab}-end`).value;
     if (!start || !end) { adminToast('Selecione ambas as datas.', 'error'); return; }
-    if (new Date(start) > new Date(end)) { adminToast('Início maior que fim.', 'error'); return; }
+    if (new Date(start) > new Date(end)) { adminToast('InÃ­cio maior que fim.', 'error'); return; }
 
-    // Limpar o select de período ao aplicar datas customizadas
+    // Limpar o select de perÃ­odo ao aplicar datas customizadas
     const selId = (tab === 'prod' ? 'prod' : tab === 'cust' ? 'cust' : tab) + '-period-filter';
     const sel = document.getElementById(selId);
     if (sel) sel.value = "";
@@ -1886,7 +1680,7 @@ function initOverviewCharts(orders, period = '7days', startDate, endDate) {
         const end = new Date(endDate + 'T00:00:00');
         const diffTime = Math.abs(end - start);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        count = Math.min(diffDays, 60); // Limite de 60 dias para o gráfico não quebrar
+        count = Math.min(diffDays, 60); // Limite de 60 dias para o grÃ¡fico nÃ£o quebrar
 
         for (let i = 0; i < count; i++) {
             const d = new Date(start);
@@ -1987,7 +1781,7 @@ function loadSalesCharts(period, allOrders, startDate, endDate) {
         datasets: [{ label: 'Faturamento R$', data: data, backgroundColor: '#3498db' }]
     });
 
-    // Análise por Dia da Semana (Real)
+    // AnÃ¡lise por Dia da Semana (Real)
     const dowLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
     const dowData = new Array(7).fill(0);
     orders.forEach(o => {
@@ -2035,13 +1829,13 @@ function loadProductsFinance(orders, products) {
     if (container) {
         if (lowStock.length > 0) {
             container.innerHTML = `<h4><i class="fas fa-exclamation-triangle"></i> Alerta de Estoque Baixo (Menos de 5 und)</h4>` +
-                lowStock.map(p => `<p>• ${p.name}: <strong>${p.stock} unidades</strong> restantes.</p>`).join('');
+                lowStock.map(p => `<p>â€¢ ${p.name}: <strong>${p.stock} unidades</strong> restantes.</p>`).join('');
         } else {
             container.innerHTML = `<p style="color: #27ae60"><i class="fas fa-check-circle"></i> Estoque em dia.</p>`;
         }
     }
 
-    // Relatório de Pagamentos
+    // RelatÃ³rio de Pagamentos
     const payments = {};
     orders.forEach(o => {
         const rawMethod = o.payment_method || 'Outros';
@@ -2146,7 +1940,7 @@ window.loadStoreSettings = async function () {
     if (error) { console.warn('Erro ao carregar dados da empresa:', error.message); return; }
     const data = (stores && stores.length > 0) ? stores[0] : null;
     
-    // Armazena no cache global para uso na impressão
+    // Armazena no cache global para uso na impressÃ£o
     window._storeSettings = data;
 
     if (!data) return;
@@ -2215,7 +2009,7 @@ window.saveStoreSettings = async function () {
             text_color: window._storeSettings?.text_color || _selectedText
         };
         window._storeSettings = { id: existingId, ...settings, ...colorsCached };
-        adminToast('Dados da empresa atualizados com sucesso! ✅');
+        adminToast('Dados da empresa atualizados com sucesso! âœ…');
     }
 };
 
@@ -2302,7 +2096,7 @@ window.saveBrand = async function () {
     const id = document.getElementById('brand-id').value;
     const name = document.getElementById('brand-name').value.trim();
 
-    if (!name) { adminToast('O nome da marca é obrigatório!', 'error'); return; }
+    if (!name) { adminToast('O nome da marca Ã© obrigatÃ³rio!', 'error'); return; }
 
     if (id) {
         await supabase.from('brands').update({ name }).eq('id', id);
@@ -2318,6 +2112,6 @@ window.saveBrand = async function () {
 window.deleteBrand = async function (id) {
     if (!confirm('Deseja excluir esta marca?')) return;
     await supabase.from('brands').delete().eq('id', id);
-    adminToast('Marca excluída!');
+    adminToast('Marca excluÃ­da!');
     await loadBrands();
 };
