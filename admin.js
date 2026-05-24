@@ -499,7 +499,7 @@ window.openProductModal = async function (id) {
 
     if (!id) {
         document.getElementById('product-modal-title').textContent = 'Novo Produto';
-        ['prod-id', 'prod-name', 'prod-image-base64', 'prod-desc', 'prod-barcode'].forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
+        ['prod-id', 'prod-name', 'prod-image-url', 'prod-desc', 'prod-barcode'].forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
         ['prod-price', 'prod-promo-price', 'prod-stock', 'prod-cost'].forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
         document.getElementById('prod-promo-active').checked = false;
         renderVariations([]);
@@ -517,7 +517,7 @@ window.openProductModal = async function (id) {
     document.getElementById('prod-stock').value = prod.stock || 0;
     document.getElementById('prod-cost').value = prod.cost || 0;
     document.getElementById('prod-barcode').value = prod.barcode || '';
-    document.getElementById('prod-image-base64').value = prod.image || '';
+    document.getElementById('prod-image-url').value = prod.image || '';
     document.getElementById('prod-desc').value = prod.description || '';
     document.getElementById('prod-category').value = prod.category || '';
     document.getElementById('prod-brand').value = prod.brand || '';
@@ -574,7 +574,7 @@ window.saveProduct = async function () {
         price: parseFloat(document.getElementById('prod-price').value),
         promo_price: parseFloat(document.getElementById('prod-promo-price').value) || null,
         stock: parseInt(document.getElementById('prod-stock').value) || 0,
-        image: document.getElementById('prod-image-base64').value,
+        image: document.getElementById('prod-image-url').value,
         description: document.getElementById('prod-desc').value,
         category: document.getElementById('prod-category').value,
         brand: document.getElementById('prod-brand').value,
@@ -606,23 +606,59 @@ window.saveProduct = async function () {
     await loadProducts();
 };
 
-// Handle Image File Upload to Base64
+// ---- Upload de Imagem de Produto para o Supabase Storage ----
+async function uploadProductImage(file) {
+    const statusEl = document.getElementById('prod-upload-status');
+    const statusText = document.getElementById('prod-upload-status-text');
+    const preview = document.getElementById('prod-img-preview');
+
+    // Mostra spinner
+    if (statusEl) { statusEl.style.display = 'flex'; }
+    if (statusText) statusText.textContent = 'Enviando imagem...';
+
+    try {
+        // Gera nome de arquivo único e seguro
+        const ext = file.name.split('.').pop().toLowerCase();
+        const safeName = file.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const fileName = `produtos/${Date.now()}_${safeName}`;
+
+        // Upload para o Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('product-images')
+            .upload(fileName, file, { upsert: true, contentType: file.type });
+
+        if (uploadError) throw uploadError;
+
+        // Obtém a URL pública
+        const { data: urlData } = supabase.storage
+            .from('product-images')
+            .getPublicUrl(fileName);
+
+        const publicUrl = urlData.publicUrl;
+
+        // Armazena URL e atualiza prévia
+        document.getElementById('prod-image-url').value = publicUrl;
+        if (preview) {
+            preview.src = publicUrl;
+            preview.style.display = 'block';
+        }
+
+        if (statusText) statusText.textContent = '✓ Imagem enviada com sucesso!';
+        setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 2500);
+
+    } catch (err) {
+        console.error('Erro ao enviar imagem:', err);
+        if (statusText) statusText.textContent = '✗ Erro ao enviar: ' + (err.message || 'verifique o Storage');
+        adminToast('Erro ao enviar imagem: ' + (err.message || 'verifique o bucket product-images'), 'error');
+    }
+}
+
+// Handler de seleção de arquivo de produto → aciona upload para Storage
 document.addEventListener('change', e => {
     if (e.target.id === 'prod-image-file') {
         const file = e.target.files[0];
         if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function (event) {
-            const base64 = event.target.result;
-            document.getElementById('prod-image-base64').value = base64;
-            const preview = document.getElementById('prod-img-preview');
-            if (preview) {
-                preview.src = base64;
-                preview.style.display = 'block';
-            }
-        };
-        reader.readAsDataURL(file);
+        uploadProductImage(file);
     }
 });
 
