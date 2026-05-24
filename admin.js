@@ -1,4 +1,4 @@
-﻿// Global Cache
+// Global Cache
 let cachedAdminData = {
     orders: null,
     products: null,
@@ -833,6 +833,7 @@ function renderOrdersTable() {
                 <td>
                     <button class="btn-icon btn-icon-view" onclick="viewOrder('${o.id}')" title="Ver detalhes"><i class="fas fa-eye"></i></button>
                     <button class="btn-icon" onclick="printOrderFromTable('${o.id}')" title="Imprimir Pedido" style="color: #34495e;"><i class="fas fa-print"></i></button>
+                    <button class="btn-icon btn-icon-delete" onclick="deleteOrder('${o.id}')" title="Excluir Pedido" style="color:#e74c3c;"><i class="fas fa-trash"></i></button>
                     ${o.clientPhone ? ` <a href="https://wa.me/55${o.clientPhone.replace(/\D/g, '')}" target="_blank" class="btn-icon" style="color:#25D366;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>` : ''}
                 </td>
             </tr>
@@ -889,6 +890,18 @@ window.viewOrder = function (id) {
 };
 
 window.closeOrderModal = function () { document.getElementById('order-detail-modal').classList.add('hidden'); };
+
+window.deleteOrder = async function (id) {
+    const targetId = id || (window._currentOrder && window._currentOrder.id);
+    if (!targetId) return;
+    if (!confirm('Tem certeza que deseja excluir o pedido #' + String(targetId).padStart(5, '0') + '?\nEsta ação é irreversível.')) return;
+    const { error } = await supabase.from('orders').delete().eq('id', targetId);
+    if (error) { adminToast('Erro ao excluir pedido: ' + error.message, 'error'); return; }
+    const modal = document.getElementById('order-detail-modal');
+    if (modal && !modal.classList.contains('hidden')) closeOrderModal();
+    adminToast('Pedido #' + String(targetId).padStart(5, '0') + ' excluído com sucesso.', 'error');
+    initAdminDashboard();
+};
 
 window.printOrderFromTable = async function (id) {
     const o = allAdminOrders.find(o => o.id == id);

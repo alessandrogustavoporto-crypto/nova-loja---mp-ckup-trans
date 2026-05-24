@@ -403,6 +403,25 @@
     flex-shrink: 0;
 }
 
+/* ---- Danger Button ---- */
+.btn-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+    font-family: var(--font-family);
+}
+.btn-danger:hover { background: #c0392b; transform: translateY(-1px); }
+.btn-danger:active { transform: translateY(0); }
+
 /* ---- Order Detail ---- */
 .order-detail-section { margin-bottom: 20px; }
 .order-detail-section h4 { color: var(--admin-primary); margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
