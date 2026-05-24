@@ -418,11 +418,8 @@ async function saveNewCustomer() {
         if (error) throw error;
 
         alert('Cliente cadastrado com sucesso!');
-        selectedCustomer = data;
-        document.getElementById('selected-customer-info').classList.remove('hidden');
-        document.getElementById('selected-cust-name').textContent = data.name;
-        
         await loadInitialData(); // Refresh list
+        window.selectCustomer(data.id);
         closeNewCustModal();
 
     } catch (e) {
