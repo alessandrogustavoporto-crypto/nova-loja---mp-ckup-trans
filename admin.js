@@ -668,9 +668,11 @@ async function uploadProductImage(file) {
         const errMsg = err.message || '';
         if (errMsg.includes('Bucket not found')) {
             alert("Atenção: O bucket 'product-images' não existe no seu Supabase Storage!\n\nComo resolver em 10 segundos:\n1. Acesse o painel do seu Supabase (https://supabase.com)\n2. Vá em 'Storage' no menu esquerdo\n3. Clique em 'New Bucket'\n4. Digite o nome exato: product-images\n5. Marque a opção 'Public'\n6. Clique em Salvar e tente novamente!");
+        } else if (errMsg.includes('row-level security') || errMsg.includes('security policy')) {
+            alert("Atenção: Upload bloqueado pelas Políticas de Segurança (RLS) do Supabase!\n\nComo resolver em 30 segundos:\n1. Acesse o painel do Supabase (https://supabase.com)\n2. Vá em 'Storage' -> 'Policies' no menu lateral\n3. Sob o bucket 'product-images', clique em 'New Policy'\n4. Selecione 'Get started quickly' (ou similar)\n5. Escolha a opção: 'Give uploads access to everyone (public)' (marca as permissões INSERT e SELECT para anon/public)\n6. Salve a política e tente novamente!");
         }
         if (statusText) statusText.textContent = '✗ Erro ao enviar: ' + (err.message || 'verifique o Storage');
-        adminToast('Erro ao enviar imagem: ' + (err.message || 'verifique o bucket product-images'), 'error');
+        adminToast('Erro ao enviar imagem: ' + (err.message || 'verifique as políticas de RLS no bucket'), 'error');
     }
 }
 
@@ -831,6 +833,9 @@ window.startImageMigration = async function () {
             if (errMsg.includes('Bucket not found')) {
                 logMsg = ` ✗ Erro: Bucket "product-images" não encontrado.`;
                 isBucketMissing = true;
+            } else if (errMsg.includes('row-level security') || errMsg.includes('security policy')) {
+                logMsg = ` ✗ Erro: Permissão negada pela política RLS do bucket.`;
+                isRLSBlocked = true;
             }
             logItem.textContent += logMsg;
             logItem.style.color = '#ff7675';
@@ -868,6 +873,23 @@ window.startImageMigration = async function () {
                 `5. Ative a opção <strong>Public</strong><br>` +
                 `6. Clique em Salvar e tente rodar a migração novamente!`;
             logEl.appendChild(warning);
+        } else if (isRLSBlocked) {
+            const rlsWarning = document.createElement('div');
+            rlsWarning.style.marginTop = '10px';
+            rlsWarning.style.color = '#ff7675';
+            rlsWarning.style.border = '1px dashed #ff7675';
+            rlsWarning.style.padding = '8px';
+            rlsWarning.style.borderRadius = '4px';
+            rlsWarning.style.lineHeight = '1.6';
+            rlsWarning.innerHTML = `<strong>⚠️ Como resolver o erro RLS (Permissão Negada):</strong><br>` +
+                `O seu Supabase está bloqueando os uploads porque faltam as políticas de acesso público.<br>` +
+                `1. Acesse o painel do seu Supabase (https://supabase.com)<br>` +
+                `2. Vá em <strong>Storage</strong> -> <strong>Policies</strong> no menu lateral esquerdo<br>` +
+                `3. Sob a seção do bucket <strong>product-images</strong>, clique em <strong>New Policy</strong><br>` +
+                `4. Selecione a opção rápida <strong>"Get started quickly"</strong><br>` +
+                `5. Escolha a opção: <strong>"Give uploads access to everyone (public)"</strong> (irá marcar INSERT e SELECT para anon/public)<br>` +
+                `6. Clique em <strong>Save</strong> para aplicar a política e tente rodar a migração novamente!`;
+            logEl.appendChild(rlsWarning);
         }
         
         logEl.scrollTop = logEl.scrollHeight;
