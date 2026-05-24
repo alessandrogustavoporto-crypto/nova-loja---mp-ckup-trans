@@ -606,6 +606,20 @@ window.saveProduct = async function () {
     await loadProducts();
 };
 
+// ---- Tenta criar o bucket 'product-images' automaticamente caso não exista ----
+async function tryCreateBucket() {
+    try {
+        const { error } = await supabase.storage.createBucket('product-images', { public: true });
+        if (!error) {
+            console.log("Bucket 'product-images' criado com sucesso!");
+            return true;
+        }
+    } catch (e) {
+        console.warn("Falha ao criar o bucket automaticamente (normal para chaves de acesso anônimas).");
+    }
+    return false;
+}
+
 // ---- Upload de Imagem de Produto para o Supabase Storage ----
 async function uploadProductImage(file) {
     const statusEl = document.getElementById('prod-upload-status');
@@ -615,6 +629,9 @@ async function uploadProductImage(file) {
     // Mostra spinner
     if (statusEl) { statusEl.style.display = 'flex'; }
     if (statusText) statusText.textContent = 'Enviando imagem...';
+
+    // Tenta criar o bucket se não existir
+    await tryCreateBucket();
 
     try {
         // Gera nome de arquivo único e seguro
@@ -648,6 +665,10 @@ async function uploadProductImage(file) {
 
     } catch (err) {
         console.error('Erro ao enviar imagem:', err);
+        const errMsg = err.message || '';
+        if (errMsg.includes('Bucket not found')) {
+            alert("Atenção: O bucket 'product-images' não existe no seu Supabase Storage!\n\nComo resolver em 10 segundos:\n1. Acesse o painel do seu Supabase (https://supabase.com)\n2. Vá em 'Storage' no menu esquerdo\n3. Clique em 'New Bucket'\n4. Digite o nome exato: product-images\n5. Marque a opção 'Public'\n6. Clique em Salvar e tente novamente!");
+        }
         if (statusText) statusText.textContent = '✗ Erro ao enviar: ' + (err.message || 'verifique o Storage');
         adminToast('Erro ao enviar imagem: ' + (err.message || 'verifique o bucket product-images'), 'error');
     }
@@ -746,8 +767,12 @@ window.startImageMigration = async function () {
     if (progressText) progressText.textContent = `0 / ${base64ProductsToMigrate.length}`;
     if (logEl) logEl.innerHTML = '<div>Iniciando migração...</div>';
 
+    // Tenta criar o bucket se não existir
+    await tryCreateBucket();
+
     let successCount = 0;
     let failCount = 0;
+    let isBucketMissing = false;
 
     for (let i = 0; i < base64ProductsToMigrate.length; i++) {
         const p = base64ProductsToMigrate[i];
@@ -800,7 +825,14 @@ window.startImageMigration = async function () {
         } catch (err) {
             failCount++;
             console.error(`Erro ao migrar produto ${p.name}:`, err);
-            logItem.textContent += ` ✗ Erro: ${err.message || err}`;
+            
+            const errMsg = err.message || '';
+            let logMsg = ` ✗ Erro: ${err.message || err}`;
+            if (errMsg.includes('Bucket not found')) {
+                logMsg = ` ✗ Erro: Bucket "product-images" não encontrado.`;
+                isBucketMissing = true;
+            }
+            logItem.textContent += logMsg;
             logItem.style.color = '#ff7675';
         }
 
@@ -819,6 +851,25 @@ window.startImageMigration = async function () {
     summary.textContent = `Fim da migração! Sucesso: ${successCount} | Falhas: ${failCount}`;
     if (logEl) {
         logEl.appendChild(summary);
+        
+        if (isBucketMissing) {
+            const warning = document.createElement('div');
+            warning.style.marginTop = '10px';
+            warning.style.color = '#ffeaa7';
+            warning.style.border = '1px dashed #ffeaa7';
+            warning.style.padding = '8px';
+            warning.style.borderRadius = '4px';
+            warning.style.lineHeight = '1.6';
+            warning.innerHTML = `<strong>⚠️ Como resolver o erro "Bucket not found":</strong><br>` +
+                `1. Acesse o painel do seu Supabase (https://supabase.com)<br>` +
+                `2. Clique em <strong>Storage</strong> no menu lateral esquerdo<br>` +
+                `3. Clique em <strong>New Bucket</strong> no topo<br>` +
+                `4. Nomeie como: <strong>product-images</strong> (exatamente igual)<br>` +
+                `5. Ative a opção <strong>Public</strong><br>` +
+                `6. Clique em Salvar e tente rodar a migração novamente!`;
+            logEl.appendChild(warning);
+        }
+        
         logEl.scrollTop = logEl.scrollHeight;
     }
 
