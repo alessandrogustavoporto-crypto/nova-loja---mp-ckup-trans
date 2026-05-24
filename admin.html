@@ -123,8 +123,10 @@
         <section id="section-produtos" class="admin-section">
             <div class="section-toolbar">
                 <input type="text" id="product-search" placeholder="Buscar produto..." class="admin-search">
-                <button class="btn-primary btn-sm" onclick="openProductModal()"><i class="fas fa-plus"></i> Novo
-                    Produto</button>
+                <button class="btn-primary btn-sm" onclick="openProductModal()"><i class="fas fa-plus"></i> Novo Produto</button>
+                <button class="btn-secondary btn-sm" onclick="openMigrateImagesModal()" title="Migrar imagens Base64 para Supabase Storage" style="background:#f39c12;color:#fff;border:none;">
+                    <i class="fas fa-cloud-upload-alt"></i> Migrar Imagens p/ Storage
+                </button>
             </div>
             <div class="admin-card">
                 <div class="admin-card-header">
@@ -918,6 +920,37 @@
                 <button class="btn-secondary" onclick="closeClientModal()">Cancelar</button>
                 <button class="btn-primary" onclick="saveClient()"><i class="fas fa-save"></i> Salvar
                     Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Migração de Imagens -->
+    <div id="modal-migrate-images" class="admin-modal-overlay hidden">
+        <div class="admin-modal" style="max-width:580px;">
+            <div class="admin-modal-header">
+                <h3><i class="fas fa-cloud-upload-alt"></i> Migrar Imagens para Supabase Storage</h3>
+                <button class="modal-close" onclick="closeMigrateImagesModal()" id="migrate-close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <p style="font-size:14px;color:var(--text-muted);margin-bottom:15px;">
+                    Detecta todos os produtos com imagens em Base64 e faz o upload automático para o Supabase Storage, atualizando o banco com a URL pública.
+                </p>
+                <div id="migrate-start-area">
+                    <p id="migrate-count-info" style="font-weight:600;margin-bottom:15px;">Clique em iniciar para verificar os produtos.</p>
+                    <button class="btn-primary" onclick="startImageMigration()" id="migrate-start-btn">
+                        <i class="fas fa-play"></i> Iniciar Migração
+                    </button>
+                </div>
+                <div id="migrate-progress-area" style="display:none;">
+                    <div style="background:#f0f0f0;border-radius:8px;height:16px;overflow:hidden;margin-bottom:10px;">
+                        <div id="migrate-progress-bar" style="height:100%;width:0%;background:var(--primary-green);transition:width 0.3s;"></div>
+                    </div>
+                    <p id="migrate-progress-text" style="font-size:13px;font-weight:600;margin-bottom:10px;">0 / 0</p>
+                    <div id="migrate-log" style="max-height:220px;overflow-y:auto;font-size:12px;font-family:monospace;background:#1a1a2e;color:#a8e6c3;padding:12px;border-radius:6px;line-height:1.8;"></div>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button class="btn-secondary" onclick="closeMigrateImagesModal()" id="migrate-done-btn" style="display:none;">Fechar</button>
             </div>
         </div>
     </div>

@@ -662,6 +662,173 @@ document.addEventListener('change', e => {
     }
 });
 
+// ---- MIGRAR IMAGENS BASE64 PARA SUPABASE STORAGE ----
+let base64ProductsToMigrate = [];
+
+window.openMigrateImagesModal = async function () {
+    const modal = document.getElementById('modal-migrate-images');
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
+
+    const infoEl = document.getElementById('migrate-count-info');
+    const startBtn = document.getElementById('migrate-start-btn');
+    const startArea = document.getElementById('migrate-start-area');
+    const progressArea = document.getElementById('migrate-progress-area');
+    const doneBtn = document.getElementById('migrate-done-btn');
+    const closeBtn = document.getElementById('migrate-close-btn');
+
+    if (infoEl) infoEl.textContent = 'Buscando produtos no banco de dados...';
+    if (startBtn) startBtn.style.display = 'none';
+    if (startArea) startArea.style.display = 'block';
+    if (progressArea) progressArea.style.display = 'none';
+    if (doneBtn) doneBtn.style.display = 'none';
+    if (closeBtn) closeBtn.style.display = 'block';
+
+    try {
+        // Carrega produtos
+        const { data: products, error } = await supabase.from('products').select('id, name, image');
+        if (error) throw error;
+
+        // Filtra os que têm base64
+        base64ProductsToMigrate = (products || []).filter(p => p.image && p.image.startsWith('data:image/'));
+
+        if (infoEl) {
+            if (base64ProductsToMigrate.length === 0) {
+                infoEl.textContent = '✓ Excelente! Nenhum produto com imagem em Base64 encontrado. Todos já estão no Storage ou sem imagem.';
+                if (startBtn) startBtn.style.display = 'none';
+            } else {
+                infoEl.textContent = `Encontrado(s) ${base64ProductsToMigrate.length} produto(s) com imagem em Base64 aguardando migração.`;
+                if (startBtn) startBtn.style.display = 'inline-block';
+            }
+        }
+    } catch (err) {
+        console.error('Erro ao verificar imagens:', err);
+        if (infoEl) infoEl.textContent = 'Erro ao carregar lista de produtos: ' + err.message;
+    }
+};
+
+window.closeMigrateImagesModal = function () {
+    const modal = document.getElementById('modal-migrate-images');
+    if (modal) modal.classList.add('hidden');
+};
+
+function base64ToBlob(base64, contentType) {
+    const byteCharacters = atob(base64);
+    const byteArrays = [];
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+        const slice = byteCharacters.slice(offset, offset + 512);
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+    }
+    return new Blob(byteArrays, { type: contentType });
+}
+
+window.startImageMigration = async function () {
+    const startArea = document.getElementById('migrate-start-area');
+    const progressArea = document.getElementById('migrate-progress-area');
+    const progressBar = document.getElementById('migrate-progress-bar');
+    const progressText = document.getElementById('migrate-progress-text');
+    const logEl = document.getElementById('migrate-log');
+    const doneBtn = document.getElementById('migrate-done-btn');
+    const closeBtn = document.getElementById('migrate-close-btn');
+
+    if (startArea) startArea.style.display = 'none';
+    if (progressArea) progressArea.style.display = 'block';
+    if (closeBtn) closeBtn.style.display = 'none'; // Desabilita fechar durante migração
+    if (doneBtn) doneBtn.style.display = 'none';
+
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressText) progressText.textContent = `0 / ${base64ProductsToMigrate.length}`;
+    if (logEl) logEl.innerHTML = '<div>Iniciando migração...</div>';
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < base64ProductsToMigrate.length; i++) {
+        const p = base64ProductsToMigrate[i];
+        const logItem = document.createElement('div');
+        logItem.style.marginBottom = '4px';
+        logItem.textContent = `[${i+1}/${base64ProductsToMigrate.length}] Processando: "${p.name}"...`;
+        if (logEl) {
+            logEl.appendChild(logItem);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        try {
+            // Decodifica Base64
+            const matches = p.image.match(/^data:(image\/[a-z+]+);base64,(.+)$/);
+            if (!matches) {
+                throw new Error('Formato Base64 inválido ou não suportado.');
+            }
+
+            const contentType = matches[1];
+            const base64Data = matches[2];
+            const ext = contentType.split('/')[1] || 'png';
+            const safeName = p.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const fileName = `produtos/migrated_${p.id}_${Date.now()}.${ext}`;
+
+            // Converte e faz Upload
+            const blob = base64ToBlob(base64Data, contentType);
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('product-images')
+                .upload(fileName, blob, { upsert: true, contentType: contentType });
+
+            if (uploadError) throw uploadError;
+
+            // Obtém URL Pública
+            const { data: urlData } = supabase.storage
+                .from('product-images')
+                .getPublicUrl(fileName);
+
+            const publicUrl = urlData.publicUrl;
+
+            // Atualiza no banco
+            const { error: updateError } = await supabase.from('products')
+                .update({ image: publicUrl })
+                .eq('id', p.id);
+
+            if (updateError) throw updateError;
+
+            successCount++;
+            logItem.textContent += ' ✓ Migrado com sucesso!';
+            logItem.style.color = '#a8e6c3';
+        } catch (err) {
+            failCount++;
+            console.error(`Erro ao migrar produto ${p.name}:`, err);
+            logItem.textContent += ` ✗ Erro: ${err.message || err}`;
+            logItem.style.color = '#ff7675';
+        }
+
+        // Atualiza Progresso
+        const pct = Math.round(((i + 1) / base64ProductsToMigrate.length) * 100);
+        if (progressBar) progressBar.style.width = `${pct}%`;
+        if (progressText) progressText.textContent = `${i + 1} / ${base64ProductsToMigrate.length}`;
+    }
+
+    // Finalização
+    const summary = document.createElement('div');
+    summary.style.marginTop = '10px';
+    summary.style.fontWeight = 'bold';
+    summary.style.borderTop = '1px solid #333';
+    summary.style.paddingTop = '8px';
+    summary.textContent = `Fim da migração! Sucesso: ${successCount} | Falhas: ${failCount}`;
+    if (logEl) {
+        logEl.appendChild(summary);
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    if (closeBtn) closeBtn.style.display = 'block';
+    if (doneBtn) doneBtn.style.display = 'inline-block';
+
+    adminToast(`Migração concluída! Sucesso: ${successCount}, Falhas: ${failCount}`, failCount > 0 ? 'warning' : 'success');
+    await loadProducts(); // Recarrega os produtos para atualizar a tabela
+};
+
 window.deleteProduct = async function (id) {
     if (!confirm('Confirmar exclusão deste produto?')) return;
     await supabase.from('products').delete().eq('id', id);
