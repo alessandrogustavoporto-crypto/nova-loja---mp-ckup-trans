@@ -775,6 +775,7 @@ window.startImageMigration = async function () {
     let successCount = 0;
     let failCount = 0;
     let isBucketMissing = false;
+    let isRLSBlocked = false;
 
     for (let i = 0; i < base64ProductsToMigrate.length; i++) {
         const p = base64ProductsToMigrate[i];
