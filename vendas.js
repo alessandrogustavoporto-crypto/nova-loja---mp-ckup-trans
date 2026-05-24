@@ -12,6 +12,12 @@ let allCustomers = [];
 let selectedCustomer = null;
 let editingItemIndex = null;
 
+// Barcode scanner detection
+let barcodeBuffer = '';
+let barcodeLastKeyTime = 0;
+const BARCODE_SPEED_THRESHOLD = 50; // ms entre teclas — leitores são < 50ms
+const BARCODE_MIN_LENGTH = 8;       // EAN-8 mínimo
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     // Update Seller Name
@@ -53,12 +59,77 @@ function setupEventListeners() {
     const prodSearch = document.getElementById('pdv-prod-search');
     const addBtn = document.getElementById('pdv-add-btn');
 
-    // Busca em tempo real de produtos
-    prodSearch.addEventListener('input', (e) => showProductSuggestions(e.target.value));
+    // Detecção de leitor de código de barras via velocidade de digitação
+    prodSearch.addEventListener('keydown', (e) => {
+        const now = Date.now();
+        const delta = now - barcodeLastKeyTime;
+        barcodeLastKeyTime = now;
 
-    // Add item on Enter in search
-    const inputs = ['pdv-prod-search', 'pdv-prod-qty', 'pdv-prod-price'];
-    inputs.forEach(id => {
+        // Ignora teclas de controle no buffer
+        if (e.key.length === 1) {
+            if (delta < BARCODE_SPEED_THRESHOLD) {
+                barcodeBuffer += e.key;
+            } else {
+                // Nova sequência de digitação (humana) — reseta buffer
+                barcodeBuffer = e.key;
+            }
+        }
+
+        // Enter: verifica se veio de leitor (buffer longo e rápido)
+        if (e.key === 'Enter') {
+            const query = prodSearch.value.trim();
+            const exactMatch = allProducts.find(p => p.barcode === query);
+
+            if (exactMatch) {
+                // Código de barras exato — insere automaticamente
+                e.preventDefault();
+                const qty = parseInt(document.getElementById('pdv-prod-qty').value) || 1;
+                addItem(exactMatch, qty, NaN);
+                prodSearch.value = '';
+                document.getElementById('pdv-prod-qty').value = '1';
+                document.getElementById('prod-suggestions').classList.add('hidden');
+                barcodeBuffer = '';
+                showBarcodeFlash(exactMatch.name);
+                return;
+            }
+
+            // Sem correspondência exata — tenta busca normal
+            addItemFromSearch();
+            barcodeBuffer = '';
+        }
+    });
+
+    // Busca em tempo real de produtos (sem auto-insert — apenas sugestões)
+    prodSearch.addEventListener('input', (e) => {
+        const query = e.target.value;
+        const now = Date.now();
+        const delta = now - barcodeLastKeyTime;
+
+        // Se digitação for rápida demais (leitor), só mostra sugestões se não houver match exato
+        if (delta < BARCODE_SPEED_THRESHOLD && query.length >= BARCODE_MIN_LENGTH) {
+            const exactMatch = allProducts.find(p => p.barcode === query);
+            if (exactMatch) {
+                // Leitor completou o código — insere diretamente (sem precisar de Enter)
+                const qty = parseInt(document.getElementById('pdv-prod-qty').value) || 1;
+                addItem(exactMatch, qty, NaN);
+                prodSearch.value = '';
+                document.getElementById('pdv-prod-qty').value = '1';
+                document.getElementById('prod-suggestions').classList.add('hidden');
+                barcodeBuffer = '';
+                showBarcodeFlash(exactMatch.name);
+                return;
+            }
+            // Código ainda incompleto — esconde sugestões durante scan
+            document.getElementById('prod-suggestions').classList.add('hidden');
+            return;
+        }
+
+        showProductSuggestions(query);
+    });
+
+    // Add item via botão
+    const otherInputs = ['pdv-prod-qty', 'pdv-prod-price'];
+    otherInputs.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('keypress', (e) => {
@@ -76,6 +147,28 @@ function setupEventListeners() {
 
     // Customer search
     document.getElementById('pdv-cust-search').addEventListener('input', (e) => searchCustomer(e.target.value));
+}
+
+// Flash visual ao inserir via código de barras
+function showBarcodeFlash(productName) {
+    let flash = document.getElementById('barcode-flash');
+    if (!flash) {
+        flash = document.createElement('div');
+        flash.id = 'barcode-flash';
+        flash.style.cssText = `
+            position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+            background: #27ae60; color: white; padding: 12px 28px;
+            border-radius: 8px; font-size: 15px; font-weight: 700;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 9999;
+            display: flex; align-items: center; gap: 10px;
+            animation: fadeInDown 0.2s ease;
+        `;
+        document.body.appendChild(flash);
+    }
+    flash.innerHTML = `<i class="fas fa-barcode"></i> ${productName} adicionado!`;
+    flash.style.display = 'flex';
+    clearTimeout(flash._timer);
+    flash._timer = setTimeout(() => { flash.style.display = 'none'; }, 1800);
 }
 
 function setupShortcuts() {
@@ -118,9 +211,9 @@ function showProductSuggestions(query) {
         return;
     }
 
-    // Se for código de barras exato (geralmente longo e numérico), não abre lista, espera o Enter ou Adicionar
+    // Se for código de barras exato, não abre lista (já foi ou será inserido automaticamente)
     const exactMatch = allProducts.find(p => p.barcode === query);
-    if (exactMatch && query.length >= 8) {
+    if (exactMatch && query.length >= BARCODE_MIN_LENGTH) {
         list.classList.add('hidden');
         return;
     }
