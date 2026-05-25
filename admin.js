@@ -3689,22 +3689,39 @@ function renderEntradasHistory(filter = '') {
         return;
     }
 
-    // 3. Renderizar cada Nota de Compra
-    tbody.innerHTML = filtered.map(g => {
+    // 3. Renderizar cada Nota de Compra (usando data-key para evitar problema de caracteres especiais no onclick)
+    tbody.innerHTML = filtered.map((g, idx) => {
         const dateStr = new Date(g.date).toLocaleDateString('pt-BR');
-        
-        return `<tr>
+        // Usar índice numérico no DOM para evitar problema de timestamps com ":" quebrando onclick
+        return `<tr data-entry-idx="${idx}">
             <td>${dateStr}</td>
             <td><strong>${g.supplier}</strong></td>
             <td>${g.invoice || '—'}</td>
             <td style="text-align:center; font-weight: 500;">${g.totalItems} un</td>
             <td style="text-align:right; font-weight:700; color:#27ae60;">R$ ${g.totalCost.toFixed(2).replace('.', ',')}</td>
             <td style="text-align:center;">
-                <button type="button" class="btn-action-view" onclick="window.viewEntryDetails('${g.key}')" title="Ver Detalhes da Nota" style="background: rgba(39, 174, 96, 0.1); color: #27ae60; padding: 6px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; transition: all 0.2s;"><i class="fas fa-search-plus"></i></button>
-                <button type="button" class="btn-action-delete" onclick="window.deleteEntryBatch('${g.key}')" title="Excluir Nota e Reverter Estoque" style="background: rgba(192, 57, 43, 0.1); color: #c0392b; padding: 6px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; margin-left: 5px; transition: all 0.2s;"><i class="fas fa-trash-alt"></i></button>
+                <button type="button" class="btn-action-view" data-entry-idx="${idx}" title="Ver Detalhes da Nota" style="background: rgba(39, 174, 96, 0.1); color: #27ae60; padding: 6px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; transition: all 0.2s;"><i class="fas fa-search-plus"></i></button>
+                <button type="button" class="btn-action-delete" data-entry-idx="${idx}" title="Excluir Nota e Reverter Estoque" style="background: rgba(192, 57, 43, 0.1); color: #c0392b; padding: 6px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; margin-left: 5px; transition: all 0.2s;"><i class="fas fa-trash-alt"></i></button>
             </td>
         </tr>`;
     }).join('');
+
+    // Mapeamento idx -> chave real (para evitar passar strings com ":" em onclick)
+    const filteredKeys = filtered.map(g => g.key);
+
+    tbody.querySelectorAll('.btn-action-view').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.getAttribute('data-entry-idx'));
+            window.viewEntryDetails(filteredKeys[idx]);
+        });
+    });
+
+    tbody.querySelectorAll('.btn-action-delete').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.getAttribute('data-entry-idx'));
+            window.deleteEntryBatch(filteredKeys[idx]);
+        });
+    });
 
     const search = document.getElementById('entry-history-search');
     if (search && !search._bound) {
