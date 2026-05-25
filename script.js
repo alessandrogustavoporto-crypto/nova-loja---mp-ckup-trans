@@ -28,14 +28,29 @@ window.APP_DATA = {
 // ============================================================
 const ProductStore = {
     _cacheKey: 'ecostore_cache_products',
+    _ttlKey: 'ecostore_cache_products_ttl',
+    _TTL: 5 * 60 * 1000, // 5 minutos
+
+    isCacheValid() {
+        const ts = localStorage.getItem(this._ttlKey);
+        return ts && (Date.now() - parseInt(ts)) < this._TTL;
+    },
+
     loadCache() {
         try {
             const cached = localStorage.getItem(this._cacheKey);
             if (cached) window.APP_DATA.products = JSON.parse(cached);
         } catch (e) { console.error('Cache load error', e); }
     },
+
     async fetchAll() {
-        const { data, error } = await supabase.from('products').select('*').order('id', { ascending: false });
+        if (this.isCacheValid()) return false; // Cache válido, não vai ao banco
+
+        const { data, error } = await supabase
+            .from('products')
+            .select('id, name, category, brand, price, promo_price, promo_active, old_price, image, stock, variations, barcode, description')
+            .order('id', { ascending: false });
+
         if (!error && data && data.length > 0) {
             const newProducts = data.map(p => ({
                 ...p,
@@ -43,17 +58,17 @@ const ProductStore = {
                 promoActive: p.promo_active,
                 promoPrice: p.promo_price
             }));
-            const cacheStr = JSON.stringify(newProducts);
-            if (localStorage.getItem(this._cacheKey) !== cacheStr) {
-                window.APP_DATA.products = newProducts;
-                try { localStorage.setItem(this._cacheKey, cacheStr); } catch(e) { console.warn('Cache cheio'); }
-                return true; // Mudou
-            }
+            window.APP_DATA.products = newProducts;
+            try {
+                localStorage.setItem(this._cacheKey, JSON.stringify(newProducts));
+                localStorage.setItem(this._ttlKey, Date.now().toString());
+            } catch(e) { console.warn('Cache cheio'); }
+            return true;
         } else if (!error && data && data.length === 0) {
             if (typeof PRODUCTS !== 'undefined') {
                 const { data: inserted, error: insertErr } = await supabase.from('products').insert(PRODUCTS.map(p => {
                     const obj = {...p, old_price: p.oldPrice, promo_active: p.promoActive || !!p.offer, promo_price: p.price};
-                    delete obj.id; // let supabase generate id
+                    delete obj.id;
                     delete obj.oldPrice;
                     delete obj.promoActive;
                     delete obj.promoPrice;
@@ -66,9 +81,11 @@ const ProductStore = {
                         promoActive: p.promo_active,
                         promoPrice: p.promo_price
                     }));
-                    const cacheStr = JSON.stringify(newProducts);
                     window.APP_DATA.products = newProducts;
-                    try { localStorage.setItem(this._cacheKey, cacheStr); } catch(e) { console.warn('Cache cheio'); }
+                    try {
+                        localStorage.setItem(this._cacheKey, JSON.stringify(newProducts));
+                        localStorage.setItem(this._ttlKey, Date.now().toString());
+                    } catch(e) { console.warn('Cache cheio'); }
                     return true;
                 }
             }
@@ -84,26 +101,41 @@ const ProductStore = {
 // ============================================================
 const BannerStore = {
     _cacheKey: 'ecostore_cache_banners',
+    _ttlKey: 'ecostore_cache_banners_ttl',
+    _TTL: 5 * 60 * 1000, // 5 minutos
+
+    isCacheValid() {
+        const ts = localStorage.getItem(this._ttlKey);
+        return ts && (Date.now() - parseInt(ts)) < this._TTL;
+    },
+
     loadCache() {
         try {
             const cached = localStorage.getItem(this._cacheKey);
             if (cached) window.APP_DATA.banners = JSON.parse(cached);
         } catch (e) {}
     },
+
     async fetchAll() {
-        const { data, error } = await supabase.from('banners').select('*');
+        if (this.isCacheValid()) return false; // Cache válido, não vai ao banco
+
+        const { data, error } = await supabase
+            .from('banners')
+            .select('id, title, subtitle, btn_text, btn_link, image, active')
+            .eq('active', true); // Só busca banners ativos na loja pública
+
         if (!error && data) {
             const newBanners = data.map(b => ({
                 ...b,
                 btnText: b.btn_text,
                 btnLink: b.btn_link
             }));
-            const cacheStr = JSON.stringify(newBanners);
-            if (localStorage.getItem(this._cacheKey) !== cacheStr) {
-                window.APP_DATA.banners = newBanners;
-                try { localStorage.setItem(this._cacheKey, cacheStr); } catch(e) { console.warn('Cache cheio'); }
-                return true;
-            }
+            window.APP_DATA.banners = newBanners;
+            try {
+                localStorage.setItem(this._cacheKey, JSON.stringify(newBanners));
+                localStorage.setItem(this._ttlKey, Date.now().toString());
+            } catch(e) { console.warn('Cache cheio'); }
+            return true;
         }
         return false;
     },
@@ -269,7 +301,10 @@ const ORDER_STATUS_MAP = {
 const Orders = {
     _latestOrders: [], // Cache global para acompanhamento
     async fetchAll() {
-        const { data, error } = await supabase.from('orders').select('*').order('id', { ascending: false });
+        const { data, error } = await supabase
+            .from('orders')
+            .select('id, client_name, client_email, total, status, status_label, created_at, items, address')
+            .order('id', { ascending: false });
         if (!error && data) {
             // Normaliza campos para o padrão usado no front-end
             window.APP_DATA.orders = data.map(o => ({
@@ -514,14 +549,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // FETCH EM BACKGROUND DO SUPABASE
     if (window.supabase) {
-        // Não bloqueia o resto da execução
-        Promise.all([
+        const isLoggedIn = Auth.isLoggedIn();
+        const fetches = [
             ProductStore.fetchAll(),
-            BannerStore.fetchAll(),
-            Auth.fetchAllUsers(),
-            Orders.fetchAll() // Carrega pro cache local, mas a tela de pedidos tem seu próprio polling
-        ]).then(([productsChanged, bannersChanged]) => {
-            // Se houve mudança no banco, atualiza a UI
+            BannerStore.fetchAll()
+        ];
+        // Só busca pedidos e clientes se o usuário estiver logado
+        if (isLoggedIn) fetches.push(Orders.fetchAll());
+
+        Promise.all(fetches).then(([productsChanged, bannersChanged]) => {
             if (productsChanged) {
                 renderPromoProducts();
                 renderAllProducts();

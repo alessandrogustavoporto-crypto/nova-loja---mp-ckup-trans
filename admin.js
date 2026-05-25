@@ -92,7 +92,10 @@ window.adminLogout = function () { AdminAuth.logout(); };
 // ---- Data Store ----
 const AdminData = {
     async getOrders() {
-        const { data } = await supabase.from('orders').select('*').order('id', { ascending: false });
+        const { data } = await supabase
+            .from('orders')
+            .select('id, client_name, client_email, total, status, status_label, created_at, items, address')
+            .order('id', { ascending: false });
         return (data || []).map(o => ({
             ...o,
             clientName: o.client_name,
@@ -104,7 +107,10 @@ const AdminData = {
     },
 
     async getProducts() {
-        const { data } = await supabase.from('products').select('*').order('id', { ascending: false });
+        const { data } = await supabase
+            .from('products')
+            .select('id, name, category, brand, price, promo_price, promo_active, old_price, image, stock, variations, barcode, description, cost')
+            .order('id', { ascending: false });
         return (data || []).map(p => ({
             ...p,
             oldPrice: p.old_price,
@@ -123,9 +129,12 @@ const AdminData = {
         return data || [];
     },
 
-    async getClients() {
-        const { data } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
-        const orders = await this.getOrders();
+    async getClients(preloadedOrders = null) {
+        const { data } = await supabase
+            .from('customers')
+            .select('id, name, email, phone, cpf, cnpj, is_pj, status, address, created_at')
+            .order('created_at', { ascending: false });
+        const orders = preloadedOrders || [];
         return (data || []).map(u => ({
             ...u,
             type: u.is_pj ? 'PJ' : 'PF',
@@ -134,7 +143,10 @@ const AdminData = {
     },
 
     async getBanners() {
-        const { data } = await supabase.from('banners').select('*').order('id', { ascending: true });
+        const { data } = await supabase
+            .from('banners')
+            .select('id, title, subtitle, btn_text, btn_link, image, active')
+            .order('id', { ascending: true });
         return (data || []).map(b => ({
             ...b,
             btnText: b.btn_text,
@@ -263,15 +275,16 @@ async function initAdminDashboard() {
     const nameEl = document.getElementById('admin-name-display');
     if (nameEl && admin) nameEl.textContent = admin.name;
 
-    // 1. Busca todos os dados em paralelo (MUITO MAIS RÁPIDO)
-    const [orders, products, categories, brands, clients, banners] = await Promise.all([
+    // 1. Busca todos os dados em paralelo — orders primeiro para reutilizar em getClients
+    const [orders, products, categories, brands, banners] = await Promise.all([
         AdminData.getOrders(),
         AdminData.getProducts(),
         AdminData.getCategories(),
         AdminData.getBrands(),
-        AdminData.getClients(),
         AdminData.getBanners()
     ]);
+    // Clientes reutiliza orders já carregados — elimina o segundo fetch de pedidos
+    const clients = await AdminData.getClients(orders);
 
     // Salva no cache global
     cachedAdminData = { orders, products, categories, brands, clients, banners };
