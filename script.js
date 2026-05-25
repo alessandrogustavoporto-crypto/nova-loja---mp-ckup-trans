@@ -244,15 +244,25 @@ const Auth = {
     },
     getAllUsers() { return window.APP_DATA.users; },
 
-    // Register a new customer with password
+    // Register a new customer with password (Supabase Auth + public.customers)
     async register(userData) {
+        // 1. Verificar se e-mail já existe na tabela de clientes
         const { data: existing } = await supabase.from('customers').select('id').eq('email', userData.email).single();
         if (existing) return { success: false, error: 'E-mail já cadastrado.' };
 
-        const { error } = await supabase.from('customers').insert([{
+        // 2. Criar conta no Supabase Auth nativo
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: userData.email,
+            password: userData.password
+        });
+
+        if (signUpError) return { success: false, error: signUpError.message };
+
+        // 3. Gravar dados complementares na tabela public.customers
+        const { error: customerError } = await supabase.from('customers').insert([{
             name: userData.name,
             email: userData.email,
-            password: userData.password,
+            password: '', // Senha não será salva em texto limpo por segurança!
             phone: userData.phone || null,
             cpf: userData.cpf || null,
             cnpj: userData.cnpj || null,
@@ -260,27 +270,116 @@ const Auth = {
             address: userData.address || null,
             status: 'ativo'
         }]);
-        if (error) return { success: false, error: error.message };
+
+        if (customerError) {
+            console.error('Erro ao salvar dados de cliente na tabela:', customerError);
+            return { success: false, error: 'Conta criada, mas houve erro ao salvar dados complementares: ' + customerError.message };
+        }
+
         await this.fetchAllUsers();
         return { success: true };
     },
 
-    // Login: validate email + password against Supabase
+    // Login: validate email + password against Supabase Auth (with automatic legacy account migration)
     async loginWithPassword(email, password) {
-        const { data, error } = await supabase
+        // 1. Tentar fazer login no Supabase Auth oficial
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
+
+        // 2. Se o login falhar...
+        if (authError) {
+            // Se falhou por credenciais inválidas ou e-mail não confirmado:
+            // Vamos verificar se o usuário existe na tabela antiga `customers` com a senha certa!
+            const { data: legacyCustomer, error: legacyError } = await supabase
+                .from('customers')
+                .select('*')
+                .eq('email', email)
+                .eq('password', password)
+                .single();
+
+            if (!legacyError && legacyCustomer) {
+                // Usuário é antigo e digitou a senha correta!
+                // Vamos migrá-lo de forma transparente para o Supabase Auth:
+                const { data: newAuthData, error: signUpError } = await supabase.auth.signUp({
+                    email: email,
+                    password: password
+                });
+
+                if (signUpError) {
+                    console.error('Erro ao migrar usuário legado:', signUpError);
+                    return { success: false, error: 'Erro na migração de conta: ' + signUpError.message };
+                }
+
+                // E atualizar a senha legada na tabela public.customers para vazio por segurança!
+                await supabase.from('customers').update({ password: '' }).eq('email', email);
+
+                // Agora tentamos logar de novo
+                const { data: retryAuthData, error: retryAuthError } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (retryAuthError) {
+                    return { success: false, error: 'Migrado, mas falhou ao iniciar sessão: ' + retryAuthError.message };
+                }
+                
+                // Login com sucesso após migração transparente!
+                localStorage.setItem(this._key, JSON.stringify(legacyCustomer));
+                await Cart.loadFromCloud(email);
+                return { success: true, user: legacyCustomer };
+            }
+
+            // Se não encontrou nem na tabela legada, as credenciais são realmente inválidas
+            return { success: false, error: 'E-mail ou senha incorretos.' };
+        }
+
+        // 3. Login oficial do Supabase Auth deu sucesso!
+        // Fazemos fetch dos dados cadastrais dele da tabela public.customers
+        const { data: customer, error: customerError } = await supabase
             .from('customers')
             .select('*')
             .eq('email', email)
-            .eq('password', password)
             .single();
-        if (error || !data) return { success: false, error: 'E-mail ou senha incorretos.' };
-        localStorage.setItem(this._key, JSON.stringify(data));
-        // Restore cloud cart after login
+
+        if (customerError || !customer) {
+            // Conta de Auth existe mas não tem registro na tabela customers
+            const fallbackCustomer = {
+                name: email.split('@')[0],
+                email: email,
+                phone: null,
+                cpf: null,
+                cnpj: null,
+                is_pj: false,
+                address: null,
+                status: 'ativo'
+            };
+            await supabase.from('customers').insert([fallbackCustomer]);
+            localStorage.setItem(this._key, JSON.stringify(fallbackCustomer));
+            await Cart.loadFromCloud(email);
+            return { success: true, user: fallbackCustomer };
+        }
+
+        localStorage.setItem(this._key, JSON.stringify(customer));
         await Cart.loadFromCloud(email);
-        return { success: true, user: data };
+        return { success: true, user: customer };
     },
 
-    logout() { localStorage.removeItem(this._key); }
+    // Enviar link de redefinição
+    async sendPasswordResetEmail(email) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin + '/recuperar-senha.html'
+        });
+        if (error) return { success: false, error: error.message };
+        return { success: true };
+    },
+
+    // Deslogar
+    async logout() {
+        localStorage.removeItem(this._key);
+        await supabase.auth.signOut();
+    }
 };
 
 
@@ -1441,7 +1540,6 @@ function initAuthPages() {
             }
         });
     }
-
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
         loginForm.addEventListener('submit', async e => {
@@ -1460,6 +1558,77 @@ function initAuthPages() {
                 if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Entrar'; }
                 if (msg) { msg.textContent = result.error; msg.className = 'feedback-msg feedback-error'; msg.classList.remove('hidden'); }
                 else showToast(result.error, 'error');
+            }
+        });
+    }
+
+    // Alternância do Formulário de Login <-> Esqueci minha senha
+    const btnForgotPassword = document.getElementById('btn-forgot-password');
+    const linkBackToLogin = document.getElementById('link-back-to-login');
+    const forgotPasswordForm = document.getElementById('forgot-password-form');
+    const authFooterLogin = document.getElementById('auth-footer-login');
+
+    if (btnForgotPassword && forgotPasswordForm && loginForm) {
+        btnForgotPassword.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginForm.classList.add('hidden');
+            if (authFooterLogin) authFooterLogin.classList.add('hidden');
+            forgotPasswordForm.classList.remove('hidden');
+        });
+    }
+
+    if (linkBackToLogin && forgotPasswordForm && loginForm) {
+        linkBackToLogin.addEventListener('click', (e) => {
+            e.preventDefault();
+            forgotPasswordForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            if (authFooterLogin) authFooterLogin.classList.remove('hidden');
+        });
+    }
+
+    // Submissão do Formulário de Redefinição de Senha
+    if (forgotPasswordForm) {
+        forgotPasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const emailInput = document.getElementById('reset-email');
+            const email = emailInput.value.trim();
+            const msg = document.getElementById('reset-msg');
+            const btnSubmit = document.getElementById('btn-submit-reset');
+            const btnText = btnSubmit.querySelector('.btn-text');
+            const spinner = btnSubmit.querySelector('.spinner');
+
+            if (!email) return;
+
+            // Inicia loading
+            btnSubmit.disabled = true;
+            if (btnText) btnText.classList.add('hidden');
+            if (spinner) spinner.classList.remove('hidden');
+            if (msg) msg.classList.add('hidden');
+
+            const result = await Auth.sendPasswordResetEmail(email);
+
+            // Termina loading
+            btnSubmit.disabled = false;
+            if (btnText) btnText.classList.remove('hidden');
+            if (spinner) spinner.classList.add('hidden');
+
+            if (result.success) {
+                emailInput.value = '';
+                if (msg) {
+                    msg.textContent = 'E-mail enviado com sucesso! Verifique sua caixa de entrada e spam.';
+                    msg.className = 'feedback-msg feedback-success';
+                    msg.classList.remove('hidden');
+                } else {
+                    showToast('E-mail enviado com sucesso!');
+                }
+            } else {
+                if (msg) {
+                    msg.textContent = 'Erro ao enviar e-mail: ' + result.error;
+                    msg.className = 'feedback-msg feedback-error';
+                    msg.classList.remove('hidden');
+                } else {
+                    showToast('Erro: ' + result.error, 'error');
+                }
             }
         });
     }

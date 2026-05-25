@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -34,12 +34,29 @@
                         <input type="password" id="senha" placeholder="Digite sua senha" required>
                     </div>
                     <div class="auth-actions">
-                        <a href="#" class="link-muted">Esqueci minha senha</a>
+                        <a href="#" class="link-muted" id="btn-forgot-password">Esqueci minha senha</a>
                     </div>
                     <div id="login-msg" class="feedback-msg hidden"></div>
                     <button type="submit" class="btn-primary btn-block">Entrar</button>
                 </form>
-                <div class="auth-footer">
+
+                <!-- Form: Forgot Password (hidden by default) -->
+                <form id="forgot-password-form" class="hidden">
+                    <div class="form-group">
+                        <label for="reset-email">E-mail de Cadastro</label>
+                        <input type="email" id="reset-email" placeholder="Digite seu e-mail de cadastro" required>
+                    </div>
+                    <div class="auth-actions">
+                        <a href="#" id="link-back-to-login" class="link-orange">Voltar para o Login</a>
+                    </div>
+                    <div id="reset-msg" class="feedback-msg hidden"></div>
+                    <button type="submit" class="btn-primary btn-block mt-20" id="btn-submit-reset">
+                        <span class="btn-text">Enviar Link de Recuperação</span>
+                        <span class="spinner hidden"><i class="fas fa-circle-notch fa-spin"></i></span>
+                    </button>
+                </form>
+
+                <div class="auth-footer" id="auth-footer-login">
                     <p>Não tem uma conta? <a href="cadastro.html" class="link-orange">Criar nova conta</a></p>
                 </div>
             </div>

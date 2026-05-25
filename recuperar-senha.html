@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperar Senha - OTMake10</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .recovery-success-box {
+            text-align: center;
+            padding: 20px 10px;
+        }
+        .recovery-success-box i {
+            font-size: 48px;
+            color: #2ec4b6;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body class="bg-gray">
+    <!-- Header Simples -->
+    <header class="header">
+        <div class="header-container justify-center">
+            <div class="logo">
+                <a href="index.html">OTMake10</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="auth-main">
+        <div class="auth-card" id="recovery-card">
+            <div class="auth-header">
+                <h2>Definir Nova Senha</h2>
+                <p style="color: #666; font-size: 14px; margin-top: 5px;">Escolha uma senha forte para a sua conta.</p>
+            </div>
+            <div class="auth-body">
+                <div id="recovery-msg" class="feedback-msg hidden"></div>
+
+                <form id="recovery-form">
+                    <div class="form-group">
+                        <label for="new-password">Nova Senha</label>
+                        <input type="password" id="new-password" placeholder="Mínimo de 6 caracteres" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password">Confirmar Nova Senha</label>
+                        <input type="password" id="confirm-password" placeholder="Digite a senha novamente" required minlength="6">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary btn-block mt-20" id="btn-submit-recovery">
+                        <span class="btn-text">Salvar Nova Senha</span>
+                        <span class="spinner hidden"><i class="fas fa-circle-notch fa-spin"></i></span>
+                    </button>
+                </form>
+
+                <div id="success-view" class="recovery-success-box hidden">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>Senha alterada com sucesso!</h3>
+                    <p style="color: #666; font-size: 14px; margin-top: 10px; margin-bottom: 20px;">
+                        Sua senha foi redefinida com segurança. Você já pode acessar sua conta.
+                    </p>
+                    <a href="login.html" class="btn-primary btn-block text-center" style="display: block; text-decoration: none; line-height: 40px; height: 40px;">
+                        Ir para o Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Depedencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const form = document.getElementById('recovery-form');
+            const newPasswordInput = document.getElementById('new-password');
+            const confirmPasswordInput = document.getElementById('confirm-password');
+            const msgEl = document.getElementById('recovery-msg');
+            const successView = document.getElementById('success-view');
+            const btnSubmit = document.getElementById('btn-submit-recovery');
+            const btnText = btnSubmit.querySelector('.btn-text');
+            const spinner = btnSubmit.querySelector('.spinner');
+
+            function showMsg(text, type = 'error') {
+                msgEl.textContent = text;
+                msgEl.className = `feedback-msg ${type}`;
+                msgEl.classList.remove('hidden');
+            }
+
+            function hideMsg() {
+                msgEl.classList.add('hidden');
+            }
+
+            // O Supabase coloca os tokens de recuperação de senha no hash da URL (#access_token=...)
+            // Vamos checar se o token está presente ou se a sessão de recovery foi estabelecida.
+            // O próprio SDK do Supabase detecta e inicializa a sessão a partir do hash da URL.
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (sessionError) {
+                console.error('Erro de sessão:', sessionError);
+                showMsg('O link de recuperação parece inválido ou expirou. Por favor, solicite um novo link.', 'error');
+                form.querySelector('button').disabled = true;
+                return;
+            }
+
+            // O tipo da sessão do Supabase deve ser de recuperação
+            // Mas, por segurança, se não houver uma sessão ativa no carregamento (ex: sem hash na URL), avisamos o usuário.
+            const hasHash = window.location.hash && window.location.hash.includes('access_token');
+            if (!session && !hasHash) {
+                showMsg('Acesso inválido. Você precisa acessar esta página através do link de redefinição enviado para o seu e-mail.', 'error');
+                form.querySelector('button').disabled = true;
+                return;
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                hideMsg();
+
+                const newPassword = newPasswordInput.value;
+                const confirmPassword = confirmPasswordInput.value;
+
+                if (newPassword.length < 6) {
+                    showMsg('A senha precisa ter no mínimo 6 caracteres.', 'error');
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    showMsg('As senhas não coincidem. Por favor, digite as senhas iguais.', 'error');
+                    return;
+                }
+
+                // Inicia loading
+                btnSubmit.disabled = true;
+                btnText.classList.add('hidden');
+                spinner.classList.remove('hidden');
+
+                try {
+                    // Redefine a senha do usuário
+                    const { error } = await supabase.auth.updateUser({
+                        password: newPassword
+                    });
+
+                    if (error) {
+                        showMsg('Erro ao redefinir a senha: ' + error.message, 'error');
+                        btnSubmit.disabled = false;
+                        btnText.classList.remove('hidden');
+                        spinner.classList.add('hidden');
+                        return;
+                    }
+
+                    // Logout por segurança para garantir que ele entre novamente com as credenciais atualizadas
+                    await supabase.auth.signOut();
+                    
+                    // Limpa sessão local do localStorage se houver
+                    localStorage.removeItem('ecostore_user');
+
+                    // Mostra tela de sucesso
+                    form.classList.add('hidden');
+                    successView.classList.remove('hidden');
+                    document.querySelector('.auth-header').classList.add('hidden');
+
+                } catch (err) {
+                    console.error('Erro de processamento:', err);
+                    showMsg('Ocorreu um erro no processamento. Tente novamente mais tarde.', 'error');
+                    btnSubmit.disabled = false;
+                    btnText.classList.remove('hidden');
+                    spinner.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     /* Color Palette */
     --primary-green: #9F90EA; /* Predominant Green */
     --light-green: #beb5f2;
@@ -783,6 +783,27 @@ input:checked + .slider:before {
     background-color: #d4edda;
     color: #155724;
     border: 1px solid #c3e6cb;
+}
+
+.feedback-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Button Spinner Loadings */
+.spinner {
+    margin-left: 8px;
+}
+.spinner.hidden {
+    display: none !important;
+}
+
+/* Auth swap animations */
+#login-form:not(.hidden),
+#forgot-password-form:not(.hidden),
+#recovery-form:not(.hidden) {
+    animation: fadeIn 0.4s ease;
 }
 
 /* Dashboard */
