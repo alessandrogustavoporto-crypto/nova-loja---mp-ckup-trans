@@ -2700,6 +2700,9 @@ async function renderCaixaAbertoState() {
         .select('total, payment_method')
         .gte('created_at', currentCashSession.opened_at);
 
+    // SEGURANÇA: Aborta se o caixa tiver sido fechado enquanto a rede respondia
+    if (!currentCashSession) return;
+
     let totalSalesCash = 0;
     if (!salesErr && sales) {
         sales.forEach(o => {
@@ -2716,6 +2719,9 @@ async function renderCaixaAbertoState() {
         .select('*')
         .eq('session_id', currentCashSession.id)
         .order('id', { ascending: false });
+
+    // SEGURANÇA: Aborta se o caixa tiver sido fechado enquanto a rede respondia
+    if (!currentCashSession) return;
 
     let totalTransactions = 0;
     let totalSangrias = 0;
