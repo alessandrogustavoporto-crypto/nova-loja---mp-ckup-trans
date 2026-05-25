@@ -335,6 +335,9 @@ async function initAdminDashboard() {
                 }
             }, 10000); // Atualiza a cada 10 segundos
         }
+        if (sectionId === 'entradas') {
+            initEntradasModule();
+        }
 
         // No mobile, fecha a sidebar automaticamente ao clicar em uma seção
         if (window.innerWidth <= 768) {
@@ -3388,4 +3391,219 @@ async function checkAndAutoCloseCaixa(session) {
     }
     return false;
 }
+
+// ============================================================
+// SEÇÃO: ENTRADAS DE ESTOQUE (COMPRAS)
+// ============================================================
+let allStockEntries = [];
+
+async function initEntradasModule() {
+    const loadingEl = document.getElementById('entradas-loading');
+    const errorEl = document.getElementById('entradas-error');
+    const contentEl = document.getElementById('entradas-content');
+
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    if (errorEl) errorEl.classList.add('hidden');
+    if (contentEl) contentEl.classList.add('hidden');
+
+    try {
+        // 1. Configurar data inicial como hoje na hora local
+        const dateInput = document.getElementById('entry-date');
+        if (dateInput && !dateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+        }
+
+        // 2. Carregar produtos para o select
+        await populateEntryProductSelect();
+
+        // 3. Buscar histórico de entradas no Supabase
+        const { data: entries, error } = await supabase
+            .from('stock_entries')
+            .select(`
+                id,
+                date,
+                supplier,
+                invoice,
+                product_id,
+                quantity,
+                cost_price,
+                products (
+                    name
+                )
+            `)
+            .order('date', { ascending: false });
+
+        if (error) {
+            console.error("Erro ao buscar histórico de entradas:", error);
+            throw error;
+        }
+
+        allStockEntries = entries || [];
+        renderEntradasHistory();
+
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (contentEl) contentEl.classList.remove('hidden');
+    } catch (err) {
+        console.error("Falha ao inicializar o controle de entradas:", err);
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (errorEl) {
+            errorEl.classList.remove('hidden');
+            errorEl.innerHTML = 
+                '<div style="color:#c0392b; padding:25px; font-weight:bold; text-align:center; max-width:600px; margin:0 auto;">' +
+                '<i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:15px;"></i>' +
+                '<h3 style="margin-bottom:10px; font-size:18px;">Erro: Tabela de Entradas não encontrada no Supabase!</h3>' +
+                '<p style="font-size:14px; font-weight:normal; margin-bottom:15px; color:#555; line-height:1.6;">' +
+                'Para ativar a aba de Entradas de Estoque, você precisa criar a tabela correspondente no seu banco de dados. ' +
+                'Copie e execute o script SQL fornecido abaixo no <strong>SQL Editor</strong> do seu painel do Supabase.' +
+                '</p>' +
+                '<div style="background:#f8f9fa; border:1px solid #ddd; padding:12px; border-radius:6px; font-size:13px; font-weight:600; color:#333; margin-bottom:10px; cursor:pointer;" onclick="navigator.clipboard.writeText(\'-- Criar tabela de entradas de estoque\\nCREATE TABLE public.stock_entries (\\n    id SERIAL PRIMARY KEY,\\n    date TIMESTAMP WITH TIME ZONE DEFAULT timezone(\\\\'utc\\\\'::text, now()) NOT NULL,\\n    supplier TEXT NOT NULL,\\n    invoice TEXT,\\n    product_id INTEGER REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,\\n    quantity INTEGER NOT NULL,\\n    cost_price NUMERIC(10,2) NOT NULL,\\n    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone(\\\\'utc\\\\'::text, now()) NOT NULL\\n);\\nALTER TABLE public.stock_entries ENABLE ROW LEVEL SECURITY;\\nCREATE POLICY \\\"Permitir leitura de entradas\\\" ON public.stock_entries FOR SELECT USING (true);\\nCREATE POLICY \\\"Permitir insercao de entradas\\\" ON public.stock_entries FOR INSERT WITH CHECK (true);\'); alert(\'SQL copiado para a área de transferência!\');">' +
+                '<i class="far fa-copy"></i> Copiar Código SQL de Criação' +
+                '</div>' +
+                '<button class="btn-primary" onclick="initEntradasModule()" style="background:#27ae60; margin-top:10px;"><i class="fas fa-sync"></i> Já criei, tentar novamente</button>' +
+                '</div>';
+        }
+    }
+}
+
+async function populateEntryProductSelect() {
+    const select = document.getElementById('entry-product');
+    if (!select) return;
+
+    let prods = cachedAdminData.products || await AdminData.getProducts();
+    prods = [...prods].sort((a, b) => a.name.localeCompare(b.name));
+
+    select.innerHTML = '<option value="">-- Selecione o Produto --</option>' +
+        prods.map(p => `<option value="${p.id}">${p.name} (Atual: ${p.stock || 0} un)</option>`).join('');
+}
+
+function renderEntradasHistory(filter = '') {
+    const tbody = document.getElementById('entradas-history-table');
+    if (!tbody) return;
+
+    const f = filter.toLowerCase().trim();
+    const filtered = allStockEntries.filter(e => {
+        const prodName = e.products ? String(e.products.name).toLowerCase() : '';
+        return !f || 
+            String(e.supplier).toLowerCase().includes(f) ||
+            String(e.invoice || '').toLowerCase().includes(f) ||
+            prodName.includes(f);
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:35px; color:var(--text-muted);">Nenhuma entrada de estoque registrada.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(e => {
+        const dateStr = new Date(e.date).toLocaleDateString('pt-BR');
+        const prodName = e.products ? e.products.name : 'Produto Excluído';
+        const cost = parseFloat(e.cost_price || 0);
+        const qty = parseInt(e.quantity || 0);
+        const total = cost * qty;
+
+        return `<tr>
+            <td>${dateStr}</td>
+            <td><strong>${e.supplier}</strong></td>
+            <td>${e.invoice || '—'}</td>
+            <td>${prodName}</td>
+            <td>${qty} un</td>
+            <td>R$ ${cost.toFixed(2).replace('.', ',')}</td>
+            <td style="font-weight:700; color:#27ae60;">R$ ${total.toFixed(2).replace('.', ',')}</td>
+        </tr>`;
+    }).join('');
+
+    const search = document.getElementById('entry-history-search');
+    if (search && !search._bound) {
+        search._bound = true;
+        search.addEventListener('input', (el) => renderEntradasHistory(el.target.value));
+    }
+}
+
+// Handler de submissão do formulário de Entrada
+document.addEventListener('submit', async (e) => {
+    if (e.target && e.target.id === 'form-lancar-entrada') {
+        e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
+        
+        const entryDate = document.getElementById('entry-date').value;
+        const supplier = document.getElementById('entry-supplier').value.trim();
+        const invoice = document.getElementById('entry-invoice').value.trim();
+        const productId = parseInt(document.getElementById('entry-product').value);
+        const qty = parseInt(document.getElementById('entry-qty').value) || 0;
+        const costPrice = parseFloat(document.getElementById('entry-cost').value) || 0;
+
+        if (!productId) { adminToast('Por favor, selecione um produto!', 'error'); return; }
+        if (qty <= 0) { adminToast('A quantidade deve ser maior que zero!', 'error'); return; }
+        if (costPrice < 0) { adminToast('O preço de custo não pode ser negativo!', 'error'); return; }
+
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...'; }
+
+        try {
+            // 1. Obter o estoque atual do produto para incrementar
+            const { data: prod, error: fetchErr } = await supabase
+                .from('products')
+                .select('stock')
+                .eq('id', productId)
+                .single();
+
+            if (fetchErr) throw fetchErr;
+
+            const currentStock = parseInt(prod.stock || 0);
+            const newStock = currentStock + qty;
+
+            // 2. Atualizar estoque e preço de custo do produto no Supabase
+            const { error: updateErr } = await supabase
+                .from('products')
+                .update({
+                    stock: newStock,
+                    cost: costPrice
+                })
+                .eq('id', productId);
+
+            if (updateErr) throw updateErr;
+
+            // 3. Registrar entrada no histórico de compras
+            const { error: insertErr } = await supabase
+                .from('stock_entries')
+                .insert([{
+                    date: entryDate ? new Date(entryDate).toISOString() : new Date().toISOString(),
+                    supplier: supplier,
+                    invoice: invoice || null,
+                    product_id: productId,
+                    quantity: qty,
+                    cost_price: costPrice
+                }]);
+
+            if (insertErr) throw insertErr;
+
+            adminToast('Entrada de estoque registrada com sucesso!');
+            
+            // Resetar formulário exceto data e fornecedor para facilitar lançamentos múltiplos rápidos
+            document.getElementById('entry-product').value = '';
+            document.getElementById('entry-qty').value = '';
+            document.getElementById('entry-cost').value = '';
+
+            // 4. Recarregar os produtos no cache global e atualizar tabelas
+            const updatedProducts = await AdminData.getProducts();
+            cachedAdminData.products = updatedProducts;
+            await loadProducts(null, updatedProducts);
+            
+            // Atualizar os módulos de Estoque se estiverem abertos
+            try {
+                if (typeof loadStock === 'function') {
+                    await loadStock();
+                }
+            } catch (e) { console.warn('Erro ao atualizar estoque geral:', e); }
+
+            // Recarregar o histórico de entradas atualizado
+            await initEntradasModule();
+        } catch (err) {
+            console.error('Erro ao registrar entrada de estoque:', err);
+            adminToast('Erro ao registrar entrada: ' + err.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus-circle"></i> Registrar Entrada e Atualizar Estoque'; }
+        }
+    }
+});
 
