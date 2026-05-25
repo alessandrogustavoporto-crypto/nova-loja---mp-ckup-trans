@@ -327,7 +327,11 @@ async function initAdminDashboard() {
             caixaUpdateInterval = setInterval(async () => {
                 const secCaixa = document.getElementById('section-caixa');
                 if (currentCashSession && secCaixa && secCaixa.classList.contains('active')) {
-                    await renderCaixaAbertoState();
+                    // Verificar se o caixa deve ser fechado automaticamente (23:50 ou dia anterior)
+                    const wasClosed = await checkAndAutoCloseCaixa(currentCashSession);
+                    if (!wasClosed) {
+                        await renderCaixaAbertoState();
+                    }
                 }
             }, 10000); // Atualiza a cada 10 segundos
         }
@@ -2619,9 +2623,13 @@ async function initCaixaDashboard() {
         }
 
         if (activeSession) {
-            // Caixa está ABERTO!
-            currentCashSession = activeSession;
-            await renderCaixaAbertoState();
+            // Verificar se o caixa deve ser fechado automaticamente (23:50 ou dia anterior)
+            const wasClosed = await checkAndAutoCloseCaixa(activeSession);
+            if (!wasClosed) {
+                // Caixa está ABERTO!
+                currentCashSession = activeSession;
+                await renderCaixaAbertoState();
+            }
         } else {
             // Caixa está FECHADO!
             currentCashSession = null;
@@ -3292,4 +3300,92 @@ window.closeHistoryCashModal = function() {
     const modal = document.getElementById('modal-historico-caixa');
     if (modal) modal.classList.add('hidden');
 };
+
+async function checkAndAutoCloseCaixa(session) {
+    if (!session || session.status !== 'aberto') return false;
+
+    const now = new Date();
+    const openedDate = new Date(session.opened_at);
+
+    // 1. Verificar se a sessão foi aberta em um dia anterior (esquecido aberto)
+    const isPreviousDay = (
+        now.getFullYear() > openedDate.getFullYear() ||
+        (now.getFullYear() === openedDate.getFullYear() && now.getMonth() > openedDate.getMonth()) ||
+        (now.getFullYear() === openedDate.getFullYear() && now.getMonth() === openedDate.getMonth() && now.getDate() > openedDate.getDate())
+    );
+
+    // 2. Verificar se hoje já passou das 23:50
+    const isPast1150PM = now.getHours() > 23 || (now.getHours() === 23 && now.getMinutes() >= 50);
+
+    // Se for um dia anterior OU se hoje já passou das 23:50
+    if (isPreviousDay || isPast1150PM) {
+        console.log(`[Caixa] Fechamento automático ativado. Anterior: ${isPreviousDay}, Passou 23:50: ${isPast1150PM}`);
+        
+        try {
+            // A. Calcular o saldo estimado atual do caixa
+            const { data: sales } = await supabase
+                .from('orders')
+                .select('total, payment_method')
+                .gte('created_at', session.opened_at);
+
+            let totalSalesCash = 0;
+            if (sales) {
+                sales.forEach(o => {
+                    const payMethod = String(o.payment_method || '').toLowerCase();
+                    if (payMethod.includes('dinheiro')) {
+                        totalSalesCash += parseFloat(o.total || 0);
+                    }
+                });
+            }
+
+            const { data: transactions } = await supabase
+                .from('cash_transactions')
+                .select('amount, type')
+                .eq('session_id', session.id);
+
+            let totalTransactions = 0;
+            if (transactions) {
+                transactions.forEach(t => {
+                    const val = parseFloat(t.amount || 0);
+                    if (t.type === 'sangria') totalTransactions -= val;
+                    else totalTransactions += val;
+                });
+            }
+
+            const initialAmount = parseFloat(session.initial_amount || 0);
+            const balance = initialAmount + totalSalesCash + totalTransactions;
+
+            // B. Atualizar a sessão no Supabase para fechado
+            const closingTime = new Date();
+            
+            const { error } = await supabase
+                .from('cash_sessions')
+                .update({
+                    closed_at: closingTime.toISOString(),
+                    total_sales_cash: totalSalesCash,
+                    total_transactions: totalTransactions,
+                    final_amount: balance,
+                    status: 'fechado',
+                    closed_by: 'Sistema (Fechamento Automático)'
+                })
+                .eq('id', session.id);
+
+            if (error) throw error;
+
+            console.log(`[Caixa] Caixa ${session.id} fechado automaticamente com sucesso.`);
+            
+            // Se a sessão que fechamos for a sessão ativa na tela atual, resetar
+            if (currentCashSession && currentCashSession.id === session.id) {
+                currentCashSession = null;
+                await renderCaixaFechadoState();
+                await initCaixaHistoryCalendar();
+                adminToast('O caixa ativo foi fechado automaticamente pelo sistema (horário limite: 23:50).', 'info');
+            }
+            return true;
+        } catch (err) {
+            console.error('Erro no fechamento automático do caixa:', err);
+        }
+    }
+    return false;
+}
 
