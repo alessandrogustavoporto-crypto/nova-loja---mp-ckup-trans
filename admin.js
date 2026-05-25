@@ -14,6 +14,7 @@ const ordersPageSize = 50;
 let dashCurrentPage = 1;
 const dashPageSize = 30;
 let dashPendingOrders = [];
+let caixaUpdateInterval = null;
 
 function logErrorToDOM(msg) {
     const div = document.createElement('div');
@@ -311,11 +312,25 @@ async function initAdminDashboard() {
         if (sec) sec.classList.add('active');
         document.getElementById('admin-page-title').textContent = btn.textContent.trim();
 
+        // Gerenciar atualização automática da aba Caixa
+        if (caixaUpdateInterval) {
+            clearInterval(caixaUpdateInterval);
+            caixaUpdateInterval = null;
+        }
+
         // Carregamento instantâneo via cache
         if (sectionId === 'financeiro') loadFinanceData('7days');
         if (sectionId === 'empresa') loadStoreSettings();
         if (sectionId === 'estoque') loadStock();
-        if (sectionId === 'caixa') initCaixaDashboard();
+        if (sectionId === 'caixa') {
+            initCaixaDashboard();
+            caixaUpdateInterval = setInterval(async () => {
+                const secCaixa = document.getElementById('section-caixa');
+                if (currentCashSession && secCaixa && secCaixa.classList.contains('active')) {
+                    await renderCaixaAbertoState();
+                }
+            }, 10000); // Atualiza a cada 10 segundos
+        }
 
         // No mobile, fecha a sidebar automaticamente ao clicar em uma seção
         if (window.innerWidth <= 768) {
