@@ -3487,19 +3487,14 @@ function addEntryItemRow() {
 
     const rowId = 'row-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
 
-    const productOptions = cachedEntryProducts.map(p => 
-        `<option value="${p.id}">${p.name} (Estoque: ${p.stock || 0} un)</option>`
-    ).join('');
-
     const tr = document.createElement('tr');
     tr.id = rowId;
     tr.className = 'entry-item-row';
     tr.innerHTML = `
-        <td style="padding: 10px 15px;">
-            <select class="table-input-compact entry-prod-select" required>
-                <option value="">-- Selecione o Produto --</option>
-                ${productOptions}
-            </select>
+        <td style="padding: 10px 15px; position: relative;">
+            <input type="text" class="table-input-compact entry-prod-search" placeholder="🔍 Digite nome, código ou SKU..." required autocomplete="off" style="width: 100%;">
+            <input type="hidden" class="entry-prod-id" required>
+            <div class="prod-suggestions-floating hidden"></div>
         </td>
         <td style="padding: 10px 15px;">
             <input type="number" class="table-input-compact entry-qty-input" placeholder="Qtd" min="1" required style="width: 100%;">
@@ -3515,13 +3510,15 @@ function addEntryItemRow() {
         </td>
     `;
 
-    // Listeners para atualizar cálculo ao alterar inputs
+    const searchInput = tr.querySelector('.entry-prod-search');
+    const hiddenIdInput = tr.querySelector('.entry-prod-id');
+    const suggestionsDiv = tr.querySelector('.prod-suggestions-floating');
     const qtyInput = tr.querySelector('.entry-qty-input');
     const costInput = tr.querySelector('.entry-cost-input');
     const rowTotalEl = tr.querySelector('.entry-row-total');
     const removeBtn = tr.querySelector('.btn-remove-row');
-    const prodSelect = tr.querySelector('.entry-prod-select');
 
+    // Função para recalcular o total da linha
     const updateRowTotal = () => {
         const qty = parseInt(qtyInput.value) || 0;
         const cost = parseFloat(costInput.value) || 0;
@@ -3532,7 +3529,75 @@ function addEntryItemRow() {
 
     qtyInput.addEventListener('input', updateRowTotal);
     costInput.addEventListener('input', updateRowTotal);
-    prodSelect.addEventListener('change', updateRowTotal);
+
+    // Lógica do Autocomplete
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        
+        // Se apagar a busca, limpa a seleção do produto
+        if (query.length === 0) {
+            hiddenIdInput.value = '';
+            suggestionsDiv.innerHTML = '';
+            suggestionsDiv.classList.add('hidden');
+            updateRowTotal();
+            return;
+        }
+
+        // Buscar produtos correspondentes
+        const matches = cachedEntryProducts.filter(p => 
+            p.name.toLowerCase().includes(query) || 
+            (p.barcode && p.barcode.includes(query)) ||
+            (p.sku && p.sku.toLowerCase().includes(query))
+        ).slice(0, 8); // Limite de 8 sugestões
+
+        if (matches.length > 0) {
+            suggestionsDiv.innerHTML = matches.map(p => `
+                <div class="prod-suggestion-row-item" data-id="${p.id}" data-name="${p.name.replace(/"/g, '&quot;')}" data-cost="${p.cost || 0}">
+                    <div class="item-details">
+                        <span class="item-name">${p.name}</span>
+                    </div>
+                    <span class="item-stock">Estoque atual: ${p.stock || 0} un | SKU: ${p.sku || '—'}</span>
+                </div>
+            `).join('');
+            suggestionsDiv.classList.remove('hidden');
+
+            // Evento de clique em cada sugestão
+            suggestionsDiv.querySelectorAll('.prod-suggestion-row-item').forEach(item => {
+                // Usando onmousedown para rodar ANTES do blur do input
+                item.onmousedown = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const id = item.getAttribute('data-id');
+                    const name = item.getAttribute('data-name');
+                    const suggestedCost = parseFloat(item.getAttribute('data-cost')) || 0;
+
+                    hiddenIdInput.value = id;
+                    searchInput.value = name;
+                    
+                    // Preencher preço de custo atual do produto se estiver vazio
+                    if (!costInput.value || parseFloat(costInput.value) === 0) {
+                        costInput.value = suggestedCost.toFixed(2);
+                    }
+
+                    suggestionsDiv.innerHTML = '';
+                    suggestionsDiv.classList.add('hidden');
+                    updateRowTotal();
+                };
+            });
+        } else {
+            suggestionsDiv.innerHTML = '';
+            suggestionsDiv.classList.add('hidden');
+        }
+    });
+
+    // Fechar caixa de sugestões quando o usuário desfocar do campo
+    searchInput.addEventListener('blur', () => {
+        // Delay minúsculo para garantir clique no item antes de sumir
+        setTimeout(() => {
+            suggestionsDiv.classList.add('hidden');
+        }, 150);
+    });
 
     removeBtn.addEventListener('click', () => {
         const allRows = tbody.querySelectorAll('.entry-item-row');
@@ -3637,12 +3702,12 @@ document.addEventListener('submit', async (e) => {
         let validationError = null;
 
         rows.forEach((tr, index) => {
-            const productId = parseInt(tr.querySelector('.entry-prod-select').value);
+            const productId = parseInt(tr.querySelector('.entry-prod-id').value);
             const qty = parseInt(tr.querySelector('.entry-qty-input').value) || 0;
             const costPrice = parseFloat(tr.querySelector('.entry-cost-input').value) || 0;
 
             if (!productId) {
-                validationError = `Linha ${index + 1}: Selecione um produto!`;
+                validationError = `Linha ${index + 1}: Digite e selecione um produto válido da lista de sugestões!`;
                 return;
             }
             if (qty <= 0) {
