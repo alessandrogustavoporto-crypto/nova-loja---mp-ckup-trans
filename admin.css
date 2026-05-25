@@ -29,7 +29,8 @@
     height: 100vh;
     z-index: 500;
     transition: var(--transition);
-    overflow: hidden; /* mantém escondido horizontalmente */
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .admin-sidebar.collapsed {
@@ -54,7 +55,7 @@
 
 .sidebar-brand i { font-size: 22px; color: #a8e6c3; }
 
-.sidebar-nav { flex: 1; padding: 15px 0; overflow-y: auto; overflow-x: hidden; }
+.sidebar-nav { flex: 1; padding: 15px 0; }
 
 .sidebar-btn {
     display: flex;
@@ -92,8 +93,6 @@
 .sidebar-footer {
     border-top: 1px solid rgba(255,255,255,0.15);
     padding: 10px 0;
-    flex-shrink: 0; /* nunca comprime — garante que sempre aparece */
-    background: var(--admin-primary);
 }
 
 .sidebar-logout { color: #ffb3b3 !important; }
