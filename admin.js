@@ -2627,6 +2627,9 @@ async function initCaixaDashboard() {
             currentCashSession = null;
             await renderCaixaFechadoState();
         }
+
+        // Inicializar histórico de caixas por calendário
+        await initCaixaHistoryCalendar();
     } catch (err) {
         console.error("Falha ao inicializar o controle de caixa:", err);
         // Exibir mensagem de erro informativa se as tabelas ainda não foram criadas
@@ -2862,6 +2865,7 @@ document.addEventListener('submit', async (e) => {
             adminToast('Caixa aberto com sucesso!');
             currentCashSession = data;
             await renderCaixaAbertoState();
+            await initCaixaHistoryCalendar();
         } catch (err) {
             console.error('Erro ao abrir caixa:', err);
             adminToast('Erro ao abrir caixa: ' + err.message, 'error');
@@ -2977,6 +2981,7 @@ document.addEventListener('submit', async (e) => {
             closeCloseCashModal();
             currentCashSession = null;
             await renderCaixaFechadoState();
+            await initCaixaHistoryCalendar();
         } catch (err) {
             console.error('Erro ao fechar caixa:', err);
             adminToast('Erro ao fechar caixa: ' + err.message, 'error');
@@ -2985,4 +2990,306 @@ document.addEventListener('submit', async (e) => {
         }
     }
 });
+
+// ============================================================
+// SEÇÃO: HISTÓRICO E CALENDÁRIO DE CAIXAS
+// ============================================================
+let historyCurrentDate = new Date();
+let historySessions = [];
+
+async function initCaixaHistoryCalendar() {
+    const year = historyCurrentDate.getFullYear();
+    const month = historyCurrentDate.getMonth();
+    
+    const monthNames = [
+        "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+    const monthLabel = document.getElementById('history-month-year');
+    if (monthLabel) monthLabel.textContent = `${monthNames[month]} ${year}`;
+    
+    // Configura os limites do mês selecionado usando HORA LOCAL
+    const startOfMonth = new Date(year, month, 1, 0, 0, 0, 0);
+    const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
+    
+    try {
+        const { data: sessions, error } = await supabase
+            .from('cash_sessions')
+            .select('*')
+            .gte('opened_at', startOfMonth.toISOString())
+            .lte('opened_at', endOfMonth.toISOString())
+            .order('opened_at', { ascending: true });
+            
+        if (error) throw error;
+        
+        historySessions = sessions || [];
+        renderCaixaHistoryCalendar(year, month);
+    } catch (err) {
+        console.error("Erro ao carregar histórico de caixas:", err);
+    }
+}
+
+function renderCaixaHistoryCalendar(year, month) {
+    const grid = document.getElementById('calendar-days-grid');
+    if (!grid) return;
+    
+    grid.innerHTML = '';
+    
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    
+    // Preencher dias vazios no início do calendário
+    for (let i = 0; i < firstDayIndex; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-day-cell empty';
+        grid.appendChild(cell);
+    }
+    
+    // Preencher os dias do mês
+    for (let day = 1; day <= totalDays; day++) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-day-cell';
+        cell.textContent = day;
+        
+        // Verificar se o dia corresponde a hoje
+        if (today.getFullYear() === year && today.getMonth() === month && today.getDate() === day) {
+            cell.classList.add('today');
+        }
+        
+        // Buscar sessões correspondentes a este dia (em Hora Local)
+        const daySessions = historySessions.filter(s => {
+            const opDate = new Date(s.opened_at);
+            return opDate.getFullYear() === year && opDate.getMonth() === month && opDate.getDate() === day;
+        });
+        
+        if (daySessions.length > 0) {
+            const hasActive = daySessions.some(s => s.status === 'aberto');
+            if (hasActive) {
+                cell.classList.add('has-active-session');
+            } else {
+                cell.classList.add('has-closed-session');
+            }
+            
+            // Adicionar ponto indicador
+            const badge = document.createElement('span');
+            badge.className = 'calendar-day-badge';
+            cell.appendChild(badge);
+        }
+        
+        cell.addEventListener('click', () => {
+            document.querySelectorAll('.calendar-day-cell').forEach(c => c.classList.remove('selected'));
+            cell.classList.add('selected');
+            renderSelectedDaySessions(day, daySessions);
+        });
+        
+        grid.appendChild(cell);
+    }
+}
+
+window.changeHistoryMonth = async function(offset) {
+    historyCurrentDate.setMonth(historyCurrentDate.getMonth() + offset);
+    
+    const title = document.getElementById('selected-day-title');
+    if (title) title.textContent = 'Selecione um dia no calendário';
+    
+    const sessionsContainer = document.getElementById('selected-day-sessions');
+    if (sessionsContainer) {
+        sessionsContainer.innerHTML = '<p style="color:var(--text-muted); font-size:14px; text-align:center; padding:30px 0; margin:0;">Clique em um dia destacado para ver o histórico do caixa.</p>';
+    }
+    
+    await initCaixaHistoryCalendar();
+};
+
+function renderSelectedDaySessions(day, daySessions) {
+    const title = document.getElementById('selected-day-title');
+    if (title) title.textContent = `Caixas do dia ${String(day).padStart(2, '0')}/${String(historyCurrentDate.getMonth() + 1).padStart(2, '0')}/${historyCurrentDate.getFullYear()}`;
+    
+    const container = document.getElementById('selected-day-sessions');
+    if (!container) return;
+    
+    if (daySessions.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted); font-size:14px; text-align:center; padding:30px 0; margin:0;">Nenhum caixa movimentado neste dia.</p>';
+        return;
+    }
+    
+    container.innerHTML = daySessions.map(s => {
+        const openTime = new Date(s.opened_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const closeTime = s.closed_at ? new Date(s.closed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
+        
+        const statusBadge = s.status === 'aberto' 
+            ? '<span class="badge badge-ativo" style="background:#27ae60; color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700;">Aberto</span>'
+            : '<span class="badge badge-fechado" style="background:#7f8c8d; color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700;">Fechado</span>';
+            
+        const balanceLabel = s.status === 'aberto' ? 'Saldo Estimado' : 'Fundo Final';
+        const balanceVal = s.status === 'aberto' 
+            ? (parseFloat(s.initial_amount || 0) + parseFloat(s.total_sales_cash || 0) + parseFloat(s.total_transactions || 0)) 
+            : parseFloat(s.final_amount || 0);
+            
+        return `<div class="history-session-item" onclick="viewHistorySessionReport(${s.id})">
+            <div>
+                <div style="font-weight:700; color:var(--text-color); font-size:14px;">Operador: ${s.opened_by}</div>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                    <i class="far fa-clock"></i> Abertura: ${openTime} ${closeTime ? `| Fechamento: ${closeTime}` : ''}
+                </div>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                    ${balanceLabel}: <strong>R$ ${balanceVal.toFixed(2).replace('.', ',')}</strong>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                ${statusBadge}
+                <div style="font-size:11px; color:#2980b9; font-weight:600; margin-top:8px;"><i class="fas fa-eye"></i> Ver Relatório</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.viewHistorySessionReport = async function(sessionId) {
+    const modal = document.getElementById('modal-historico-caixa');
+    const body = document.getElementById('modal-historico-caixa-body');
+    if (!modal || !body) return;
+    
+    body.innerHTML = '<div class="text-center" style="padding:40px;"><i class="fas fa-circle-notch fa-spin fa-2x" style="color:#2980b9;"></i><p style="margin-top:10px;">Carregando relatório...</p></div>';
+    modal.classList.remove('hidden');
+    
+    try {
+        // 1. Buscar a sessão específica
+        const { data: session, error: sessErr } = await supabase
+            .from('cash_sessions')
+            .select('*')
+            .eq('id', sessionId)
+            .single();
+            
+        if (sessErr) throw sessErr;
+        
+        // 2. Buscar transações daquela sessão
+        const { data: transactions, error: txErr } = await supabase
+            .from('cash_transactions')
+            .select('*')
+            .eq('session_id', sessionId)
+            .order('id', { ascending: true });
+            
+        if (txErr) throw txErr;
+        
+        // 3. Renderizar o corpo do relatório detalhado
+        const openDate = new Date(session.opened_at).toLocaleString('pt-BR');
+        const closeDate = session.closed_at ? new Date(session.closed_at).toLocaleString('pt-BR') : 'Ainda Aberto';
+        
+        const initialAmount = parseFloat(session.initial_amount || 0);
+        const salesAmount = parseFloat(session.total_sales_cash || 0);
+        const transAmount = parseFloat(session.total_transactions || 0);
+        const estimated = initialAmount + salesAmount + transAmount;
+        const finalAmount = session.status === 'aberto' ? null : parseFloat(session.final_amount || 0);
+        
+        // Calcular Sangrias e Suprimentos separadamente
+        let totalSangrias = 0;
+        let totalSuprimentos = 0;
+        (transactions || []).forEach(t => {
+            const val = parseFloat(t.amount || 0);
+            if (t.type === 'sangria') totalSangrias += val;
+            else totalSuprimentos += val;
+        });
+        
+        let diffHTML = '';
+        if (session.status === 'fechado') {
+            const diff = finalAmount - estimated;
+            const diffColor = diff === 0 ? '#27ae60' : (diff > 0 ? '#2980b9' : '#c0392b');
+            const diffLabel = diff === 0 ? 'Conferido (Sem divergências)' : (diff > 0 ? `Sobra de R$ ${diff.toFixed(2).replace('.', ',')}` : `Quebra de R$ ${Math.abs(diff).toFixed(2).replace('.', ',')}`);
+            
+            diffHTML = `
+                <div class="history-session-kpi ${diff >= 0 ? 'success' : 'danger'}" style="grid-column: span 2;">
+                    <span>Divergência / Fechamento Real</span>
+                    <strong style="color:${diffColor};">${diffLabel} (Físico: R$ ${finalAmount.toFixed(2).replace('.', ',')})</strong>
+                </div>
+            `;
+        }
+        
+        // Listagem de movimentações
+        let txListHTML = '';
+        if (transactions && transactions.length > 0) {
+            txListHTML = transactions.map(t => {
+                const isSangria = t.type === 'sangria';
+                const color = isSangria ? '#c0392b' : '#27ae60';
+                const symbol = isSangria ? '-' : '+';
+                const label = isSangria ? 'Sangria' : 'Suprimento';
+                const time = new Date(t.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                
+                return `<tr>
+                    <td>${time}</td>
+                    <td style="color:${color}; font-weight:700;">${label}</td>
+                    <td>${t.description || '—'}</td>
+                    <td style="color:${color}; font-weight:700;">${symbol} R$ ${parseFloat(t.amount || 0).toFixed(2).replace('.', ',')}</td>
+                </tr>`;
+            }).join('');
+        } else {
+            txListHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted);">Nenhuma sangria ou suprimento lançado.</td></tr>';
+        }
+        
+        body.innerHTML = `
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
+                <div>
+                    <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Operador de Abertura</div>
+                    <strong style="font-size:16px;">${session.opened_by}</strong>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:4px;"><i class="far fa-calendar-alt"></i> ${openDate}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Fechamento</div>
+                    <strong style="font-size:16px;">${session.closed_by || '—'}</strong>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:4px;"><i class="far fa-calendar-alt"></i> ${closeDate}</div>
+                </div>
+            </div>
+            
+            <div class="history-session-details-grid">
+                <div class="history-session-kpi">
+                    <span>Fundo de Caixa Inicial</span>
+                    <strong>R$ ${initialAmount.toFixed(2).replace('.', ',')}</strong>
+                </div>
+                <div class="history-session-kpi success">
+                    <span>Vendas no Dinheiro (PDV)</span>
+                    <strong>+ R$ ${salesAmount.toFixed(2).replace('.', ',')}</strong>
+                </div>
+                <div class="history-session-kpi">
+                    <span>Suprimentos (Aportes)</span>
+                    <strong>+ R$ ${totalSuprimentos.toFixed(2).replace('.', ',')}</strong>
+                </div>
+                <div class="history-session-kpi danger">
+                    <span>Sangrias (Retiradas)</span>
+                    <strong>- R$ ${totalSangrias.toFixed(2).replace('.', ',')}</strong>
+                </div>
+                <div class="history-session-kpi" style="border-left-color:#8e44ad; grid-column: span 2;">
+                    <span>Saldo Estimado em Gaveta</span>
+                    <strong>R$ ${estimated.toFixed(2).replace('.', ',')}</strong>
+                </div>
+                ${diffHTML}
+            </div>
+            
+            <div style="margin-top:20px;">
+                <h4 style="font-size:14px; font-weight:700; margin-bottom:10px; color:var(--text-color);">Movimentações Manuais</h4>
+                <div style="overflow-x:auto; border:1px solid var(--border-color); border-radius:6px;">
+                    <table class="admin-table" style="margin:0; font-size:13px;">
+                           <thead>
+                               <tr>
+                                   <th width="80">Hora</th>
+                                   <th width="100">Operação</th>
+                                   <th>Descrição / Motivo</th>
+                                   <th width="120">Valor</th>
+                               </tr>
+                           </thead>
+                        <tbody>
+                            ${txListHTML}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        console.error("Erro ao carregar detalhes do histórico:", err);
+        body.innerHTML = `<div style="color:#c0392b; padding:20px; text-align:center;"><strong>Erro:</strong> ${err.message}</div>`;
+    }
+};
+
+window.closeHistoryCashModal = function() {
+    const modal = document.getElementById('modal-historico-caixa');
+    if (modal) modal.classList.add('hidden');
+};
 

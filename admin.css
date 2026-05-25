@@ -809,3 +809,169 @@
     border: 1px solid var(--border-color);
 }
 
+/* ============================================================
+   SEÇÃO: CALENDÁRIO E HISTÓRICO DE CAIXAS
+   ============================================================ */
+.caixa-history-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 1.8fr;
+    gap: 25px;
+}
+
+@media (max-width: 900px) {
+    .caixa-history-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.calendar-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    text-align: center;
+}
+
+.calendar-day-cell {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+    border: 1px solid #f0f0f0;
+    position: relative;
+}
+
+.calendar-day-cell:hover {
+    background: #ebf5ff;
+    border-color: #3b82f6;
+    color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.calendar-day-cell.empty {
+    background: transparent !important;
+    border: none !important;
+    cursor: default;
+    pointer-events: none;
+}
+
+.calendar-day-cell.today {
+    border: 2px solid #9F90EA;
+    font-weight: 700;
+}
+
+.calendar-day-cell.has-active-session {
+    background: #e8f5e9 !important;
+    border: 2px solid #27ae60;
+    color: #27ae60;
+    font-weight: 700;
+}
+
+.calendar-day-cell.has-closed-session {
+    background: #f1f8ff !important;
+    border: 2px solid #2980b9;
+    color: #2980b9;
+    font-weight: 600;
+}
+
+.calendar-day-cell.selected {
+    background: #9F90EA !important;
+    color: white !important;
+    border-color: #9F90EA !important;
+}
+
+.calendar-day-badge {
+    position: absolute;
+    bottom: 3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.calendar-day-cell.has-active-session .calendar-day-badge {
+    background: #27ae60;
+}
+
+.calendar-day-cell.has-closed-session .calendar-day-badge {
+    background: #2980b9;
+}
+
+.history-session-item {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.history-session-item:hover {
+    border-color: #9F90EA;
+    box-shadow: var(--shadow-sm);
+    transform: translateX(4px);
+}
+
+.history-session-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.history-session-kpi {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    border-left: 4px solid #9F90EA;
+}
+
+.history-session-kpi.success {
+    border-left-color: #27ae60;
+}
+
+.history-session-kpi.danger {
+    border-left-color: #c0392b;
+}
+
+.history-session-kpi span {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.history-session-kpi strong {
+    display: block;
+    font-size: 16px;
+    margin-top: 4px;
+}
+

@@ -642,6 +642,39 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 3. Histórico e Calendário de Caixas -->
+            <div class="admin-card mt-25" id="caixa-historico-section">
+                <div class="admin-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <h2><i class="far fa-calendar-alt"></i> Histórico de Fechamentos por Calendário</h2>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button type="button" class="btn-secondary btn-sm" onclick="changeHistoryMonth(-1)" style="padding: 6px 12px;"><i class="fas fa-chevron-left"></i></button>
+                        <span id="history-month-year" style="font-weight:700; min-width:140px; text-align:center; font-size:15px; color:var(--text-color);">Carregando...</span>
+                        <button type="button" class="btn-secondary btn-sm" onclick="changeHistoryMonth(1)" style="padding: 6px 12px;"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                <div class="admin-card-body" style="padding:20px;">
+                    <div class="caixa-history-layout">
+                        <!-- Calendário -->
+                        <div class="calendar-card">
+                            <div class="calendar-weekdays">
+                                <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+                            </div>
+                            <div class="calendar-days" id="calendar-days-grid">
+                                <!-- Gerado via JS -->
+                            </div>
+                        </div>
+                        <!-- Detalhes do Dia Selecionado -->
+                        <div class="day-details-card" style="display:flex; flex-direction:column; gap:15px;">
+                            <h3 id="selected-day-title" style="font-size:16px; font-weight:700; border-bottom:2px solid #eee; padding-bottom:8px; color:var(--text-color); margin:0;">Selecione um dia no calendário</h3>
+                            <div id="selected-day-sessions" style="display:flex; flex-direction:column; gap:12px;">
+                                <!-- Sessões listadas aqui -->
+                                <p style="color:var(--text-muted); font-size:14px; text-align:center; padding:30px 0; margin:0;">Clique em um dia destacado para ver o histórico do caixa.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
 
 <!-- SECTION: Financeiro -->
@@ -1166,6 +1199,22 @@
                         <i class="fas fa-lock"></i> Confirmar e Fechar Caixa
                     </button>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Detalhes do Caixa Histórico -->
+    <div id="modal-historico-caixa" class="admin-modal-overlay hidden">
+        <div class="admin-modal" style="max-width:650px;">
+            <div class="admin-modal-header" style="background:#2980b9; color:white; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;"><i class="fas fa-file-invoice-dollar"></i> Relatório Completo de Caixa</h3>
+                <button type="button" class="modal-close" onclick="closeHistoryCashModal()" style="color:white; background:none; border:none; font-size:18px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body" style="padding:25px;" id="modal-historico-caixa-body">
+                <!-- Preenchido via JS -->
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeHistoryCashModal()">Fechar Relatório</button>
             </div>
         </div>
     </div>
