@@ -2653,7 +2653,7 @@ async function initCaixaDashboard() {
                 'Para ativar a aba Caixa, você precisa criar as tabelas correspondentes no seu banco de dados. ' +
                 'Copie e execute o script SQL fornecido nas instruções no <strong>SQL Editor</strong> do painel do seu Supabase.' +
                 '</p>' +
-                '<div style="background:#f8f9fa; border:1px solid #ddd; padding:12px; border-radius:6px; font-size:13px; font-weight:600; color:#333; margin-bottom:10px; cursor:pointer;" onclick="navigator.clipboard.writeText(\'-- Criar tabelas do caixa\\nCREATE TABLE public.cash_sessions (id SERIAL PRIMARY KEY, opened_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL, closed_at TIMESTAMP WITH TIME ZONE, opened_by TEXT NOT NULL, initial_amount NUMERIC(10,2) DEFAULT 0.00 NOT NULL, total_sales_cash NUMERIC(10,2) DEFAULT 0.00 NOT NULL, total_transactions NUMERIC(10,2) DEFAULT 0.00 NOT NULL, final_amount NUMERIC(10,2), status TEXT DEFAULT \\\'aberto\\\'::text NOT NULL, closed_by TEXT);\\nCREATE TABLE public.cash_transactions (id SERIAL PRIMARY KEY, session_id INTEGER REFERENCES public.cash_sessions(id) ON DELETE CASCADE NOT NULL, type TEXT NOT NULL, amount NUMERIC(10,2) NOT NULL, description TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL);\\nALTER TABLE public.cash_sessions ENABLE ROW LEVEL SECURITY;\\nALTER TABLE public.cash_transactions ENABLE ROW LEVEL SECURITY;\\nCREATE POLICY \\\"Permitir leitura para todos\\\" ON public.cash_sessions FOR SELECT USING (true);\\nCREATE POLICY \\\"Permitir insercao para todos\\\" ON public.cash_sessions FOR INSERT WITH CHECK (true);\\nCREATE POLICY \\\"Permitir atualizacao para todos\\\" ON public.cash_sessions FOR UPDATE USING (true);\\nCREATE POLICY \\\"Permitir leitura de transacoes\\\" ON public.cash_transactions FOR SELECT USING (true);\\nCREATE POLICY \\\"Permitir insercao de transacoes\\\" ON public.cash_transactions FOR INSERT WITH CHECK (true);\'); alert(\\\'SQL copiado para a área de transferência!\\\');">' +
+                '<div style="background:#f8f9fa; border:1px solid #ddd; padding:12px; border-radius:6px; font-size:13px; font-weight:600; color:#333; margin-bottom:10px; cursor:pointer;" onclick="window.copyCaixaSQL()">' +
                 '<i class="far fa-copy"></i> Copiar Código SQL de Criação' +
                 '</div>' +
                 '<button class="btn-primary" onclick="initCaixaDashboard()" style="background:#27ae60; margin-top:10px;"><i class="fas fa-sync"></i> Já criei, tentar novamente</button>' +
@@ -3457,7 +3457,7 @@ async function initEntradasModule() {
                 'Para ativar a aba de Entradas de Estoque, você precisa criar a tabela correspondente no seu banco de dados. ' +
                 'Copie e execute o script SQL fornecido abaixo no <strong>SQL Editor</strong> do seu painel do Supabase.' +
                 '</p>' +
-                '<div style="background:#f8f9fa; border:1px solid #ddd; padding:12px; border-radius:6px; font-size:13px; font-weight:600; color:#333; margin-bottom:10px; cursor:pointer;" onclick="navigator.clipboard.writeText(\'-- Criar tabela de entradas de estoque\\nCREATE TABLE public.stock_entries (\\n    id SERIAL PRIMARY KEY,\\n    date TIMESTAMP WITH TIME ZONE DEFAULT timezone(\\\\'utc\\\\'::text, now()) NOT NULL,\\n    supplier TEXT NOT NULL,\\n    invoice TEXT,\\n    product_id INTEGER REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,\\n    quantity INTEGER NOT NULL,\\n    cost_price NUMERIC(10,2) NOT NULL,\\n    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone(\\\\'utc\\\\'::text, now()) NOT NULL\\n);\\nALTER TABLE public.stock_entries ENABLE ROW LEVEL SECURITY;\\nCREATE POLICY \\\"Permitir leitura de entradas\\\" ON public.stock_entries FOR SELECT USING (true);\\nCREATE POLICY \\\"Permitir insercao de entradas\\\" ON public.stock_entries FOR INSERT WITH CHECK (true);\'); alert(\'SQL copiado para a área de transferência!\');">' +
+                '<div style="background:#f8f9fa; border:1px solid #ddd; padding:12px; border-radius:6px; font-size:13px; font-weight:600; color:#333; margin-bottom:10px; cursor:pointer;" onclick="window.copyEntradasSQL()">' +
                 '<i class="far fa-copy"></i> Copiar Código SQL de Criação' +
                 '</div>' +
                 '<button class="btn-primary" onclick="initEntradasModule()" style="background:#27ae60; margin-top:10px;"><i class="fas fa-sync"></i> Já criei, tentar novamente</button>' +
@@ -3606,4 +3606,65 @@ document.addEventListener('submit', async (e) => {
         }
     }
 });
+
+// Helper para copiar SQL de criacao do Caixa
+window.copyCaixaSQL = function() {
+    const sql = `-- Criar tabelas do caixa
+CREATE TABLE IF NOT EXISTS public.cash_sessions (
+    id SERIAL PRIMARY KEY,
+    opened_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    closed_at TIMESTAMP WITH TIME ZONE,
+    opened_by TEXT NOT NULL,
+    initial_amount NUMERIC(10,2) DEFAULT 0.00 NOT NULL,
+    total_sales_cash NUMERIC(10,2) DEFAULT 0.00 NOT NULL,
+    total_transactions NUMERIC(10,2) DEFAULT 0.00 NOT NULL,
+    final_amount NUMERIC(10,2),
+    status TEXT DEFAULT 'aberto'::text NOT NULL,
+    closed_by TEXT
+);
+
+CREATE TABLE IF NOT EXISTS public.cash_transactions (
+    id SERIAL PRIMARY KEY,
+    session_id INTEGER REFERENCES public.cash_sessions(id) ON DELETE CASCADE NOT NULL,
+    type TEXT NOT NULL,
+    amount NUMERIC(10,2) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.cash_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.cash_transactions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Permitir leitura para todos" ON public.cash_sessions FOR SELECT USING (true);
+CREATE POLICY "Permitir insercao para todos" ON public.cash_sessions FOR INSERT WITH CHECK (true);
+CREATE POLICY "Permitir atualizacao para todos" ON public.cash_sessions FOR UPDATE USING (true);
+CREATE POLICY "Permitir leitura de transacoes" ON public.cash_transactions FOR SELECT USING (true);
+CREATE POLICY "Permitir insercao de transacoes" ON public.cash_transactions FOR INSERT WITH CHECK (true);`;
+
+    navigator.clipboard.writeText(sql);
+    alert('SQL do Caixa copiado para a área de transferência!');
+};
+
+// Helper para copiar SQL de criacao de Entradas de Estoque
+window.copyEntradasSQL = function() {
+    const sql = `-- Criar tabela de entradas de estoque
+CREATE TABLE IF NOT EXISTS public.stock_entries (
+    id SERIAL PRIMARY KEY,
+    date TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    supplier TEXT NOT NULL,
+    invoice TEXT,
+    product_id INTEGER REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
+    quantity INTEGER NOT NULL,
+    cost_price NUMERIC(10,2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.stock_entries ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Permitir leitura de entradas" ON public.stock_entries FOR SELECT USING (true);
+CREATE POLICY "Permitir insercao de entradas" ON public.stock_entries FOR INSERT WITH CHECK (true);`;
+
+    navigator.clipboard.writeText(sql);
+    alert('SQL de Entradas copiado para a área de transferência!');
+};
 
