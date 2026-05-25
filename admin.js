@@ -1732,7 +1732,7 @@ window.openBannerModal = async function (id) {
 
     if (!id) {
         document.getElementById('banner-modal-title').textContent = 'Inserir Novo Banner';
-        ['banner-id', 'banner-title', 'banner-subtitle', 'banner-btn-text', 'banner-btn-link', 'banner-image-base64'].forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
+        ['banner-id', 'banner-title', 'banner-subtitle', 'banner-btn-text', 'banner-btn-link', 'banner-image-url'].forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
         document.getElementById('banner-active').checked = true;
         return;
     }
@@ -1747,7 +1747,7 @@ window.openBannerModal = async function (id) {
     document.getElementById('banner-subtitle').value = banner.subtitle || '';
     document.getElementById('banner-btn-text').value = banner.btnText || '';
     document.getElementById('banner-btn-link').value = banner.btnLink || '';
-    document.getElementById('banner-image-base64').value = banner.image || '';
+    document.getElementById('banner-image-url').value = banner.image || '';
     document.getElementById('banner-active').checked = !!banner.active;
 
     if (banner.image && preview) {
@@ -1769,7 +1769,7 @@ window.saveBanner = async function () {
         subtitle: document.getElementById('banner-subtitle').value,
         btn_text: document.getElementById('banner-btn-text').value,
         btn_link: document.getElementById('banner-btn-link').value,
-        image: document.getElementById('banner-image-base64').value,
+        image: document.getElementById('banner-image-url').value,
         active: document.getElementById('banner-active').checked
     };
 
@@ -2305,23 +2305,176 @@ window.saveStoreSettings = async function () {
     }
 };
 
-// Handle Banner Image Upload
+// ---- Upload de Imagem de Banner para o Supabase Storage (bucket: product-images/banners/) ----
+async function uploadBannerImage(file) {
+    const preview = document.getElementById('banner-img-preview');
+    const placeholder = document.getElementById('preview-placeholder');
+    const statusEl = document.getElementById('banner-upload-status');
+    const statusText = document.getElementById('banner-upload-status-text');
+
+    if (statusEl) statusEl.style.display = 'flex';
+    if (statusText) statusText.textContent = 'Enviando imagem...';
+
+    await tryCreateBucket(); // Reutiliza o helper já existente
+
+    try {
+        const safeName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
+        const fileName = `banners/${Date.now()}_${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('product-images')
+            .upload(fileName, file, { upsert: true, contentType: file.type });
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+            .from('product-images')
+            .getPublicUrl(fileName);
+
+        const publicUrl = urlData.publicUrl;
+
+        document.getElementById('banner-image-url').value = publicUrl;
+        if (preview) { preview.src = publicUrl; preview.style.display = 'block'; }
+        if (placeholder) placeholder.style.display = 'none';
+
+        if (statusText) statusText.textContent = '✓ Imagem enviada com sucesso!';
+        setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 2500);
+
+    } catch (err) {
+        console.error('Erro ao enviar imagem do banner:', err);
+        if (statusText) statusText.textContent = '✗ Erro: ' + (err.message || 'verifique o Storage');
+        adminToast('Erro ao enviar imagem do banner: ' + (err.message || ''), 'error');
+    }
+}
+
+// Handler de seleção de arquivo de banner → aciona upload para Storage
 document.addEventListener('change', e => {
     if (e.target.id === 'banner-image-file') {
         const file = e.target.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function (event) {
-            const base64 = event.target.result;
-            document.getElementById('banner-image-base64').value = base64;
-            const preview = document.getElementById('banner-img-preview');
-            const placeholder = document.getElementById('preview-placeholder');
-            if (preview) { preview.src = base64; preview.style.display = 'block'; }
-            if (placeholder) { placeholder.style.display = 'none'; }
-        };
-        reader.readAsDataURL(file);
+        uploadBannerImage(file);
     }
 });
+
+// ---- MIGRAR IMAGENS DE BANNERS BASE64 PARA SUPABASE STORAGE ----
+let base64BannersToMigrate = [];
+
+window.openMigrateBannersModal = async function () {
+    const modal = document.getElementById('modal-migrate-banners');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    const infoEl = document.getElementById('migrate-banners-count-info');
+    const startBtn = document.getElementById('migrate-banners-start-btn');
+    const startArea = document.getElementById('migrate-banners-start-area');
+    const progressArea = document.getElementById('migrate-banners-progress-area');
+    const doneBtn = document.getElementById('migrate-banners-done-btn');
+    const closeBtn = document.getElementById('migrate-banners-close-btn');
+    const logEl = document.getElementById('migrate-banners-log');
+
+    if (infoEl) infoEl.textContent = 'Buscando banners no banco de dados...';
+    if (startBtn) startBtn.style.display = 'none';
+    if (startArea) startArea.style.display = 'block';
+    if (progressArea) progressArea.style.display = 'none';
+    if (doneBtn) doneBtn.style.display = 'none';
+    if (closeBtn) closeBtn.style.display = 'block';
+    if (logEl) logEl.innerHTML = '';
+
+    try {
+        const { data: banners, error } = await supabase.from('banners').select('id, title, image');
+        if (error) throw error;
+        base64BannersToMigrate = (banners || []).filter(b => b.image && b.image.startsWith('data:image/'));
+        if (infoEl) {
+            if (base64BannersToMigrate.length === 0) {
+                infoEl.textContent = '✓ Nenhum banner com imagem em Base64 encontrado. Todos já estão no Storage!';
+            } else {
+                infoEl.textContent = `Encontrado(s) ${base64BannersToMigrate.length} banner(s) com imagem em Base64 aguardando migração.`;
+                if (startBtn) startBtn.style.display = 'inline-block';
+            }
+        }
+    } catch (err) {
+        if (infoEl) infoEl.textContent = 'Erro ao carregar banners: ' + err.message;
+    }
+};
+
+window.closeMigrateBannersModal = function () {
+    const modal = document.getElementById('modal-migrate-banners');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.startBannerMigration = async function () {
+    const startArea = document.getElementById('migrate-banners-start-area');
+    const progressArea = document.getElementById('migrate-banners-progress-area');
+    const progressBar = document.getElementById('migrate-banners-progress-bar');
+    const progressText = document.getElementById('migrate-banners-progress-text');
+    const logEl = document.getElementById('migrate-banners-log');
+    const doneBtn = document.getElementById('migrate-banners-done-btn');
+    const closeBtn = document.getElementById('migrate-banners-close-btn');
+
+    if (startArea) startArea.style.display = 'none';
+    if (progressArea) progressArea.style.display = 'block';
+    if (closeBtn) closeBtn.style.display = 'none';
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressText) progressText.textContent = `0 / ${base64BannersToMigrate.length}`;
+    if (logEl) logEl.innerHTML = '<div>Iniciando migração de banners...</div>';
+
+    await tryCreateBucket();
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < base64BannersToMigrate.length; i++) {
+        const b = base64BannersToMigrate[i];
+        const logItem = document.createElement('div');
+        logItem.style.marginBottom = '4px';
+        logItem.textContent = `[${i+1}/${base64BannersToMigrate.length}] Processando banner: "${b.title || 'sem título'}"...`;
+        if (logEl) { logEl.appendChild(logItem); logEl.scrollTop = logEl.scrollHeight; }
+
+        try {
+            const matches = b.image.match(/^data:(image\/[a-z+]+);base64,(.+)$/);
+            if (!matches) throw new Error('Formato Base64 inválido.');
+
+            const contentType = matches[1];
+            const ext = contentType.split('/')[1] || 'png';
+            const fileName = `banners/migrated_${b.id}_${Date.now()}.${ext}`;
+
+            const blob = base64ToBlob(matches[2], contentType);
+            const { error: uploadError } = await supabase.storage
+                .from('product-images')
+                .upload(fileName, blob, { upsert: true, contentType });
+            if (uploadError) throw uploadError;
+
+            const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(fileName);
+            const publicUrl = urlData.publicUrl;
+
+            const { error: updateError } = await supabase.from('banners').update({ image: publicUrl }).eq('id', b.id);
+            if (updateError) throw updateError;
+
+            successCount++;
+            logItem.textContent += ' ✓ Migrado com sucesso!';
+            logItem.style.color = '#a8e6c3';
+        } catch (err) {
+            failCount++;
+            logItem.textContent += ` ✗ Erro: ${err.message || err}`;
+            logItem.style.color = '#ff7675';
+        }
+
+        const pct = Math.round(((i + 1) / base64BannersToMigrate.length) * 100);
+        if (progressBar) progressBar.style.width = `${pct}%`;
+        if (progressText) progressText.textContent = `${i + 1} / ${base64BannersToMigrate.length}`;
+    }
+
+    const summary = document.createElement('div');
+    summary.style.cssText = 'margin-top:10px;font-weight:bold;border-top:1px solid #333;padding-top:8px;';
+    summary.textContent = `Fim! Sucesso: ${successCount} | Falhas: ${failCount}`;
+    if (logEl) { logEl.appendChild(summary); logEl.scrollTop = logEl.scrollHeight; }
+
+    if (closeBtn) closeBtn.style.display = 'block';
+    if (doneBtn) doneBtn.style.display = 'inline-block';
+
+    adminToast(`Migração de banners concluída! Sucesso: ${successCount}, Falhas: ${failCount}`, failCount > 0 ? 'warning' : 'success');
+    await loadBanners();
+};
 
 // ============================================================
 // BOOT

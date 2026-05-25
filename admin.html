@@ -489,6 +489,9 @@
                         melhor visualização.
                     </p>
                 </div>
+                <button class="btn-secondary btn-sm" onclick="openMigrateBannersModal()" title="Migrar imagens Base64 dos banners para Supabase Storage" style="background:#f39c12;color:#fff;border:none;">
+                    <i class="fas fa-cloud-upload-alt"></i> Migrar Imagens p/ Storage
+                </button>
                 <button class="btn-primary" onclick="openBannerModal()" style="padding: 12px 24px; font-weight: 700;">
                     <i class="fas fa-plus-circle"></i> INSERIR NOVO BANNER
                 </button>
@@ -869,7 +872,10 @@
                                 selecionada</p>
                         </div>
                     </div>
-                    <input type="hidden" id="banner-image-base64">
+                    <input type="hidden" id="banner-image-url">
+                    <div id="banner-upload-status" style="display:none; margin-top:6px; font-size:12px; color:var(--text-muted); align-items:center; gap:6px;">
+                        <i class="fas fa-spinner fa-spin"></i> <span id="banner-upload-status-text">Enviando imagem...</span>
+                    </div>
                 </div>
                 <div class="promo-toggle-row"
                     style="background: #e8f5e9; padding: 15px; border-radius: var(--radius-sm); border: 1px solid #c8e6c9; color: var(--primary-green);">
@@ -951,6 +957,37 @@
             </div>
             <div class="admin-modal-footer">
                 <button class="btn-secondary" onclick="closeMigrateImagesModal()" id="migrate-done-btn" style="display:none;">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Migração de Imagens de Banners -->
+    <div id="modal-migrate-banners" class="admin-modal-overlay hidden">
+        <div class="admin-modal" style="max-width:580px;">
+            <div class="admin-modal-header">
+                <h3><i class="fas fa-cloud-upload-alt"></i> Migrar Imagens de Banners para Supabase Storage</h3>
+                <button class="modal-close" onclick="closeMigrateBannersModal()" id="migrate-banners-close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body">
+                <p style="font-size:14px;color:var(--text-muted);margin-bottom:15px;">
+                    Detecta todos os banners com imagens em Base64 e faz o upload automático para o bucket <strong>product-images/banners/</strong> no Supabase Storage.
+                </p>
+                <div id="migrate-banners-start-area">
+                    <p id="migrate-banners-count-info" style="font-weight:600;margin-bottom:15px;">Clique em iniciar para verificar os banners.</p>
+                    <button class="btn-primary" onclick="startBannerMigration()" id="migrate-banners-start-btn" style="display:none;">
+                        <i class="fas fa-play"></i> Iniciar Migração
+                    </button>
+                </div>
+                <div id="migrate-banners-progress-area" style="display:none;">
+                    <div style="background:#f0f0f0;border-radius:8px;height:16px;overflow:hidden;margin-bottom:10px;">
+                        <div id="migrate-banners-progress-bar" style="height:100%;width:0%;background:var(--primary-green);transition:width 0.3s;"></div>
+                    </div>
+                    <p id="migrate-banners-progress-text" style="font-size:13px;font-weight:600;margin-bottom:10px;">0 / 0</p>
+                    <div id="migrate-banners-log" style="max-height:220px;overflow-y:auto;font-size:12px;font-family:monospace;background:#1a1a2e;color:#a8e6c3;padding:12px;border-radius:6px;line-height:1.8;"></div>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button class="btn-secondary" onclick="closeMigrateBannersModal()" id="migrate-banners-done-btn" style="display:none;">Fechar</button>
             </div>
         </div>
     </div>
