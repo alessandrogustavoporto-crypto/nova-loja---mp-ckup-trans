@@ -775,7 +775,7 @@ function initCategoriesMenu() {
 
     // Get unique categories
     const allProducts = ProductStore.getAll();
-    const categories = [...new Set(allProducts.map(p => p.category))];
+    const categories = [...new Set(allProducts.map(p => p.category).filter(cat => cat && cat.trim() !== ''))];
 
     // Populate dropdown
     dropdown.innerHTML = '<li><a href="javascript:void(0)" onclick="filterByCategory(null)">Todas as Categorias</a></li>' +
