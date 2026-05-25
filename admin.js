@@ -2795,10 +2795,46 @@ document.addEventListener('submit', async (e) => {
             const adminSession = JSON.parse(sessionStorage.getItem('ecostore_admin_session') || '{}');
             const operator = adminSession.name || 'Operador Admin';
 
+            // 1. Buscar último fechamento para comparar valores e lançar sangria/suprimento de ajuste
+            let lastClosedAmount = null;
+            try {
+                const { data: lastSession } = await supabase
+                    .from('cash_sessions')
+                    .select('final_amount')
+                    .eq('status', 'fechado')
+                    .order('id', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                
+                if (lastSession && lastSession.final_amount !== null) {
+                    lastClosedAmount = parseFloat(lastSession.final_amount);
+                }
+            } catch (e) {
+                console.warn('Erro ao carregar último fechamento para comparação de abertura:', e);
+            }
+
+            let sessionInitialAmount = valorInicial;
+            let autoTransaction = null;
+
+            if (lastClosedAmount !== null) {
+                const diff = valorInicial - lastClosedAmount;
+                // Considera diferenças maiores que 1 centavo para evitar imprecisões de ponto flutuante
+                if (Math.abs(diff) > 0.009) {
+                    sessionInitialAmount = lastClosedAmount;
+                    autoTransaction = {
+                        type: diff < 0 ? 'sangria' : 'suprimento',
+                        amount: Math.abs(diff),
+                        description: diff < 0 
+                            ? `Diferença de abertura: menor que o fechamento anterior (Fundo esperado: R$ ${lastClosedAmount.toFixed(2).replace('.', ',')} | Informado: R$ ${valorInicial.toFixed(2).replace('.', ',')})`
+                            : `Diferença de abertura: maior que o fechamento anterior (Fundo esperado: R$ ${lastClosedAmount.toFixed(2).replace('.', ',')} | Informado: R$ ${valorInicial.toFixed(2).replace('.', ',')})`
+                    };
+                }
+            }
+
             const { data, error } = await supabase
                 .from('cash_sessions')
                 .insert([{
-                    initial_amount: valorInicial,
+                    initial_amount: sessionInitialAmount,
                     opened_by: operator,
                     status: 'aberto'
                 }])
@@ -2806,6 +2842,22 @@ document.addEventListener('submit', async (e) => {
                 .single();
 
             if (error) throw error;
+
+            // 2. Se houver diferença, inserir transação automática de ajuste
+            if (autoTransaction) {
+                const { error: txErr } = await supabase
+                    .from('cash_transactions')
+                    .insert([{
+                        session_id: data.id,
+                        type: autoTransaction.type,
+                        amount: autoTransaction.amount,
+                        description: autoTransaction.description
+                    }]);
+
+                if (txErr) {
+                    console.error('Erro ao registrar transação automática de ajuste:', txErr);
+                }
+            }
 
             adminToast('Caixa aberto com sucesso!');
             currentCashSession = data;
