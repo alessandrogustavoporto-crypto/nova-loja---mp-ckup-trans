@@ -315,6 +315,7 @@ async function initAdminDashboard() {
         if (sectionId === 'financeiro') loadFinanceData('7days');
         if (sectionId === 'empresa') loadStoreSettings();
         if (sectionId === 'estoque') loadStock();
+        if (sectionId === 'caixa') initCaixaDashboard();
 
         // No mobile, fecha a sidebar automaticamente ao clicar em uma seção
         if (window.innerWidth <= 768) {
@@ -2573,3 +2574,342 @@ window.deleteBrand = async function (id) {
     adminToast('Marca excluída!');
     await loadBrands();
 };
+
+// ============================================================
+// SEÇÃO: CAIXA (CONTROLE DE FLUXO DE CAIXA)
+// ============================================================
+let currentCashSession = null;
+
+async function initCaixaDashboard() {
+    const loadingEl = document.getElementById('caixa-loading');
+    const fechadoEl = document.getElementById('caixa-estado-fechado');
+    const abertoEl = document.getElementById('caixa-estado-aberto');
+
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    if (fechadoEl) fechadoEl.classList.add('hidden');
+    if (abertoEl) abertoEl.classList.add('hidden');
+
+    try {
+        // 1. Tentar buscar sessão de caixa aberta no Supabase
+        const { data: activeSession, error } = await supabase
+            .from('cash_sessions')
+            .select('*')
+            .eq('status', 'aberto')
+            .limit(1)
+            .maybeSingle();
+
+        if (error) {
+            console.error("Erro ao buscar sessão do caixa no Supabase:", error);
+            throw error;
+        }
+
+        if (activeSession) {
+            // Caixa está ABERTO!
+            currentCashSession = activeSession;
+            await renderCaixaAbertoState();
+        } else {
+            // Caixa está FECHADO!
+            currentCashSession = null;
+            await renderCaixaFechadoState();
+        }
+    } catch (err) {
+        console.error("Falha ao inicializar o controle de caixa:", err);
+        // Exibir mensagem de erro informativa se as tabelas ainda não foram criadas
+        if (loadingEl) {
+            loadingEl.innerHTML = 
+                '<div style="color:#c0392b; padding:25px; font-weight:bold; text-align:center; max-width:600px; margin:0 auto;">' +
+                '<i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom:15px;"></i>' +
+                '<h3 style="margin-bottom:10px; font-size:18px;">Erro: Tabelas do Caixa não encontradas no Supabase!</h3>' +
+                '<p style="font-size:14px; font-weight:normal; margin-bottom:15px; color:#555; line-height:1.6;">' +
+                'Para ativar a aba Caixa, você precisa criar as tabelas correspondentes no seu banco de dados. ' +
+                'Copie e execute o script SQL fornecido nas instruções no <strong>SQL Editor</strong> do painel do seu Supabase.' +
+                '</p>' +
+                '<div style="background:#f8f9fa; border:1px solid #ddd; padding:12px; border-radius:6px; font-size:13px; font-weight:600; color:#333; margin-bottom:10px; cursor:pointer;" onclick="navigator.clipboard.writeText(\'-- Criar tabelas do caixa\\nCREATE TABLE public.cash_sessions (id SERIAL PRIMARY KEY, opened_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL, closed_at TIMESTAMP WITH TIME ZONE, opened_by TEXT NOT NULL, initial_amount NUMERIC(10,2) DEFAULT 0.00 NOT NULL, total_sales_cash NUMERIC(10,2) DEFAULT 0.00 NOT NULL, total_transactions NUMERIC(10,2) DEFAULT 0.00 NOT NULL, final_amount NUMERIC(10,2), status TEXT DEFAULT \\\'aberto\\\'::text NOT NULL, closed_by TEXT);\\nCREATE TABLE public.cash_transactions (id SERIAL PRIMARY KEY, session_id INTEGER REFERENCES public.cash_sessions(id) ON DELETE CASCADE NOT NULL, type TEXT NOT NULL, amount NUMERIC(10,2) NOT NULL, description TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL);\\nALTER TABLE public.cash_sessions ENABLE ROW LEVEL SECURITY;\\nALTER TABLE public.cash_transactions ENABLE ROW LEVEL SECURITY;\\nCREATE POLICY \\\"Permitir leitura para todos\\\" ON public.cash_sessions FOR SELECT USING (true);\\nCREATE POLICY \\\"Permitir insercao para todos\\\" ON public.cash_sessions FOR INSERT WITH CHECK (true);\\nCREATE POLICY \\\"Permitir atualizacao para todos\\\" ON public.cash_sessions FOR UPDATE USING (true);\\nCREATE POLICY \\\"Permitir leitura de transacoes\\\" ON public.cash_transactions FOR SELECT USING (true);\\nCREATE POLICY \\\"Permitir insercao de transacoes\\\" ON public.cash_transactions FOR INSERT WITH CHECK (true);\'); alert(\\\'SQL copiado para a área de transferência!\\\');">' +
+                '<i class="far fa-copy"></i> Copiar Código SQL de Criação' +
+                '</div>' +
+                '<button class="btn-primary" onclick="initCaixaDashboard()" style="background:#27ae60; margin-top:10px;"><i class="fas fa-sync"></i> Já criei, tentar novamente</button>' +
+                '</div>';
+        }
+    }
+}
+
+// 2. Renderizar Estado Fechado
+async function renderCaixaFechadoState() {
+    const loadingEl = document.getElementById('caixa-loading');
+    const fechadoEl = document.getElementById('caixa-estado-fechado');
+    const abertoEl = document.getElementById('caixa-estado-aberto');
+
+    if (loadingEl) loadingEl.classList.add('hidden');
+    if (fechadoEl) fechadoEl.classList.remove('hidden');
+    if (abertoEl) abertoEl.classList.add('hidden');
+
+    try {
+        const { data: lastSession } = await supabase
+            .from('cash_sessions')
+            .select('final_amount')
+            .eq('status', 'fechado')
+            .order('id', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        const inputFundo = document.getElementById('abertura-valor-inicial');
+        if (inputFundo) {
+            if (lastSession && lastSession.final_amount) {
+                inputFundo.value = parseFloat(lastSession.final_amount).toFixed(2);
+            } else {
+                inputFundo.value = '0.00';
+            }
+        }
+    } catch(e) { console.warn('Erro ao carregar último fechamento:', e); }
+}
+
+// 3. Renderizar Estado Aberto
+async function renderCaixaAbertoState() {
+    const loadingEl = document.getElementById('caixa-loading');
+    const fechadoEl = document.getElementById('caixa-estado-fechado');
+    const abertoEl = document.getElementById('caixa-estado-aberto');
+
+    if (!currentCashSession) return;
+
+    if (loadingEl) loadingEl.classList.add('hidden');
+    if (fechadoEl) fechadoEl.classList.add('hidden');
+    if (abertoEl) abertoEl.classList.remove('hidden');
+
+    const openedDate = new Date(currentCashSession.opened_at).toLocaleString('pt-BR');
+    const infoEl = document.getElementById('caixa-aberto-info');
+    if (infoEl) infoEl.textContent = `Aberto por ${currentCashSession.opened_by} em ${openedDate}`;
+
+    // C. Calcular Vendas Dinheiro (Vendas PDV - dinheiro)
+    const { data: sales, error: salesErr } = await supabase
+        .from('orders')
+        .select('total, payment_method')
+        .gte('created_at', currentCashSession.opened_at);
+
+    let totalSalesCash = 0;
+    if (!salesErr && sales) {
+        sales.forEach(o => {
+            const payMethod = String(o.payment_method || '').toLowerCase();
+            if (payMethod.includes('dinheiro')) {
+                totalSalesCash += parseFloat(o.total || 0);
+            }
+        });
+    }
+
+    // D. Carregar Transações do Caixa (Sangrias e Suprimentos)
+    const { data: transactions, error: txErr } = await supabase
+        .from('cash_transactions')
+        .select('*')
+        .eq('session_id', currentCashSession.id)
+        .order('id', { ascending: false });
+
+    let totalTransactions = 0;
+    let totalSangrias = 0;
+    let totalSuprimentos = 0;
+
+    const tbody = document.getElementById('caixa-movimentacoes-table');
+    if (tbody) {
+        if (!txErr && transactions && transactions.length > 0) {
+            tbody.innerHTML = transactions.map(t => {
+                const isSangria = t.type === 'sangria';
+                const color = isSangria ? '#c0392b' : '#27ae60';
+                const opLabel = isSangria ? 'Sangria' : 'Suprimento';
+                const hora = new Date(t.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                
+                const val = parseFloat(t.amount || 0);
+                if (isSangria) {
+                    totalSangrias += val;
+                    totalTransactions -= val;
+                } else {
+                    totalSuprimentos += val;
+                    totalTransactions += val;
+                }
+
+                return '<tr>' +
+                    '<td>' + hora + '</td>' +
+                    '<td><span style="font-weight:700; color:' + color + ';">' + opLabel + '</span></td>' +
+                    '<td>' + t.description + '</td>' +
+                    '<td style="font-weight:700; color:' + color + ';">' + (isSangria ? '-' : '+') + ' R$ ' + val.toFixed(2).replace('.', ',') + '</td>' +
+                    '</tr>';
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">Nenhum suprimento ou sangria lançado nesta sessão.</td></tr>';
+        }
+    }
+
+    // E. Atualizar Cards Financeiros
+    const initialAmount = parseFloat(currentCashSession.initial_amount || 0);
+    const balance = initialAmount + totalSalesCash + totalTransactions;
+
+    const cardInitial = document.getElementById('card-caixa-inicial');
+    const cardSales = document.getElementById('card-caixa-vendas');
+    const cardMovs = document.getElementById('card-caixa-movs');
+    const cardSaldo = document.getElementById('card-caixa-saldo');
+
+    if (cardInitial) cardInitial.textContent = 'R$ ' + initialAmount.toFixed(2).replace('.', ',');
+    if (cardSales) cardSales.textContent = 'R$ ' + totalSalesCash.toFixed(2).replace('.', ',');
+    if (cardMovs) {
+        const sign = totalTransactions >= 0 ? '+' : '-';
+        cardMovs.textContent = sign + ' R$ ' + Math.abs(totalTransactions).toFixed(2).replace('.', ',');
+        cardMovs.style.color = totalTransactions >= 0 ? '#27ae60' : '#c0392b';
+    }
+    if (cardSaldo) cardSaldo.textContent = 'R$ ' + balance.toFixed(2).replace('.', ',');
+
+    currentCashSession.total_sales_cash = totalSalesCash;
+    currentCashSession.total_transactions = totalTransactions;
+    currentCashSession.total_sangrias = totalSangrias;
+    currentCashSession.total_suprimentos = totalSuprimentos;
+    currentCashSession.estimated_balance = balance;
+}
+
+// 4. Lógica de Submissão: Abertura de Caixa
+document.addEventListener('submit', async (e) => {
+    if (e.target && e.target.id === 'form-abrir-caixa') {
+        e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
+        const valorInicial = parseFloat(document.getElementById('abertura-valor-inicial').value) || 0;
+        
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abrindo...'; }
+
+        try {
+            const adminSession = JSON.parse(sessionStorage.getItem('ecostore_admin_session') || '{}');
+            const operator = adminSession.name || 'Operador Admin';
+
+            const { data, error } = await supabase
+                .from('cash_sessions')
+                .insert([{
+                    initial_amount: valorInicial,
+                    opened_by: operator,
+                    status: 'aberto'
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            adminToast('Caixa aberto com sucesso!');
+            currentCashSession = data;
+            await renderCaixaAbertoState();
+        } catch (err) {
+            console.error('Erro ao abrir caixa:', err);
+            adminToast('Erro ao abrir caixa: ' + err.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock-open"></i> Abrir Caixa'; }
+        }
+    }
+});
+
+// 5. Lógica de Submissão: Lançar Movimentação (Sangria / Suprimento)
+document.addEventListener('submit', async (e) => {
+    if (e.target && e.target.id === 'form-movimentacao-caixa') {
+        e.preventDefault();
+        if (!currentCashSession) return;
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        const tipo = document.getElementById('mov-tipo').value;
+        const valor = parseFloat(document.getElementById('mov-valor').value) || 0;
+        const descricao = document.getElementById('mov-descricao').value.trim();
+
+        if (valor <= 0) { adminToast('O valor deve ser maior que zero!', 'error'); return; }
+
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Lançando...'; }
+
+        try {
+            const { error } = await supabase
+                .from('cash_transactions')
+                .insert([{
+                    session_id: currentCashSession.id,
+                    type: tipo,
+                    amount: valor,
+                    description: descricao
+                }]);
+
+            if (error) throw error;
+
+            adminToast('Movimentação registrada com sucesso!');
+            document.getElementById('mov-valor').value = '';
+            document.getElementById('mov-descricao').value = '';
+            
+            await renderCaixaAbertoState();
+        } catch (err) {
+            console.error('Erro ao lançar movimentação:', err);
+            adminToast('Erro ao lançar movimentação: ' + err.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus-circle"></i> Confirmar Lançamento'; }
+        }
+    }
+});
+
+// 6. Lógica de Abertura do Modal de Fechamento
+document.addEventListener('click', async (e) => {
+    if (e.target && e.target.id === 'btn-pre-fechar-caixa') {
+        if (!currentCashSession) return;
+
+        const fundo = parseFloat(currentCashSession.initial_amount || 0);
+        const vendas = parseFloat(currentCashSession.total_sales_cash || 0);
+        const suprimentos = parseFloat(currentCashSession.total_suprimentos || 0);
+        const sangrias = parseFloat(currentCashSession.total_sangrias || 0);
+        const balance = parseFloat(currentCashSession.estimated_balance || 0);
+
+        document.getElementById('fechamento-fundo').textContent = 'R$ ' + fundo.toFixed(2).replace('.', ',');
+        document.getElementById('fechamento-vendas').textContent = '+ R$ ' + vendas.toFixed(2).replace('.', ',');
+        document.getElementById('fechamento-suprimentos').textContent = '+ R$ ' + suprimentos.toFixed(2).replace('.', ',');
+        document.getElementById('fechamento-sangrias').textContent = '- R$ ' + sangrias.toFixed(2).replace('.', ',');
+        document.getElementById('fechamento-saldo-estimado').textContent = 'R$ ' + balance.toFixed(2).replace('.', ',');
+        
+        document.getElementById('fechamento-valor-real').value = balance.toFixed(2);
+        document.getElementById('fechamento-observacao').value = '';
+
+        document.getElementById('modal-fechamento-caixa').classList.remove('hidden');
+    }
+});
+
+// 7. Lógica de Fechar o Modal
+window.closeCloseCashModal = function() {
+    document.getElementById('modal-fechamento-caixa').classList.add('hidden');
+};
+
+// 8. Lógica de Confirmação e Submissão do Fechamento
+document.addEventListener('submit', async (e) => {
+    if (e.target && e.target.id === 'form-fechar-caixa') {
+        e.preventDefault();
+        if (!currentCashSession) return;
+
+        if (!confirm('Tem certeza que deseja FECHAR o caixa?')) return;
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        const valorReal = parseFloat(document.getElementById('fechamento-valor-real').value) || 0;
+        const nota = document.getElementById('fechamento-observacao').value.trim();
+
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fechando...'; }
+
+        try {
+            const adminSession = JSON.parse(sessionStorage.getItem('ecostore_admin_session') || '{}');
+            const operator = adminSession.name || 'Operador Admin';
+
+            const { error } = await supabase
+                .from('cash_sessions')
+                .update({
+                    closed_at: new Date().toISOString(),
+                    total_sales_cash: currentCashSession.total_sales_cash,
+                    total_transactions: currentCashSession.total_transactions,
+                    final_amount: valorReal,
+                    status: 'fechado',
+                    closed_by: operator
+                })
+                .eq('id', currentCashSession.id);
+
+            if (error) throw error;
+
+            adminToast('Caixa fechado com sucesso!');
+            closeCloseCashModal();
+            currentCashSession = null;
+            await renderCaixaFechadoState();
+        } catch (err) {
+            console.error('Erro ao fechar caixa:', err);
+            adminToast('Erro ao fechar caixa: ' + err.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock"></i> Confirmar e Fechar Caixa'; }
+        }
+    }
+});
+
