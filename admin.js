@@ -3806,7 +3806,11 @@ window.closeDetailsEntryModal = function() {
 // Lixeira: Excluir Nota Inteira e Reverter Estoque
 window.deleteEntryBatch = async function(key) {
     const entry = groupedStockEntries[key];
-    if (!entry) return;
+    if (!entry) {
+        console.error('[deleteEntryBatch] Entrada não encontrada para key:', key);
+        alert('Erro interno: entrada não encontrada. Recarregue a página e tente novamente.');
+        return;
+    }
 
     if (!confirm(`Deseja realmente excluir a nota de entrada de "${entry.supplier}"?\n\nATENÇÃO: O estoque de todos os produtos comprados nesta nota será REDUZIDO com base nas quantidades adquiridas!`)) {
         return;
@@ -3840,14 +3844,36 @@ window.deleteEntryBatch = async function(key) {
         // 2. Excluir os registros da tabela stock_entries
         const idsToDelete = entry.items.map(item => item.id);
         
-        const { error: deleteErr } = await supabase
+        console.log('[deleteEntryBatch] Excluindo IDs:', idsToDelete);
+
+        const { data: deletedRows, error: deleteErr } = await supabase
             .from('stock_entries')
             .delete()
-            .in('id', idsToDelete);
+            .in('id', idsToDelete)
+            .select(); // Retorna linhas deletadas — detecta falha silenciosa de RLS
 
-        if (deleteErr) throw deleteErr;
+        if (deleteErr) {
+            console.error('[deleteEntryBatch] Erro Supabase:', deleteErr);
+            throw deleteErr;
+        }
 
-        adminToast('Nota de compra excluída e estoques revertidos com sucesso!');
+        console.log('[deleteEntryBatch] Linhas deletadas:', deletedRows);
+
+        if (!deletedRows || deletedRows.length === 0) {
+            // RLS bloqueou silenciosamente — nenhuma linha foi realmente excluída
+            const rlsMsg =
+                '⚠️ FALHA: O banco de dados bloqueou a exclusão (RLS ativo).\n\n' +
+                'Para corrigir:\n' +
+                '1. Abra o painel do Supabase\n' +
+                '2. Vá em Table Editor → stock_entries → Policies\n' +
+                '3. Adicione uma policy: DELETE para role "anon" — usando: true\n\n' +
+                'Ou desative temporariamente o RLS desta tabela.';
+            console.error('[deleteEntryBatch] RLS bloqueou o DELETE silenciosamente.');
+            alert(rlsMsg);
+            return;
+        }
+
+        adminToast(`Nota de "${entry.supplier}" excluída! ${deletedRows.length} registro(s) removido(s).`);
 
         // 3. Recarregar cache de produtos e atualizar tabelas gerais
         const updatedProducts = await AdminData.getProducts();
