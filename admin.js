@@ -3636,39 +3636,73 @@ function updateEntrySummary() {
     summaryTotal.textContent = 'R$ ' + totalValue.toFixed(2).replace('.', ',');
 }
 
+// Memória global das entradas agrupadas para exibição e ações
+let groupedStockEntries = {};
+
 function renderEntradasHistory(filter = '') {
     const tbody = document.getElementById('entradas-history-table');
     if (!tbody) return;
 
+    // 1. Agrupar as entradas individuais por Nota / Fornecedor / Data exata
+    groupedStockEntries = {};
+
+    allStockEntries.forEach(e => {
+        const dateKey = e.date; // Usamos a data original (timestamp UTC completo)
+        const key = `${e.supplier}_${e.invoice || 'sem-nota'}_${dateKey}`;
+
+        if (!groupedStockEntries[key]) {
+            groupedStockEntries[key] = {
+                key: key,
+                date: dateKey,
+                supplier: e.supplier,
+                invoice: e.invoice,
+                totalItems: 0,
+                totalCost: 0,
+                items: []
+            };
+        }
+
+        const qty = parseInt(e.quantity || 0);
+        const cost = parseFloat(e.cost_price || 0);
+
+        groupedStockEntries[key].totalItems += qty;
+        groupedStockEntries[key].totalCost += (qty * cost);
+        groupedStockEntries[key].items.push(e);
+    });
+
+    const groupedList = Object.values(groupedStockEntries);
+
+    // 2. Filtrar o histórico agrupado
     const f = filter.toLowerCase().trim();
-    const filtered = allStockEntries.filter(e => {
-        const prodName = e.products ? String(e.products.name).toLowerCase() : '';
-        return !f || 
-            String(e.supplier).toLowerCase().includes(f) ||
-            String(e.invoice || '').toLowerCase().includes(f) ||
-            prodName.includes(f);
+    const filtered = groupedList.filter(g => {
+        if (!f) return true;
+        const matchesSupplier = g.supplier.toLowerCase().includes(f);
+        const matchesInvoice = String(g.invoice || '').toLowerCase().includes(f);
+        const matchesProduct = g.items.some(item => 
+            item.products && item.products.name.toLowerCase().includes(f)
+        );
+        return matchesSupplier || matchesInvoice || matchesProduct;
     });
 
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:35px; color:var(--text-muted);">Nenhuma entrada de estoque registrada.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:35px; color:var(--text-muted);">Nenhuma nota de compra registrada.</td></tr>';
         return;
     }
 
-    tbody.innerHTML = filtered.map(e => {
-        const dateStr = new Date(e.date).toLocaleDateString('pt-BR');
-        const prodName = e.products ? e.products.name : 'Produto Excluído';
-        const cost = parseFloat(e.cost_price || 0);
-        const qty = parseInt(e.quantity || 0);
-        const total = cost * qty;
-
+    // 3. Renderizar cada Nota de Compra
+    tbody.innerHTML = filtered.map(g => {
+        const dateStr = new Date(g.date).toLocaleDateString('pt-BR');
+        
         return `<tr>
             <td>${dateStr}</td>
-            <td><strong>${e.supplier}</strong></td>
-            <td>${e.invoice || '—'}</td>
-            <td>${prodName}</td>
-            <td>${qty} un</td>
-            <td>R$ ${cost.toFixed(2).replace('.', ',')}</td>
-            <td style="font-weight:700; color:#27ae60;">R$ ${total.toFixed(2).replace('.', ',')}</td>
+            <td><strong>${g.supplier}</strong></td>
+            <td>${g.invoice || '—'}</td>
+            <td style="text-align:center; font-weight: 500;">${g.totalItems} un</td>
+            <td style="text-align:right; font-weight:700; color:#27ae60;">R$ ${g.totalCost.toFixed(2).replace('.', ',')}</td>
+            <td style="text-align:center;">
+                <button type="button" class="btn-action-view" onclick="window.viewEntryDetails('${g.key}')" title="Ver Detalhes da Nota" style="background: rgba(39, 174, 96, 0.1); color: #27ae60; padding: 6px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; transition: all 0.2s;"><i class="fas fa-search-plus"></i></button>
+                <button type="button" class="btn-action-delete" onclick="window.deleteEntryBatch('${g.key}')" title="Excluir Nota e Reverter Estoque" style="background: rgba(192, 57, 43, 0.1); color: #c0392b; padding: 6px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; margin-left: 5px; transition: all 0.2s;"><i class="fas fa-trash-alt"></i></button>
+            </td>
         </tr>`;
     }).join('');
 
@@ -3678,6 +3712,144 @@ function renderEntradasHistory(filter = '') {
         search.addEventListener('input', (el) => renderEntradasHistory(el.target.value));
     }
 }
+
+// Lupa: Ver Detalhes da Nota em Modal
+window.viewEntryDetails = function(key) {
+    const entry = groupedStockEntries[key];
+    if (!entry) return;
+
+    const modal = document.getElementById('modal-detalhes-entrada');
+    const body = document.getElementById('modal-detalhes-entrada-body');
+    if (!modal || !body) return;
+
+    const dateFormatted = new Date(entry.date).toLocaleDateString('pt-BR');
+    
+    let itemsRows = entry.items.map(item => {
+        const prodName = item.products ? item.products.name : 'Produto Excluído';
+        const cost = parseFloat(item.cost_price || 0);
+        const qty = parseInt(item.quantity || 0);
+        const total = cost * qty;
+        
+        return `
+            <tr>
+                <td style="padding: 10px 12px; font-weight: 500;">${prodName}</td>
+                <td style="padding: 10px 12px; text-align: center;">${qty} un</td>
+                <td style="padding: 10px 12px; text-align: right;">R$ ${cost.toFixed(2).replace('.', ',')}</td>
+                <td style="padding: 10px 12px; text-align: right; font-weight: 700; color: #27ae60;">R$ ${total.toFixed(2).replace('.', ',')}</td>
+            </tr>
+        `;
+    }).join('');
+
+    body.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid var(--border-color);">
+            <div>
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Fornecedor</span>
+                <strong style="display: block; font-size: 14px; color: var(--text-main); margin-top: 2px;">${entry.supplier}</strong>
+            </div>
+            <div>
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Nota / Fatura</span>
+                <strong style="display: block; font-size: 14px; color: var(--text-main); margin-top: 2px;">${entry.invoice || '—'}</strong>
+            </div>
+            <div>
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Data da Compra</span>
+                <strong style="display: block; font-size: 14px; color: var(--text-main); margin-top: 2px;">${dateFormatted}</strong>
+            </div>
+            <div>
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Valor Total da Nota</span>
+                <strong style="display: block; font-size: 15px; color: #27ae60; margin-top: 2px;">R$ ${entry.totalCost.toFixed(2).replace('.', ',')}</strong>
+            </div>
+        </div>
+
+        <h4 style="margin: 15px 0 10px 0; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;"><i class="fas fa-list" style="color: #27ae60;"></i> Itens da Nota</h4>
+        <div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 6px;">
+            <table class="admin-table" style="margin: 0; min-width: 500px;">
+                <thead>
+                    <tr style="background: #f8f9fa;">
+                        <th>Produto</th>
+                        <th style="width: 80px; text-align: center;">Qtd</th>
+                        <th style="width: 120px; text-align: right;">Custo Unitário</th>
+                        <th style="width: 120px; text-align: right;">Custo Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsRows}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    modal.classList.remove('hidden');
+};
+
+window.closeDetailsEntryModal = function() {
+    const modal = document.getElementById('modal-detalhes-entrada');
+    if (modal) modal.classList.add('hidden');
+};
+
+// Lixeira: Excluir Nota Inteira e Reverter Estoque
+window.deleteEntryBatch = async function(key) {
+    const entry = groupedStockEntries[key];
+    if (!entry) return;
+
+    if (!confirm(`Deseja realmente excluir a nota de entrada de "${entry.supplier}"?\n\nATENÇÃO: O estoque de todos os produtos comprados nesta nota será REDUZIDO com base nas quantidades adquiridas!`)) {
+        return;
+    }
+
+    try {
+        // 1. Reverter o estoque de cada produto na nota
+        await Promise.all(entry.items.map(async (item) => {
+            const { data: prod, error: fetchErr } = await supabase
+                .from('products')
+                .select('stock')
+                .eq('id', item.product_id)
+                .single();
+
+            if (fetchErr) {
+                console.warn(`Produto ID ${item.product_id} não encontrado no catálogo. Ignorando reversão de estoque.`);
+                return;
+            }
+
+            const currentStock = parseInt(prod.stock || 0);
+            const newStock = Math.max(0, currentStock - item.quantity); // Protege contra estoque negativo
+
+            const { error: updateErr } = await supabase
+                .from('products')
+                .update({ stock: newStock })
+                .eq('id', item.product_id);
+
+            if (updateErr) throw updateErr;
+        }));
+
+        // 2. Excluir os registros da tabela stock_entries
+        const idsToDelete = entry.items.map(item => item.id);
+        
+        const { error: deleteErr } = await supabase
+            .from('stock_entries')
+            .delete()
+            .in('id', idsToDelete);
+
+        if (deleteErr) throw deleteErr;
+
+        adminToast('Nota de compra excluída e estoques revertidos com sucesso!');
+
+        // 3. Recarregar cache de produtos e atualizar tabelas gerais
+        const updatedProducts = await AdminData.getProducts();
+        cachedAdminData.products = updatedProducts;
+        await loadProducts(null, updatedProducts);
+
+        try {
+            if (typeof loadStock === 'function') {
+                await loadStock();
+            }
+        } catch (e) { console.warn('Erro ao atualizar estoque geral:', e); }
+
+        // Recarregar histórico de compras
+        await initEntradasModule();
+    } catch (err) {
+        console.error('Erro ao excluir nota de entrada:', err);
+        adminToast('Erro ao excluir nota de entrada: ' + err.message, 'error');
+    }
+};
 
 // Handler de submissão do formulário de Entrada (Lote / Multi-Produto)
 document.addEventListener('submit', async (e) => {
@@ -3761,8 +3933,9 @@ document.addEventListener('submit', async (e) => {
             }));
 
             // 2. Registrar entradas no histórico de compras do Supabase (inserção em lote)
+            const finalEntryDate = entryDate ? new Date(entryDate).toISOString() : new Date().toISOString();
             const insertData = itemsToSave.map(item => ({
-                date: entryDate ? new Date(entryDate).toISOString() : new Date().toISOString(),
+                date: finalEntryDate,
                 supplier: supplier,
                 invoice: invoice || null,
                 product_id: item.product_id,

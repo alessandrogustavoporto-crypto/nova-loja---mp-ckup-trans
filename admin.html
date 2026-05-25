@@ -501,13 +501,12 @@
                             <table class="admin-table" style="margin: 0; min-width: 750px;">
                                 <thead style="position: sticky; top: 0; background: white; z-index: 10; box-shadow: 0 1px 0 rgba(0,0,0,0.06);">
                                     <tr>
-                                        <th style="width: 100px;">Data</th>
+                                        <th style="width: 120px;">Data</th>
                                         <th>Fornecedor</th>
-                                        <th style="width: 100px;">Nota</th>
-                                        <th>Produto</th>
-                                        <th style="width: 80px;">Qtd</th>
-                                        <th style="width: 110px;">Custo Un.</th>
-                                        <th style="width: 120px;">Custo Total</th>
+                                        <th style="width: 120px;">Nota</th>
+                                        <th style="width: 140px; text-align: center;">Total de Itens</th>
+                                        <th style="width: 160px; text-align: right;">Custo Total da Nota</th>
+                                        <th style="width: 120px; text-align: center;">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="entradas-history-table">
@@ -1325,6 +1324,22 @@
             </div>
             <div class="admin-modal-footer">
                 <button type="button" class="btn-secondary" onclick="closeHistoryCashModal()">Fechar Relatório</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Detalhes da Entrada de Estoque -->
+    <div id="modal-detalhes-entrada" class="admin-modal-overlay hidden">
+        <div class="admin-modal" style="max-width:650px;">
+            <div class="admin-modal-header" style="background:#27ae60; color:white; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;"><i class="fas fa-info-circle"></i> Detalhes da Nota de Entrada</h3>
+                <button type="button" class="modal-close" onclick="closeDetailsEntryModal()" style="color:white; background:none; border:none; font-size:18px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="admin-modal-body" style="padding:25px;" id="modal-detalhes-entrada-body">
+                <!-- Preenchido via JS -->
+            </div>
+            <div class="admin-modal-footer" style="padding: 15px 20px; text-align: right; border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn-secondary" onclick="closeDetailsEntryModal()">Fechar</button>
             </div>
         </div>
     </div>
