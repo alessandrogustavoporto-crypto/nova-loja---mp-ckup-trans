@@ -3396,6 +3396,7 @@ async function checkAndAutoCloseCaixa(session) {
 // SEÇÃO: ENTRADAS DE ESTOQUE (COMPRAS)
 // ============================================================
 let allStockEntries = [];
+let cachedEntryProducts = [];
 
 async function initEntradasModule() {
     const loadingEl = document.getElementById('entradas-loading');
@@ -3414,8 +3415,15 @@ async function initEntradasModule() {
             dateInput.value = today;
         }
 
-        // 2. Carregar produtos para o select
-        await populateEntryProductSelect();
+        // 2. Carregar produtos para o cache e inicializar tabela com 1 linha vazia
+        let prods = cachedAdminData.products || await AdminData.getProducts();
+        cachedEntryProducts = [...prods].sort((a, b) => a.name.localeCompare(b.name));
+
+        const itemsBody = document.getElementById('entry-items-body');
+        if (itemsBody) {
+            itemsBody.innerHTML = '';
+            addEntryItemRow();
+        }
 
         // 3. Buscar histórico de entradas no Supabase
         const { data: entries, error } = await supabase
@@ -3442,6 +3450,13 @@ async function initEntradasModule() {
         allStockEntries = entries || [];
         renderEntradasHistory();
 
+        // Configurar botão de adicionar item
+        const btnAdd = document.getElementById('btn-add-entry-item');
+        if (btnAdd && !btnAdd._bound) {
+            btnAdd._bound = true;
+            btnAdd.addEventListener('click', addEntryItemRow);
+        }
+
         if (loadingEl) loadingEl.classList.add('hidden');
         if (contentEl) contentEl.classList.remove('hidden');
     } catch (err) {
@@ -3466,15 +3481,93 @@ async function initEntradasModule() {
     }
 }
 
-async function populateEntryProductSelect() {
-    const select = document.getElementById('entry-product');
-    if (!select) return;
+function addEntryItemRow() {
+    const tbody = document.getElementById('entry-items-body');
+    if (!tbody) return;
 
-    let prods = cachedAdminData.products || await AdminData.getProducts();
-    prods = [...prods].sort((a, b) => a.name.localeCompare(b.name));
+    const rowId = 'row-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
 
-    select.innerHTML = '<option value="">-- Selecione o Produto --</option>' +
-        prods.map(p => `<option value="${p.id}">${p.name} (Atual: ${p.stock || 0} un)</option>`).join('');
+    const productOptions = cachedEntryProducts.map(p => 
+        `<option value="${p.id}">${p.name} (Estoque: ${p.stock || 0} un)</option>`
+    ).join('');
+
+    const tr = document.createElement('tr');
+    tr.id = rowId;
+    tr.className = 'entry-item-row';
+    tr.innerHTML = `
+        <td style="padding: 10px 15px;">
+            <select class="table-input-compact entry-prod-select" required>
+                <option value="">-- Selecione o Produto --</option>
+                ${productOptions}
+            </select>
+        </td>
+        <td style="padding: 10px 15px;">
+            <input type="number" class="table-input-compact entry-qty-input" placeholder="Qtd" min="1" required style="width: 100%;">
+        </td>
+        <td style="padding: 10px 15px;">
+            <input type="number" class="table-input-compact entry-cost-input" placeholder="R$ 0.00" step="0.01" min="0" required style="width: 100%;">
+        </td>
+        <td style="padding: 10px 15px; font-weight: 600; color: #27ae60; font-size: 14px;" class="entry-row-total">
+            R$ 0,00
+        </td>
+        <td style="padding: 10px 15px; text-align: center;">
+            <button type="button" class="btn-remove-row" title="Remover item"><i class="fas fa-trash-alt"></i></button>
+        </td>
+    `;
+
+    // Listeners para atualizar cálculo ao alterar inputs
+    const qtyInput = tr.querySelector('.entry-qty-input');
+    const costInput = tr.querySelector('.entry-cost-input');
+    const rowTotalEl = tr.querySelector('.entry-row-total');
+    const removeBtn = tr.querySelector('.btn-remove-row');
+    const prodSelect = tr.querySelector('.entry-prod-select');
+
+    const updateRowTotal = () => {
+        const qty = parseInt(qtyInput.value) || 0;
+        const cost = parseFloat(costInput.value) || 0;
+        const total = qty * cost;
+        rowTotalEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+        updateEntrySummary();
+    };
+
+    qtyInput.addEventListener('input', updateRowTotal);
+    costInput.addEventListener('input', updateRowTotal);
+    prodSelect.addEventListener('change', updateRowTotal);
+
+    removeBtn.addEventListener('click', () => {
+        const allRows = tbody.querySelectorAll('.entry-item-row');
+        if (allRows.length > 1) {
+            tr.remove();
+            updateEntrySummary();
+        } else {
+            adminToast('Você deve manter pelo menos 1 produto na entrada!', 'warning');
+        }
+    });
+
+    tbody.appendChild(tr);
+    updateEntrySummary();
+}
+
+function updateEntrySummary() {
+    const tbody = document.getElementById('entry-items-body');
+    const summaryCount = document.getElementById('entry-summary-count');
+    const summaryTotal = document.getElementById('entry-summary-total');
+
+    if (!tbody || !summaryCount || !summaryTotal) return;
+
+    const rows = tbody.querySelectorAll('.entry-item-row');
+    let totalItems = 0;
+    let totalValue = 0;
+
+    rows.forEach(tr => {
+        const qty = parseInt(tr.querySelector('.entry-qty-input').value) || 0;
+        const cost = parseFloat(tr.querySelector('.entry-cost-input').value) || 0;
+        totalItems += qty;
+        totalValue += (qty * cost);
+    });
+
+    summaryCount.textContent = totalItems;
+    summaryTotal.textContent = 'R$ ' + totalValue.toFixed(2).replace('.', ',');
 }
 
 function renderEntradasHistory(filter = '') {
@@ -3520,7 +3613,7 @@ function renderEntradasHistory(filter = '') {
     }
 }
 
-// Handler de submissão do formulário de Entrada
+// Handler de submissão do formulário de Entrada (Lote / Multi-Produto)
 document.addEventListener('submit', async (e) => {
     if (e.target && e.target.id === 'form-lancar-entrada') {
         e.preventDefault();
@@ -3529,62 +3622,103 @@ document.addEventListener('submit', async (e) => {
         const entryDate = document.getElementById('entry-date').value;
         const supplier = document.getElementById('entry-supplier').value.trim();
         const invoice = document.getElementById('entry-invoice').value.trim();
-        const productId = parseInt(document.getElementById('entry-product').value);
-        const qty = parseInt(document.getElementById('entry-qty').value) || 0;
-        const costPrice = parseFloat(document.getElementById('entry-cost').value) || 0;
 
-        if (!productId) { adminToast('Por favor, selecione um produto!', 'error'); return; }
-        if (qty <= 0) { adminToast('A quantidade deve ser maior que zero!', 'error'); return; }
-        if (costPrice < 0) { adminToast('O preço de custo não pode ser negativo!', 'error'); return; }
+        // Obter todas as linhas de produto
+        const tbody = document.getElementById('entry-items-body');
+        if (!tbody) return;
+        const rows = tbody.querySelectorAll('.entry-item-row');
+        
+        if (rows.length === 0) {
+            adminToast('Adicione pelo menos um produto!', 'error');
+            return;
+        }
 
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...'; }
+        const itemsToSave = [];
+        let validationError = null;
+
+        rows.forEach((tr, index) => {
+            const productId = parseInt(tr.querySelector('.entry-prod-select').value);
+            const qty = parseInt(tr.querySelector('.entry-qty-input').value) || 0;
+            const costPrice = parseFloat(tr.querySelector('.entry-cost-input').value) || 0;
+
+            if (!productId) {
+                validationError = `Linha ${index + 1}: Selecione um produto!`;
+                return;
+            }
+            if (qty <= 0) {
+                validationError = `Linha ${index + 1}: Quantidade deve ser maior que zero!`;
+                return;
+            }
+            if (costPrice < 0) {
+                validationError = `Linha ${index + 1}: Preço de custo não pode ser negativo!`;
+                return;
+            }
+
+            itemsToSave.push({
+                product_id: productId,
+                quantity: qty,
+                cost_price: costPrice
+            });
+        });
+
+        if (validationError) {
+            adminToast(validationError, 'error');
+            return;
+        }
+
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando Entrada em Lote...'; }
 
         try {
-            // 1. Obter o estoque atual do produto para incrementar
-            const { data: prod, error: fetchErr } = await supabase
-                .from('products')
-                .select('stock')
-                .eq('id', productId)
-                .single();
+            // 1. Processar cada produto (Obter estoque atual, somar e atualizar)
+            await Promise.all(itemsToSave.map(async (item) => {
+                const { data: prod, error: fetchErr } = await supabase
+                    .from('products')
+                    .select('stock')
+                    .eq('id', item.product_id)
+                    .single();
 
-            if (fetchErr) throw fetchErr;
+                if (fetchErr) throw fetchErr;
 
-            const currentStock = parseInt(prod.stock || 0);
-            const newStock = currentStock + qty;
+                const currentStock = parseInt(prod.stock || 0);
+                const newStock = currentStock + item.quantity;
 
-            // 2. Atualizar estoque e preço de custo do produto no Supabase
-            const { error: updateErr } = await supabase
-                .from('products')
-                .update({
-                    stock: newStock,
-                    cost: costPrice
-                })
-                .eq('id', productId);
+                // Atualizar estoque e preço de custo do produto no Supabase
+                const { error: updateErr } = await supabase
+                    .from('products')
+                    .update({
+                        stock: newStock,
+                        cost: item.cost_price
+                    })
+                    .eq('id', item.product_id);
 
-            if (updateErr) throw updateErr;
+                if (updateErr) throw updateErr;
+            }));
 
-            // 3. Registrar entrada no histórico de compras
+            // 2. Registrar entradas no histórico de compras do Supabase (inserção em lote)
+            const insertData = itemsToSave.map(item => ({
+                date: entryDate ? new Date(entryDate).toISOString() : new Date().toISOString(),
+                supplier: supplier,
+                invoice: invoice || null,
+                product_id: item.product_id,
+                quantity: item.quantity,
+                cost_price: item.cost_price
+            }));
+
             const { error: insertErr } = await supabase
                 .from('stock_entries')
-                .insert([{
-                    date: entryDate ? new Date(entryDate).toISOString() : new Date().toISOString(),
-                    supplier: supplier,
-                    invoice: invoice || null,
-                    product_id: productId,
-                    quantity: qty,
-                    cost_price: costPrice
-                }]);
+                .insert(insertData);
 
             if (insertErr) throw insertErr;
 
-            adminToast('Entrada de estoque registrada com sucesso!');
+            adminToast('Entrada de estoque em lote registrada com sucesso!');
             
-            // Resetar formulário exceto data e fornecedor para facilitar lançamentos múltiplos rápidos
-            document.getElementById('entry-product').value = '';
-            document.getElementById('entry-qty').value = '';
-            document.getElementById('entry-cost').value = '';
+            // Resetar a tabela dinâmica deixando apenas 1 linha vazia
+            if (tbody) {
+                tbody.innerHTML = '';
+                addEntryItemRow();
+            }
 
-            // 4. Recarregar os produtos no cache global e atualizar tabelas
+            // 3. Recarregar os produtos no cache global e atualizar tabelas
             const updatedProducts = await AdminData.getProducts();
             cachedAdminData.products = updatedProducts;
             await loadProducts(null, updatedProducts);
@@ -3602,7 +3736,7 @@ document.addEventListener('submit', async (e) => {
             console.error('Erro ao registrar entrada de estoque:', err);
             adminToast('Erro ao registrar entrada: ' + err.message, 'error');
         } finally {
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus-circle"></i> Registrar Entrada e Atualizar Estoque'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle"></i> Registrar Entrada e Atualizar Estoque'; }
         }
     }
 });
