@@ -3415,17 +3415,83 @@ async function initEntradasModule() {
             dateInput.value = today;
         }
 
-        // 2. Carregar produtos para o cache e inicializar tabela com 1 linha vazia
+        // 2. Carregar produtos para o cache e inicializar tabela como vazia
         let prods = cachedAdminData.products || await AdminData.getProducts();
         cachedEntryProducts = [...prods].sort((a, b) => a.name.localeCompare(b.name));
 
         const itemsBody = document.getElementById('entry-items-body');
         if (itemsBody) {
             itemsBody.innerHTML = '';
-            addEntryItemRow();
+            checkIfEmptyTable();
         }
 
-        // 3. Buscar histórico de entradas no Supabase
+        // 3. Configurar campo global de busca autocomplete de produtos
+        const searchInput = document.getElementById('entry-prod-search-global');
+        const suggestionsDiv = document.getElementById('entry-prod-suggestions-global');
+
+        if (searchInput && suggestionsDiv) {
+            searchInput.value = '';
+            suggestionsDiv.innerHTML = '';
+            suggestionsDiv.classList.add('hidden');
+
+            if (!searchInput._bound) {
+                searchInput._bound = true;
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.toLowerCase().trim();
+                    if (query.length === 0) {
+                        suggestionsDiv.innerHTML = '';
+                        suggestionsDiv.classList.add('hidden');
+                        return;
+                    }
+
+                    const matches = cachedEntryProducts.filter(p => 
+                        p.name.toLowerCase().includes(query) || 
+                        (p.barcode && p.barcode.includes(query)) ||
+                        (p.sku && p.sku.toLowerCase().includes(query))
+                    ).slice(0, 8);
+
+                    if (matches.length > 0) {
+                        suggestionsDiv.innerHTML = matches.map(p => `
+                            <div class="prod-suggestion-row-item" data-id="${p.id}" data-name="${p.name.replace(/"/g, '&quot;')}" data-cost="${p.cost || 0}">
+                                <div class="item-details">
+                                    <span class="item-name">${p.name}</span>
+                                </div>
+                                <span class="item-stock">Estoque: ${p.stock || 0} un | Custo: R$ ${(p.cost || 0).toFixed(2)} | SKU: ${p.sku || '—'}</span>
+                            </div>
+                        `).join('');
+                        suggestionsDiv.classList.remove('hidden');
+
+                        suggestionsDiv.querySelectorAll('.prod-suggestion-row-item').forEach(item => {
+                            item.onmousedown = (ev) => {
+                                ev.preventDefault();
+                                ev.stopPropagation();
+
+                                const id = item.getAttribute('data-id');
+                                const name = item.getAttribute('data-name');
+                                const cost = parseFloat(item.getAttribute('data-cost')) || 0;
+
+                                addEntryProductRow(id, name, cost);
+
+                                searchInput.value = '';
+                                suggestionsDiv.innerHTML = '';
+                                suggestionsDiv.classList.add('hidden');
+                            };
+                        });
+                    } else {
+                        suggestionsDiv.innerHTML = '';
+                        suggestionsDiv.classList.add('hidden');
+                    }
+                });
+
+                searchInput.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        suggestionsDiv.classList.add('hidden');
+                    }, 150);
+                });
+            }
+        }
+
+        // 4. Buscar histórico de entradas no Supabase
         const { data: entries, error } = await supabase
             .from('stock_entries')
             .select(`
@@ -3449,13 +3515,6 @@ async function initEntradasModule() {
 
         allStockEntries = entries || [];
         renderEntradasHistory();
-
-        // Configurar botão de adicionar item
-        const btnAdd = document.getElementById('btn-add-entry-item');
-        if (btnAdd && !btnAdd._bound) {
-            btnAdd._bound = true;
-            btnAdd.addEventListener('click', addEntryItemRow);
-        }
 
         if (loadingEl) loadingEl.classList.add('hidden');
         if (contentEl) contentEl.classList.remove('hidden');
@@ -3481,48 +3540,56 @@ async function initEntradasModule() {
     }
 }
 
-function addEntryItemRow() {
+function addEntryProductRow(id, name, cost) {
     const tbody = document.getElementById('entry-items-body');
     if (!tbody) return;
 
-    const rowId = 'row-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+    // Verificar se o produto já foi adicionado para evitar duplicidade
+    const existingRow = Array.from(tbody.querySelectorAll('.entry-item-row')).find(tr => {
+        return tr.querySelector('.entry-prod-id').value === String(id);
+    });
 
+    if (existingRow) {
+        adminToast('Este produto já foi adicionado à lista!', 'warning');
+        return;
+    }
+
+    // Remover placeholder de tabela vazia se houver
+    const emptyRow = tbody.querySelector('.empty-row-placeholder');
+    if (emptyRow) emptyRow.remove();
+
+    const rowId = 'row-' + Date.now();
     const tr = document.createElement('tr');
     tr.id = rowId;
     tr.className = 'entry-item-row';
     tr.innerHTML = `
-        <td style="padding: 10px 15px; position: relative;">
-            <input type="text" class="table-input-compact entry-prod-search" placeholder="🔍 Digite nome, código ou SKU..." required autocomplete="off" style="width: 100%;">
-            <input type="hidden" class="entry-prod-id" required>
-            <div class="prod-suggestions-floating hidden"></div>
+        <td style="padding: 12px 15px; font-weight: 600; color: var(--text-main);">
+            ${name}
+            <input type="hidden" class="entry-prod-id" value="${id}">
         </td>
         <td style="padding: 10px 15px;">
-            <input type="number" class="table-input-compact entry-qty-input" placeholder="Qtd" min="1" required style="width: 100%;">
+            <input type="number" class="table-input-compact entry-qty-input" placeholder="Qtd" min="1" value="1" required style="width: 100%;">
         </td>
         <td style="padding: 10px 15px;">
-            <input type="number" class="table-input-compact entry-cost-input" placeholder="R$ 0.00" step="0.01" min="0" required style="width: 100%;">
+            <input type="number" class="table-input-compact entry-cost-input" placeholder="R$ 0.00" step="0.01" min="0" value="${cost.toFixed(2)}" required style="width: 100%;">
         </td>
         <td style="padding: 10px 15px; font-weight: 600; color: #27ae60; font-size: 14px;" class="entry-row-total">
-            R$ 0,00
+            R$ ${cost.toFixed(2).replace('.', ',')}
         </td>
         <td style="padding: 10px 15px; text-align: center;">
             <button type="button" class="btn-remove-row" title="Remover item"><i class="fas fa-trash-alt"></i></button>
         </td>
     `;
 
-    const searchInput = tr.querySelector('.entry-prod-search');
-    const hiddenIdInput = tr.querySelector('.entry-prod-id');
-    const suggestionsDiv = tr.querySelector('.prod-suggestions-floating');
     const qtyInput = tr.querySelector('.entry-qty-input');
     const costInput = tr.querySelector('.entry-cost-input');
     const rowTotalEl = tr.querySelector('.entry-row-total');
     const removeBtn = tr.querySelector('.btn-remove-row');
 
-    // Função para recalcular o total da linha
     const updateRowTotal = () => {
         const qty = parseInt(qtyInput.value) || 0;
-        const cost = parseFloat(costInput.value) || 0;
-        const total = qty * cost;
+        const costVal = parseFloat(costInput.value) || 0;
+        const total = qty * costVal;
         rowTotalEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
         updateEntrySummary();
     };
@@ -3530,87 +3597,21 @@ function addEntryItemRow() {
     qtyInput.addEventListener('input', updateRowTotal);
     costInput.addEventListener('input', updateRowTotal);
 
-    // Lógica do Autocomplete
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        
-        // Se apagar a busca, limpa a seleção do produto
-        if (query.length === 0) {
-            hiddenIdInput.value = '';
-            suggestionsDiv.innerHTML = '';
-            suggestionsDiv.classList.add('hidden');
-            updateRowTotal();
-            return;
-        }
-
-        // Buscar produtos correspondentes
-        const matches = cachedEntryProducts.filter(p => 
-            p.name.toLowerCase().includes(query) || 
-            (p.barcode && p.barcode.includes(query)) ||
-            (p.sku && p.sku.toLowerCase().includes(query))
-        ).slice(0, 8); // Limite de 8 sugestões
-
-        if (matches.length > 0) {
-            suggestionsDiv.innerHTML = matches.map(p => `
-                <div class="prod-suggestion-row-item" data-id="${p.id}" data-name="${p.name.replace(/"/g, '&quot;')}" data-cost="${p.cost || 0}">
-                    <div class="item-details">
-                        <span class="item-name">${p.name}</span>
-                    </div>
-                    <span class="item-stock">Estoque atual: ${p.stock || 0} un | SKU: ${p.sku || '—'}</span>
-                </div>
-            `).join('');
-            suggestionsDiv.classList.remove('hidden');
-
-            // Evento de clique em cada sugestão
-            suggestionsDiv.querySelectorAll('.prod-suggestion-row-item').forEach(item => {
-                // Usando onmousedown para rodar ANTES do blur do input
-                item.onmousedown = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    const id = item.getAttribute('data-id');
-                    const name = item.getAttribute('data-name');
-                    const suggestedCost = parseFloat(item.getAttribute('data-cost')) || 0;
-
-                    hiddenIdInput.value = id;
-                    searchInput.value = name;
-                    
-                    // Preencher preço de custo atual do produto se estiver vazio
-                    if (!costInput.value || parseFloat(costInput.value) === 0) {
-                        costInput.value = suggestedCost.toFixed(2);
-                    }
-
-                    suggestionsDiv.innerHTML = '';
-                    suggestionsDiv.classList.add('hidden');
-                    updateRowTotal();
-                };
-            });
-        } else {
-            suggestionsDiv.innerHTML = '';
-            suggestionsDiv.classList.add('hidden');
-        }
-    });
-
-    // Fechar caixa de sugestões quando o usuário desfocar do campo
-    searchInput.addEventListener('blur', () => {
-        // Delay minúsculo para garantir clique no item antes de sumir
-        setTimeout(() => {
-            suggestionsDiv.classList.add('hidden');
-        }, 150);
-    });
-
     removeBtn.addEventListener('click', () => {
-        const allRows = tbody.querySelectorAll('.entry-item-row');
-        if (allRows.length > 1) {
-            tr.remove();
-            updateEntrySummary();
-        } else {
-            adminToast('Você deve manter pelo menos 1 produto na entrada!', 'warning');
-        }
+        tr.remove();
+        updateEntrySummary();
+        checkIfEmptyTable();
     });
 
     tbody.appendChild(tr);
     updateEntrySummary();
+}
+
+function checkIfEmptyTable() {
+    const tbody = document.getElementById('entry-items-body');
+    if (tbody && tbody.querySelectorAll('.entry-item-row').length === 0) {
+        tbody.innerHTML = `<tr class="empty-row-placeholder"><td colspan="5" style="text-align:center; padding:35px; color:var(--text-muted);"><i class="fas fa-search" style="margin-right:8px;"></i> Busque e adicione produtos acima para esta entrada.</td></tr>`;
+    }
 }
 
 function updateEntrySummary() {
@@ -3777,10 +3778,10 @@ document.addEventListener('submit', async (e) => {
 
             adminToast('Entrada de estoque em lote registrada com sucesso!');
             
-            // Resetar a tabela dinâmica deixando apenas 1 linha vazia
+            // Resetar a tabela dinâmica limpa com placeholder
             if (tbody) {
                 tbody.innerHTML = '';
-                addEntryItemRow();
+                checkIfEmptyTable();
             }
 
             // 3. Recarregar os produtos no cache global e atualizar tabelas
