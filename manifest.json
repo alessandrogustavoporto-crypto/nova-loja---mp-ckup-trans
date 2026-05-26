@@ -26,6 +26,13 @@
   ],
   "shortcuts": [
     {
+      "name": "Ponto de Venda (PDV)",
+      "short_name": "PDV",
+      "description": "Abrir o caixa / ponto de venda",
+      "url": "/vendas.html",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
       "name": "Carrinho",
       "short_name": "Carrinho",
       "url": "/carrinho.html",

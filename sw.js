@@ -2,7 +2,7 @@
 // SERVICE WORKER — OTMake10 PWA
 // Versão do cache: incrementar aqui força atualização em todos os clientes
 // ============================================================
-const CACHE_VERSION = 'otmake10-v1';
+const CACHE_VERSION = 'otmake10-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
@@ -21,6 +21,10 @@ const STATIC_ASSETS = [
     '/minha-conta.html',
     '/checkout.html',
     '/offline.html',
+    // PDV — Ponto de Venda (cacheado para resiliência offline no caixa)
+    '/vendas.html',
+    '/vendas.css',
+    '/vendas.js',
     'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
