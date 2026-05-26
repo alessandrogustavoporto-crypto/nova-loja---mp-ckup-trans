@@ -18,6 +18,35 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Botão de instalar PWA no PDV */
+        #pdv-pwa-install-btn {
+            display: none;
+            align-items: center;
+            gap: 7px;
+            background: linear-gradient(135deg, #9F90EA, #7c6dd4);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: 'Inter', sans-serif;
+            animation: pulse-install 2s ease-in-out infinite;
+        }
+        @keyframes pulse-install {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(159,144,234,0.5); }
+            50%       { box-shadow: 0 0 0 8px rgba(159,144,234,0); }
+        }
+        #pdv-pwa-install-btn:hover {
+            transform: scale(1.05);
+            animation: none;
+            box-shadow: 0 4px 15px rgba(159,144,234,0.6);
+        }
+    </style>
 </head>
 <body>
     <header class="pdv-header">
@@ -27,6 +56,10 @@
         <div class="header-info">
             <span id="pdv-vendedor"><i class="fas fa-user-tie"></i> Vendedor: <strong id="vendedor-nome">Admin</strong></span>
             <span id="pdv-clock"><i class="far fa-clock"></i> <strong id="current-time">00:00:00</strong></span>
+            <!-- Botão de Instalação PWA (aparece automaticamente se não instalado) -->
+            <button id="pdv-pwa-install-btn" title="Instalar o PDV como aplicativo">
+                <i class="fas fa-download"></i> Instalar App
+            </button>
         </div>
     </header>
 
@@ -228,15 +261,61 @@
 
     <script>
         // ============================================================
-        // PWA: Registro do Service Worker no PDV
+        // PWA: Registro do Service Worker + Prompt de Instalação no PDV
         // ============================================================
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                    .then(reg => console.log('[PDV-PWA] Service Worker registrado:', reg.scope))
-                    .catch(err => console.warn('[PDV-PWA] Falha ao registrar SW:', err));
+        (function () {
+            'use strict';
+
+            // 1. Registrar Service Worker
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                        .then(reg => console.log('[PDV-PWA] SW registrado:', reg.scope))
+                        .catch(err => console.warn('[PDV-PWA] Falha no SW:', err));
+                });
+            }
+
+            // 2. Capturar o evento de instalação
+            let deferredPrompt = null;
+            const installBtn = document.getElementById('pdv-pwa-install-btn');
+            const dismissed = localStorage.getItem('pwa-install-dismissed');
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                console.log('[PDV-PWA] beforeinstallprompt capturado');
+
+                // Mostra o botão no header do PDV se ainda não instalado
+                if (!dismissed && installBtn) {
+                    installBtn.style.display = 'flex';
+                }
             });
-        }
+
+            // 3. Clicar no botão dispara o prompt nativo do SO
+            if (installBtn) {
+                installBtn.addEventListener('click', async () => {
+                    if (!deferredPrompt) {
+                        alert('Seu navegador não suporta instalação automática.\n\nNo Chrome: menu (⋮) → "Instalar aplicativo"\nNo Safari (iOS): compartilhar (⬆) → "Adicionar à Tela Inicial"');
+                        return;
+                    }
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log('[PDV-PWA] Resultado:', outcome);
+                    deferredPrompt = null;
+                    installBtn.style.display = 'none';
+                    if (outcome === 'accepted') {
+                        localStorage.setItem('pwa-install-dismissed', '1');
+                    }
+                });
+            }
+
+            // 4. Esconde botão se o app já estiver instalado
+            window.addEventListener('appinstalled', () => {
+                console.log('[PDV-PWA] App instalado!');
+                if (installBtn) installBtn.style.display = 'none';
+                localStorage.setItem('pwa-install-dismissed', '1');
+            });
+        })();
     </script>
 </body>
 </html>
