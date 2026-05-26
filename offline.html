@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sem Conexão — OTMake10</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #9F90EA 0%, #7c6dd4 100%);
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+        }
+        .offline-card {
+            background: white;
+            border-radius: 20px;
+            padding: 50px 40px;
+            text-align: center;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            animation: fadeUp 0.5s ease;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .offline-icon {
+            font-size: 72px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 26px;
+            font-weight: 700;
+            margin: 0 0 12px;
+        }
+        p {
+            color: #7f8c8d;
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 0 0 30px;
+        }
+        .btn-retry {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #9F90EA, #7c6dd4);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 14px 32px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+        }
+        .btn-retry:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(159, 144, 234, 0.4);
+        }
+        .store-name {
+            color: #9F90EA;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-card">
+        <div class="offline-icon">📡</div>
+        <h1>Você está offline</h1>
+        <p>Parece que você perdeu a conexão com a internet. Verifique o seu Wi-Fi ou dados móveis e tente novamente.</p>
+        <button class="btn-retry" onclick="window.location.reload()">
+            🔄 Tentar novamente
+        </button>
+        <p class="store-name">OTMake10</p>
+    </div>
+</body>
+</html>
