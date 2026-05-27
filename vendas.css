@@ -1,7 +1,7 @@
-﻿:root {
+:root {
     --pdv-bg: #f8f9fa;
     --pdv-sidebar: #ffffff;
-    --pdv-primary: #27ae60;
+    --pdv-primary: #9F90EA;
     --pdv-secondary: #2c3e50;
     --pdv-danger: #e74c3c;
     --pdv-border: #dfe6e9;
@@ -52,7 +52,7 @@ body { background: var(--pdv-bg); color: var(--pdv-text); height: 100vh; overflo
     font-size: 16px;
     outline: none;
 }
-.pdv-input:focus { border-color: var(--pdv-primary); box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1); }
+.pdv-input:focus { border-color: var(--pdv-primary); box-shadow: 0 0 0 3px rgba(159, 144, 234, 0.15); }
 
 /* TABLE */
 .items-section {
@@ -87,7 +87,7 @@ body { background: var(--pdv-bg); color: var(--pdv-text); height: 100vh; overflo
     transition: all 0.2s;
     font-size: 14px;
 }
-.btn-edit { background: rgba(39, 174, 96, 0.1); color: var(--pdv-primary); }
+.btn-edit { background: rgba(159, 144, 234, 0.12); color: var(--pdv-primary); }
 .btn-edit:hover { background: var(--pdv-primary); color: white; }
 .btn-remove { background: rgba(231, 76, 60, 0.1); color: var(--pdv-danger); }
 .btn-remove:hover { background: var(--pdv-danger); color: white; }
@@ -141,7 +141,7 @@ body { background: var(--pdv-bg); color: var(--pdv-text); height: 100vh; overflo
     transition: all 0.2s;
 }
 .btn-finish { background: var(--pdv-primary); color: white; }
-.btn-finish:hover { background: #219150; }
+.btn-finish:hover { background: #7c6dd4; }
 .btn-cancel { background: #eee; color: var(--pdv-text); }
 .btn-cancel:hover { background: #ddd; }
 
