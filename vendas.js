@@ -580,7 +580,6 @@ async function finishSale() {
             client_email: selectedCustomer ? selectedCustomer.email : 'venda_pdv@otmake10.com',
             total: total,
             discount_amount: discountAmount,
-            addition_amount: additionAmount,
             status: 'entregue',
             status_label: 'Entregue',
             payment_method: 'PDV - ' + paymentMethod,
