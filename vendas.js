@@ -144,6 +144,7 @@ function setupEventListeners() {
     document.getElementById('pdv-amount-received').addEventListener('input', updateChange);
     document.getElementById('pdv-global-discount').addEventListener('input', renderTotals);
     document.getElementById('pdv-discount-type').addEventListener('change', renderTotals);
+    document.getElementById('pdv-global-addition').addEventListener('input', renderTotals);
 
     // Customer search
     document.getElementById('pdv-cust-search').addEventListener('input', (e) => searchCustomer(e.target.value));
@@ -493,27 +494,30 @@ window.removeSelectedCustomer = function() {
 function calculateTotal() {
     const subtotal = pdvItems.reduce((acc, item) => acc + item.subtotal, 0);
     const discVal = parseFloat(document.getElementById('pdv-global-discount').value) || 0;
-    const discType = document.getElementById('pdv-discount-type').value; // 'val' or 'pct'
-    
+    const discType = document.getElementById('pdv-discount-type').value;
+    const additionAmount = Math.max(0, parseFloat(document.getElementById('pdv-global-addition').value) || 0);
+
     let discountAmount = 0;
     if (discType === 'pct') {
         discountAmount = subtotal * (discVal / 100);
     } else {
         discountAmount = discVal;
     }
-    
+
     return {
         subtotal,
         discountAmount,
-        total: Math.max(0, subtotal - discountAmount)
+        additionAmount,
+        total: Math.max(0, subtotal - discountAmount + additionAmount)
     };
 }
 
 function renderTotals() {
-    const { subtotal, discountAmount, total } = calculateTotal();
+    const { subtotal, discountAmount, additionAmount, total } = calculateTotal();
 
     document.getElementById('pdv-subtotal').textContent = fmt(subtotal);
     document.getElementById('pdv-discounts').textContent = '- ' + fmt(discountAmount);
+    document.getElementById('pdv-additions').textContent = additionAmount > 0 ? '+ ' + fmt(additionAmount) : fmt(0);
     document.getElementById('pdv-total').textContent = fmt(total);
     document.getElementById('checkout-final-total').textContent = fmt(total);
     
@@ -553,7 +557,7 @@ function closeCheckoutModal() {
 async function finishSale() {
     if (!confirm('Confirmar finalização de venda?')) return;
 
-    const { subtotal, discountAmount, total } = calculateTotal();
+    const { subtotal, discountAmount, additionAmount, total } = calculateTotal();
     const paymentMethod = document.getElementById('pdv-payment-method').value;
     const received = parseFloat(document.getElementById('pdv-amount-received').value) || 0;
 
@@ -570,6 +574,7 @@ async function finishSale() {
             client_email: selectedCustomer ? selectedCustomer.email : 'venda_pdv@otmake10.com',
             total: total,
             discount_amount: discountAmount,
+            addition_amount: additionAmount,
             status: 'entregue',
             status_label: 'Entregue',
             payment_method: 'PDV - ' + paymentMethod,
@@ -614,6 +619,7 @@ function clearPDV() {
     removeSelectedCustomer();
     document.getElementById('pdv-items-body').innerHTML = '';
     document.getElementById('pdv-global-discount').value = '0.00';
+    document.getElementById('pdv-global-addition').value = '0.00';
     document.getElementById('pdv-amount-received').value = '';
     document.getElementById('pdv-cust-search').value = '';
     renderItems();
