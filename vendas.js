@@ -515,12 +515,18 @@ function calculateTotal() {
 function renderTotals() {
     const { subtotal, discountAmount, additionAmount, total } = calculateTotal();
 
-    document.getElementById('pdv-subtotal').textContent = fmt(subtotal);
-    document.getElementById('pdv-discounts').textContent = '- ' + fmt(discountAmount);
-    document.getElementById('pdv-additions').textContent = additionAmount > 0 ? '+ ' + fmt(additionAmount) : fmt(0);
-    document.getElementById('pdv-total').textContent = fmt(total);
-    document.getElementById('checkout-final-total').textContent = fmt(total);
-    
+    const elSubtotal    = document.getElementById('pdv-subtotal');
+    const elDiscounts   = document.getElementById('pdv-discounts');
+    const elAdditions   = document.getElementById('pdv-additions');
+    const elTotal       = document.getElementById('pdv-total');
+    const elCheckout    = document.getElementById('checkout-final-total');
+
+    if (elSubtotal)  elSubtotal.textContent  = fmt(subtotal);
+    if (elDiscounts) elDiscounts.textContent = '- ' + fmt(discountAmount);
+    if (elAdditions) elAdditions.textContent = additionAmount > 0 ? '+ ' + fmt(additionAmount) : fmt(0);
+    if (elTotal)     elTotal.textContent     = fmt(total);
+    if (elCheckout)  elCheckout.textContent  = fmt(total);
+
     updateChange();
 }
 
