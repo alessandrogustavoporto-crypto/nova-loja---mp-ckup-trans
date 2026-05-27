@@ -95,7 +95,7 @@ const AdminData = {
     async getOrders() {
         const { data } = await supabase
             .from('orders')
-            .select('id, client_name, client_email, total, status, status_label, created_at, items, address, discount_amount, addition_amount')
+            .select('id, client_name, client_email, total, status, status_label, created_at, items, address, discount_amount, addition_amount, payment_method')
             .order('id', { ascending: false });
         return (data || []).map(o => ({
             ...o,
@@ -105,7 +105,8 @@ const AdminData = {
             date: new Date(o.created_at).toLocaleDateString('pt-BR'),
             address: typeof o.address === 'object' ? (o.address.logradouro + ', ' + o.address.numero + ' - ' + o.address.cidade) : o.address,
             discount_amount: o.discount_amount || 0,
-            addition_amount: o.addition_amount || 0
+            addition_amount: o.addition_amount || 0,
+            payment_method: o.payment_method || '—'
         }));
     },
 
@@ -1196,6 +1197,7 @@ window.viewOrder = function (id) {
         (o.items || []).map(i => '<tr><td>' + i.name + '</td><td>' + i.qty + '</td><td>' + fmt(i.price) + '</td><td>' + fmt(i.price * i.qty) + '</td></tr>').join('') +
         '</tbody></table>' +
         '</div>' +
+        '<div style="text-align:right;font-size:14px;color:#7f8c8d;margin-top:10px;">Subtotal: ' + fmt((o.items || []).reduce((acc, i) => acc + (i.price * i.qty), 0)) + '</div>' +
         (o.discount_amount > 0 ? '<div style="text-align:right;font-size:14px;color:#e74c3c;margin-top:5px;">Desconto: - ' + fmt(o.discount_amount) + '</div>' : '') +
         (o.addition_amount > 0 ? '<div style="text-align:right;font-size:14px;color:#8e44ad;margin-top:5px;">Acréscimo: + ' + fmt(o.addition_amount) + '</div>' : '') +
         '<div style="text-align:right;font-size:18px;font-weight:700;color:var(--primary-green);margin-top:5px;">Total: ' + fmt(o.total) + '</div>';
