@@ -99,8 +99,9 @@ body { background: var(--pdv-bg); color: var(--pdv-text); height: 100vh; overflo
     border-left: 1px solid var(--pdv-border);
     display: flex;
     flex-direction: column;
-    padding: 20px;
-    gap: 20px;
+    padding: 15px;
+    gap: 12px;
+    overflow-y: auto;
 }
 
 .customer-card {
@@ -119,20 +120,20 @@ body { background: var(--pdv-bg); color: var(--pdv-text); height: 100vh; overflo
 .total-row { display: flex; justify-content: space-between; font-size: 16px; }
 .total-row.grand-total {
     margin-top: auto;
-    padding-top: 20px;
+    padding-top: 15px;
     border-top: 2px solid var(--pdv-border);
-    font-size: 32px;
+    font-size: 26px;
     font-weight: 800;
     color: var(--pdv-primary);
 }
 
-.pdv-actions { display: flex; flex-direction: column; gap: 10px; }
+.pdv-actions { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
 .btn-pdv {
-    padding: 18px;
+    padding: 14px;
     border: none;
     border-radius: 8px;
     font-weight: 700;
-    font-size: 16px;
+    font-size: 15px;
     cursor: pointer;
     display: flex;
     align-items: center;
