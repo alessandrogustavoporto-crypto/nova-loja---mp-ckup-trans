@@ -95,7 +95,7 @@ const AdminData = {
     async getOrders() {
         const { data } = await supabase
             .from('orders')
-            .select('id, client_name, client_email, total, status, status_label, created_at, items, address')
+            .select('id, client_name, client_email, total, status, status_label, created_at, items, address, discount_amount, addition_amount')
             .order('id', { ascending: false });
         return (data || []).map(o => ({
             ...o,
@@ -103,7 +103,9 @@ const AdminData = {
             clientEmail: o.client_email,
             clientPhone: (o.address && o.address.phone) ? o.address.phone : (o.clientPhone || '11999999999'),
             date: new Date(o.created_at).toLocaleDateString('pt-BR'),
-            address: typeof o.address === 'object' ? (o.address.logradouro + ', ' + o.address.numero + ' - ' + o.address.cidade) : o.address
+            address: typeof o.address === 'object' ? (o.address.logradouro + ', ' + o.address.numero + ' - ' + o.address.cidade) : o.address,
+            discount_amount: o.discount_amount || 0,
+            addition_amount: o.addition_amount || 0
         }));
     },
 
@@ -1195,6 +1197,7 @@ window.viewOrder = function (id) {
         '</tbody></table>' +
         '</div>' +
         (o.discount_amount > 0 ? '<div style="text-align:right;font-size:14px;color:#e74c3c;margin-top:5px;">Desconto: - ' + fmt(o.discount_amount) + '</div>' : '') +
+        (o.addition_amount > 0 ? '<div style="text-align:right;font-size:14px;color:#8e44ad;margin-top:5px;">Acréscimo: + ' + fmt(o.addition_amount) + '</div>' : '') +
         '<div style="text-align:right;font-size:18px;font-weight:700;color:var(--primary-green);margin-top:5px;">Total: ' + fmt(o.total) + '</div>';
 
     // Store for print
@@ -1306,6 +1309,7 @@ window.printOrder = async function () {
                 <div class="footer-totals">
                     <p>VALOR TOTAL DOS PRODUTOS: <strong>${fmt((o.items || []).reduce((acc, i) => acc + (i.price * i.qty), 0))}</strong></p>
                     ${o.discount_amount > 0 ? `<p>DESCONTO CONCEDIDO: <strong style="color:red">- ${fmt(o.discount_amount)}</strong></p>` : ''}
+                    ${o.addition_amount > 0 ? `<p>ACRÉSCIMO APLICADO: <strong style="color:#8e44ad">+ ${fmt(o.addition_amount)}</strong></p>` : ''}
                     <h2 style="margin-top:10px;">TOTAL LÍQUIDO: ${fmt(o.total)}</h2>
                     <p style="margin-top:10px; font-size:12px; font-style:italic;">Forma de Pagamento: ${o.payment_method || '—'}</p>
                 </div>
