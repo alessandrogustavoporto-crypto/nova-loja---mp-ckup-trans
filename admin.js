@@ -1169,8 +1169,87 @@ function renderOrdersTable() {
 }
 
 window.updateOrderStatus = async function (id, newStatus) {
-    await supabase.from('orders').update({ status: newStatus, status_label: statusInfo[newStatus].label }).eq('id', id);
-    adminToast('Status atualizado: ' + statusInfo[newStatus].label);
+    // Busca o pedido atual para verificar o status anterior e os itens
+    const { data: currentOrder, error: fetchError } = await supabase
+        .from('orders')
+        .select('status, items')
+        .eq('id', id)
+        .single();
+
+    if (fetchError) {
+        adminToast('Erro ao buscar pedido: ' + fetchError.message, 'error');
+        console.error('updateOrderStatus fetchError:', fetchError);
+        return;
+    }
+
+    const previousStatus = currentOrder ? currentOrder.status : null;
+    const items = currentOrder ? (currentOrder.items || []) : [];
+
+    // Atualiza o status no banco
+    const { error: updateError } = await supabase
+        .from('orders')
+        .update({ status: newStatus, status_label: statusInfo[newStatus].label })
+        .eq('id', id);
+
+    if (updateError) {
+        adminToast('Erro ao atualizar status: ' + updateError.message, 'error');
+        console.error('updateOrderStatus updateError:', updateError);
+        return;
+    }
+
+    // ── Gerenciamento de Estoque ao Cancelar ──────────────────────────────────
+    // Se o novo status é "cancelado" e o pedido NÃO estava cancelado antes:
+    // → Devolve o estoque de cada item ao banco
+    if (newStatus === 'cancelado' && previousStatus !== 'cancelado') {
+        let restoredCount = 0;
+        for (const item of items) {
+            if (!item.id || !item.qty) continue;
+            try {
+                const { data: prod } = await supabase
+                    .from('products')
+                    .select('stock')
+                    .eq('id', item.id)
+                    .single();
+                if (prod) {
+                    const restoredStock = (prod.stock || 0) + item.qty;
+                    await supabase.from('products').update({ stock: restoredStock }).eq('id', item.id);
+                    restoredCount++;
+                }
+            } catch (e) {
+                console.error('Erro ao restaurar estoque do produto ' + item.id + ':', e);
+            }
+        }
+        if (restoredCount > 0) {
+            adminToast('✅ Status cancelado — estoque de ' + restoredCount + ' produto(s) restaurado(s)!');
+        } else {
+            adminToast('Status atualizado: ' + statusInfo[newStatus].label);
+        }
+    }
+    // Se o pedido estava cancelado e agora volta a um status ativo:
+    // → Abate o estoque novamente (reverter a devolução)
+    else if (previousStatus === 'cancelado' && newStatus !== 'cancelado') {
+        for (const item of items) {
+            if (!item.id || !item.qty) continue;
+            try {
+                const { data: prod } = await supabase
+                    .from('products')
+                    .select('stock')
+                    .eq('id', item.id)
+                    .single();
+                if (prod) {
+                    const newStock = Math.max(0, (prod.stock || 0) - item.qty);
+                    await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
+                }
+            } catch (e) {
+                console.error('Erro ao debitar estoque do produto ' + item.id + ':', e);
+            }
+        }
+        adminToast('Status atualizado: ' + statusInfo[newStatus].label + ' (estoque debitado)');
+    } else {
+        adminToast('Status atualizado: ' + statusInfo[newStatus].label);
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     initAdminDashboard();
 };
 
