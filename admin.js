@@ -1,3 +1,4 @@
+// admin.js — v2.1.0 — 2026-06-21 — fix: restaurar estoque ao cancelar pedido
 // Global Cache
 let cachedAdminData = {
     orders: null,
