@@ -1169,79 +1169,119 @@ function renderOrdersTable() {
 }
 
 window.updateOrderStatus = async function (id, newStatus) {
-    // Busca o pedido atual para verificar o status anterior e os itens
+    console.log('[updateOrderStatus] Iniciando — id:', id, '| newStatus:', newStatus);
+
+    // 1. Busca o pedido atual no banco (status + items)
     const { data: currentOrder, error: fetchError } = await supabase
         .from('orders')
         .select('status, items')
         .eq('id', id)
         .single();
 
+    console.log('[updateOrderStatus] Fetch pedido — data:', currentOrder, '| error:', fetchError);
+
     if (fetchError) {
         adminToast('Erro ao buscar pedido: ' + fetchError.message, 'error');
-        console.error('updateOrderStatus fetchError:', fetchError);
+        console.error('[updateOrderStatus] PAROU no fetchError:', fetchError);
         return;
     }
 
     const previousStatus = currentOrder ? currentOrder.status : null;
     const items = currentOrder ? (currentOrder.items || []) : [];
+    console.log('[updateOrderStatus] previousStatus:', previousStatus, '| items:', JSON.stringify(items));
 
-    // Atualiza o status no banco
+    // 2. Atualiza o status no banco
     const { error: updateError } = await supabase
         .from('orders')
         .update({ status: newStatus, status_label: statusInfo[newStatus].label })
         .eq('id', id);
 
+    console.log('[updateOrderStatus] Update status — error:', updateError);
+
     if (updateError) {
         adminToast('Erro ao atualizar status: ' + updateError.message, 'error');
-        console.error('updateOrderStatus updateError:', updateError);
+        console.error('[updateOrderStatus] PAROU no updateError:', updateError);
         return;
     }
 
-    // ── Gerenciamento de Estoque ao Cancelar ──────────────────────────────────
-    // Se o novo status é "cancelado" e o pedido NÃO estava cancelado antes:
-    // → Devolve o estoque de cada item ao banco
+    // ── Gerenciamento de Estoque ─────────────────────────────────────────────
     if (newStatus === 'cancelado' && previousStatus !== 'cancelado') {
+        console.log('[updateOrderStatus] Entrando no bloco CANCELAR → restaurar estoque. Total de items:', items.length);
         let restoredCount = 0;
+
         for (const item of items) {
-            if (!item.id || !item.qty) continue;
+            console.log('[updateOrderStatus] Processando item:', JSON.stringify(item));
+
+            if (!item.id || !item.qty) {
+                console.warn('[updateOrderStatus] Item sem id ou qty — pulando:', item);
+                continue;
+            }
+
             try {
-                const { data: prod } = await supabase
+                // Busca o estoque atual do produto
+                const { data: prod, error: prodFetchErr } = await supabase
                     .from('products')
-                    .select('stock')
+                    .select('id, name, stock')
                     .eq('id', item.id)
                     .single();
+
+                console.log('[updateOrderStatus] Produto buscado:', prod, '| erro:', prodFetchErr);
+
+                if (prodFetchErr) {
+                    console.error('[updateOrderStatus] Erro ao buscar produto id=' + item.id + ':', prodFetchErr);
+                    continue;
+                }
+
                 if (prod) {
-                    const restoredStock = (prod.stock || 0) + item.qty;
-                    await supabase.from('products').update({ stock: restoredStock }).eq('id', item.id);
-                    restoredCount++;
+                    const estoqueAtual = prod.stock || 0;
+                    const estoqueRestaurado = estoqueAtual + item.qty;
+                    console.log('[updateOrderStatus] Produto "' + (prod.name || item.id) + '" — estoque: ' + estoqueAtual + ' + ' + item.qty + ' = ' + estoqueRestaurado);
+
+                    const { error: stockUpdateErr } = await supabase
+                        .from('products')
+                        .update({ stock: estoqueRestaurado })
+                        .eq('id', item.id);
+
+                    if (stockUpdateErr) {
+                        console.error('[updateOrderStatus] Erro ao atualizar estoque produto id=' + item.id + ':', stockUpdateErr);
+                        adminToast('⚠️ Falha ao restaurar estoque de "' + (prod.name || item.id) + '": ' + stockUpdateErr.message, 'error');
+                    } else {
+                        console.log('[updateOrderStatus] ✅ Estoque restaurado com sucesso para produto id=' + item.id);
+                        restoredCount++;
+                    }
+                } else {
+                    console.warn('[updateOrderStatus] Produto id=' + item.id + ' não encontrado no banco (pode ter sido excluído).');
                 }
             } catch (e) {
-                console.error('Erro ao restaurar estoque do produto ' + item.id + ':', e);
+                console.error('[updateOrderStatus] Exceção ao restaurar estoque produto id=' + item.id + ':', e);
             }
         }
+
         if (restoredCount > 0) {
-            adminToast('✅ Status cancelado — estoque de ' + restoredCount + ' produto(s) restaurado(s)!');
+            adminToast('✅ Cancelado — estoque de ' + restoredCount + ' produto(s) restaurado(s)!');
         } else {
-            adminToast('Status atualizado: ' + statusInfo[newStatus].label);
+            console.warn('[updateOrderStatus] Nenhum produto teve estoque restaurado!');
+            adminToast('Pedido cancelado. (Nenhum produto com estoque para restaurar)', 'error');
         }
-    }
-    // Se o pedido estava cancelado e agora volta a um status ativo:
-    // → Abate o estoque novamente (reverter a devolução)
-    else if (previousStatus === 'cancelado' && newStatus !== 'cancelado') {
+
+    } else if (previousStatus === 'cancelado' && newStatus !== 'cancelado') {
+        console.log('[updateOrderStatus] Reativando pedido cancelado → debitando estoque.');
         for (const item of items) {
             if (!item.id || !item.qty) continue;
             try {
-                const { data: prod } = await supabase
+                const { data: prod, error: prodFetchErr } = await supabase
                     .from('products')
                     .select('stock')
                     .eq('id', item.id)
                     .single();
+                if (prodFetchErr) { console.error('[updateOrderStatus] Erro ao buscar produto id=' + item.id + ':', prodFetchErr); continue; }
                 if (prod) {
                     const newStock = Math.max(0, (prod.stock || 0) - item.qty);
-                    await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
+                    const { error: stockUpdateErr } = await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
+                    if (stockUpdateErr) console.error('[updateOrderStatus] Erro ao debitar estoque produto id=' + item.id + ':', stockUpdateErr);
                 }
             } catch (e) {
-                console.error('Erro ao debitar estoque do produto ' + item.id + ':', e);
+                console.error('[updateOrderStatus] Exceção ao debitar estoque produto id=' + item.id + ':', e);
             }
         }
         adminToast('Status atualizado: ' + statusInfo[newStatus].label + ' (estoque debitado)');
