@@ -58,7 +58,8 @@ const Validators = {
     email(value) {
         const v = value.trim().toLowerCase();
         if (/\s/.test(v)) return 'E-mail não pode conter espaços.';
-        const re = /^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/;
+        // Regex mais permissiva: aceita domínios com subdomínios e TLDs variados
+        const re = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
         if (!re.test(v)) return 'E-mail inválido. Use o formato nome@dominio.com';
         return null;
     },
@@ -146,11 +147,14 @@ function applyMasks() {
     });
 
     // Email: força minúsculas em tempo real
+    // NOTA: inputs do tipo "email" NÃO suportam setSelectionRange() nos browsers
+    // Por isso usamos o evento sem tentar restaurar o cursor (não é necessário)
     document.querySelectorAll('input[type="email"]').forEach(input => {
         input.addEventListener('input', () => {
-            const pos = input.selectionStart;
+            // Salva posição do cursor ANTES de alterar o valor
+            // (só funciona em type="text", em type="email" o browser ignora)
             input.value = input.value.toLowerCase();
-            input.setSelectionRange(pos, pos);
+            // Não chamar setSelectionRange em inputs type="email" — causa InvalidStateError
         });
     });
 }

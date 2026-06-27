@@ -247,7 +247,10 @@ const Auth = {
     // Register a new customer with password (Supabase Auth + public.customers)
     async register(userData) {
         // 1. Verificar se e-mail já existe na tabela de clientes
-        const { data: existing } = await supabase.from('customers').select('id').eq('email', userData.email).single();
+        // IMPORTANTE: usar .maybeSingle() e não .single()
+        // .single() retorna 406 quando NÃO encontra nenhum resultado (email novo = caso normal!)
+        // .maybeSingle() retorna null sem erro quando não encontra — comportamento correto aqui.
+        const { data: existing, error: existingError } = await supabase.from('customers').select('id').eq('email', userData.email).maybeSingle();
         if (existing) return { success: false, error: 'E-mail já cadastrado.' };
 
         // 2. Criar conta no Supabase Auth nativo
