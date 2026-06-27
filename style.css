@@ -168,10 +168,10 @@ ul {
 /* Hero Section */
 .hero {
     background: #f5f5f5;
-    /* Proporção padrão dos banners: 1500x750px */
+    /* Proporção padrão dos banners: 1750x600px */
     width: 100%;
     height: auto;
-    aspect-ratio: 1500 / 750;
+    aspect-ratio: 1750 / 600;
     display: flex;
     align-items: center;
     justify-content: center;
