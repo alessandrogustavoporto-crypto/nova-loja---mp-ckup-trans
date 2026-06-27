@@ -168,20 +168,23 @@ ul {
 /* Hero Section */
 .hero {
     background: #f5f5f5;
-    height: clamp(200px, 50vw, 380px); /* Height scales automatically */
+    /* Usa aspect-ratio da imagem do banner (1920x450) para nunca cortar */
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1920 / 450;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
     color: var(--white);
-    padding: 0 20px;
+    padding: 0;
     background-size: cover;
     background-position: center;
+    background-repeat: no-repeat;
     transition: background-image 0.8s ease-in-out;
     position: relative;
     overflow: hidden;
-    width: 100%;
-    margin: 0; /* Remove any margins */
+    margin: 0;
 }
 
 .hero-content {
@@ -498,9 +501,9 @@ ul {
         gap: 12px;
     }
     .hero {
+        aspect-ratio: 16 / 5.5; /* proporção ligeiramente mais alta no mobile */
         height: auto !important;
-        min-height: 120px;
-        aspect-ratio: 16 / 5.5;
+        min-height: 100px;
         background-size: cover !important;
         background-repeat: no-repeat !important;
         background-position: center center !important;
