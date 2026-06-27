@@ -2453,7 +2453,7 @@ async function uploadBannerImage(file) {
     if (statusEl) statusEl.style.display = 'flex';
     if (statusText) statusText.textContent = 'Enviando imagem...';
 
-    await tryCreateBucket(); // Reutiliza o helper já existente
+    // Bucket 'product-images' já existe com políticas configuradas — não precisa criar
 
     try {
         const safeName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
