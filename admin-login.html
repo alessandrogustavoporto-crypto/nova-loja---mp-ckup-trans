@@ -2,7 +2,8 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">`r`n    <link rel="icon" type="image/png" href="icon-192.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="icon-192.png">
     <title>Admin Login - OTMake10</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="admin.css">
@@ -20,7 +21,7 @@
             <div class="auth-body">
                 <div id="admin-auth-msg" class="feedback-msg hidden"></div>
 
-                <!-- Form: Registro (Aparece se não houver admin) -->
+                <!-- Form: Registro (Aparece se nÃ£o houver admin) -->
                 <form id="admin-register-form" class="hidden" onsubmit="window.submitAdminRegister(event);">
                     <div class="form-group">
                         <label for="reg-admin-name"><i class="fas fa-user"></i> Nome Completo</label>
@@ -32,22 +33,22 @@
                     </div>
                     <div class="form-group">
                         <label for="reg-admin-pass"><i class="fas fa-lock"></i> Criar Senha</label>
-                        <input type="password" id="reg-admin-pass" placeholder="••••••••" required>
+                        <input type="password" id="reg-admin-pass" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required>
                     </div>
                     <button type="submit" class="btn-primary btn-block" style="margin-top:10px;">
                         <i class="fas fa-user-plus"></i> Criar Conta Administrador
                     </button>
                 </form>
 
-                <!-- Form: Login (Aparece se já houver admin) -->
+                <!-- Form: Login (Aparece se jÃ¡ houver admin) -->
                 <form id="admin-login-form" class="hidden" onsubmit="window.submitAdminLogin(event);">
                     <div class="form-group">
-                        <label for="admin-email"><i class="fas fa-user-shield"></i> Usuário Admin</label>
+                        <label for="admin-email"><i class="fas fa-user-shield"></i> UsuÃ¡rio Admin</label>
                         <input type="email" id="admin-email" placeholder="admin@otmake10.com" required>
                     </div>
                     <div class="form-group">
                         <label for="admin-pass"><i class="fas fa-lock"></i> Senha</label>
-                        <input type="password" id="admin-pass" placeholder="••••••••" required>
+                        <input type="password" id="admin-pass" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required>
                     </div>
                     <button type="submit" class="btn-primary btn-block" style="margin-top:10px;">
                         <i class="fas fa-sign-in-alt"></i> Entrar no Painel
@@ -55,7 +56,7 @@
                 </form>
                 <p class="admin-hint">Acesso restrito a administradores autorizados.</p>
                 <a href="index.html" class="link-muted" style="display:block;text-align:center;margin-top:10px;font-size:13px;">
-                    <i class="fas fa-arrow-left"></i> Voltar à loja
+                    <i class="fas fa-arrow-left"></i> Voltar Ã  loja
                 </a>
             </div>
         </div>
