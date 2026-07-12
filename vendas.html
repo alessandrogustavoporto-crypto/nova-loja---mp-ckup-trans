@@ -196,30 +196,108 @@
 
     <!-- MODAL: FINALIZAR PAGAMENTO -->
     <div id="modal-checkout" class="modal-overlay hidden">
-        <div class="modal-content">
+        <div class="modal-content" style="width:600px; max-width:95vw;">
             <h2 style="margin-bottom:20px; color:var(--pdv-secondary);"><i class="fas fa-cash-register"></i> Finalizar Venda</h2>
-            
-            <div class="form-group" style="margin-bottom:20px;">
-                <label>Forma de Pagamento</label>
-                <select id="pdv-payment-method" class="pdv-input" style="width:100%;">
-                    <option value="dinheiro">Dinheiro</option>
-                    <option value="cartao_credito">Cartão de Crédito</option>
-                    <option value="cartao_debito">Cartão de Débito</option>
-                    <option value="pix">PIX</option>
-                </select>
+
+            <!-- Toggle Pagamento Dividido -->
+            <div class="split-toggle-container" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding:12px 16px; background:linear-gradient(135deg, #f8f7ff 0%, #f1f0fb 100%); border-radius:10px; border:1px solid rgba(159,144,234,0.2);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-divide" style="color:var(--pdv-primary); font-size:16px;"></i>
+                    <span style="font-weight:700; font-size:14px; color:var(--pdv-secondary);">Dividir Pagamento em 2 formas</span>
+                </div>
+                <label class="switch-toggle">
+                    <input type="checkbox" id="pdv-split-toggle" onchange="toggleSplitPayment()">
+                    <span class="switch-slider"></span>
+                </label>
             </div>
 
-            <div class="form-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
-                <div class="form-group">
-                    <label>Valor Recebido (R$)</label>
-                    <input type="number" id="pdv-amount-received" class="pdv-input" placeholder="0,00" step="0.01">
+            <!-- ===== PAGAMENTO ÚNICO (padrão) ===== -->
+            <div id="single-payment-section">
+                <div class="form-group" style="margin-bottom:15px;">
+                    <label>Forma de Pagamento</label>
+                    <select id="pdv-payment-method" class="pdv-input" style="width:100%;">
+                        <option value="dinheiro">Dinheiro</option>
+                        <option value="cartao_credito">Cartão de Crédito</option>
+                        <option value="cartao_debito">Cartão de Débito</option>
+                        <option value="pix">PIX</option>
+                    </select>
                 </div>
-                <div class="form-group">
-                    <label>Troco (R$)</label>
-                    <input type="text" id="pdv-change" class="pdv-input" value="R$ 0,00" readonly style="background:#f9f9f9; font-weight:800; color:var(--pdv-primary);">
+                <div class="form-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:18px;">
+                    <div class="form-group">
+                        <label>Valor Recebido (R$)</label>
+                        <input type="number" id="pdv-amount-received" class="pdv-input" placeholder="0,00" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Troco (R$)</label>
+                        <input type="text" id="pdv-change" class="pdv-input" value="R$ 0,00" readonly style="background:#f9f9f9; font-weight:800; color:var(--pdv-primary);">
+                    </div>
                 </div>
             </div>
 
+            <!-- ===== PAGAMENTO DIVIDIDO (2 formas) ===== -->
+            <div id="split-payment-section" class="hidden">
+                <div class="split-payments-grid">
+                    <!-- Pagamento 1 -->
+                    <div class="split-payment-card" id="split-card-1">
+                        <div class="split-payment-header">
+                            <span class="split-payment-number">1</span>
+                            <span class="split-payment-title">1ª Forma de Pagamento</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <label>Forma</label>
+                            <select id="pdv-split-method-1" class="pdv-input" style="width:100%;">
+                                <option value="dinheiro">Dinheiro</option>
+                                <option value="cartao_credito">Cartão de Crédito</option>
+                                <option value="cartao_debito">Cartão de Débito</option>
+                                <option value="pix">PIX</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Valor (R$)</label>
+                            <input type="number" id="pdv-split-value-1" class="pdv-input split-value-input" placeholder="0,00" step="0.01" oninput="updateSplitValues()">
+                        </div>
+                    </div>
+
+                    <!-- Pagamento 2 -->
+                    <div class="split-payment-card" id="split-card-2">
+                        <div class="split-payment-header">
+                            <span class="split-payment-number">2</span>
+                            <span class="split-payment-title">2ª Forma de Pagamento</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <label>Forma</label>
+                            <select id="pdv-split-method-2" class="pdv-input" style="width:100%;">
+                                <option value="cartao_credito">Cartão de Crédito</option>
+                                <option value="cartao_debito">Cartão de Débito</option>
+                                <option value="dinheiro">Dinheiro</option>
+                                <option value="pix">PIX</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Valor (R$)</label>
+                            <input type="number" id="pdv-split-value-2" class="pdv-input split-value-input" placeholder="0,00" step="0.01" oninput="updateSplitValues()" readonly style="background:#f9f9f9;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumo da divisão -->
+                <div id="split-summary" class="split-summary">
+                    <div class="split-summary-row">
+                        <span>Soma dos pagamentos:</span>
+                        <strong id="split-sum-display">R$ 0,00</strong>
+                    </div>
+                    <div class="split-summary-row" id="split-remainder-row" style="display:none;">
+                        <span>Falta:</span>
+                        <strong id="split-remainder-display" style="color:var(--pdv-danger);">R$ 0,00</strong>
+                    </div>
+                    <div class="split-summary-row" id="split-change-row" style="display:none;">
+                        <span>Troco (sobre dinheiro):</span>
+                        <strong id="split-change-display" style="color:#27ae60;">R$ 0,00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOTAL -->
             <div style="background:#2c3e50; color:white; padding:20px; border-radius:8px; text-align:center; margin-bottom:20px;">
                 <p style="font-size:12px; opacity:0.8; text-transform:uppercase;">Total Líquido a Pagar</p>
                 <h1 id="checkout-final-total" style="font-size:36px;">R$ 0,00</h1>

@@ -539,6 +539,78 @@ function updateChange() {
 }
 
 // ============================================================
+// SPLIT PAYMENT LOGIC
+// ============================================================
+
+function toggleSplitPayment() {
+    const isChecked = document.getElementById('pdv-split-toggle').checked;
+    const singleSection = document.getElementById('single-payment-section');
+    const splitSection = document.getElementById('split-payment-section');
+
+    if (isChecked) {
+        singleSection.classList.add('hidden');
+        splitSection.classList.remove('hidden');
+        // Pre-fill first value with half
+        const { total } = calculateTotal();
+        document.getElementById('pdv-split-value-1').value = '';
+        document.getElementById('pdv-split-value-2').value = total.toFixed(2);
+        updateSplitValues();
+        document.getElementById('pdv-split-value-1').focus();
+    } else {
+        singleSection.classList.remove('hidden');
+        splitSection.classList.add('hidden');
+    }
+}
+
+function updateSplitValues() {
+    const { total } = calculateTotal();
+    const val1 = parseFloat(document.getElementById('pdv-split-value-1').value) || 0;
+    const remainder = Math.max(0, total - val1);
+
+    // Auto-fill second value
+    document.getElementById('pdv-split-value-2').value = remainder.toFixed(2);
+
+    // Update summary
+    const sum = val1 + remainder;
+    document.getElementById('split-sum-display').textContent = fmt(sum);
+
+    // Check if there's a remainder (underpaid)
+    const remainderRow = document.getElementById('split-remainder-row');
+    const changeRow = document.getElementById('split-change-row');
+
+    if (val1 > total) {
+        // Overpaid on first payment — calc change if dinheiro
+        const method1 = document.getElementById('pdv-split-method-1').value;
+        document.getElementById('pdv-split-value-2').value = '0.00';
+        remainderRow.style.display = 'none';
+        if (method1 === 'dinheiro') {
+            changeRow.style.display = 'flex';
+            document.getElementById('split-change-display').textContent = fmt(val1 - total);
+        } else {
+            changeRow.style.display = 'none';
+        }
+        document.getElementById('split-sum-display').textContent = fmt(val1);
+    } else {
+        changeRow.style.display = 'none';
+        if (remainder > 0 && val1 > 0) {
+            remainderRow.style.display = 'none'; // Remainder is auto-filled, no need to show "Falta"
+        } else {
+            remainderRow.style.display = 'none';
+        }
+    }
+}
+
+function resetSplitPayment() {
+    document.getElementById('pdv-split-toggle').checked = false;
+    document.getElementById('single-payment-section').classList.remove('hidden');
+    document.getElementById('split-payment-section').classList.add('hidden');
+    document.getElementById('pdv-split-value-1').value = '';
+    document.getElementById('pdv-split-value-2').value = '';
+    document.getElementById('pdv-split-method-1').value = 'dinheiro';
+    document.getElementById('pdv-split-method-2').value = 'cartao_credito';
+}
+
+// ============================================================
 // CHECKOUT & SYNC
 // ============================================================
 
@@ -552,6 +624,12 @@ function openCheckoutModal() {
         document.getElementById('pdv-cust-search').focus();
         return;
     }
+    // Reset split payment state
+    resetSplitPayment();
+    document.getElementById('pdv-amount-received').value = '';
+    document.getElementById('pdv-change').value = 'R$ 0,00';
+    renderTotals();
+
     document.getElementById('modal-checkout').classList.remove('hidden');
     document.getElementById('pdv-amount-received').focus();
 }
@@ -564,13 +642,51 @@ async function finishSale() {
     if (!confirm('Confirmar finalização de venda?')) return;
 
     const { subtotal, discountAmount, additionAmount, total } = calculateTotal();
-    const paymentMethod = document.getElementById('pdv-payment-method').value;
-    const received = parseFloat(document.getElementById('pdv-amount-received').value) || 0;
+    const isSplit = document.getElementById('pdv-split-toggle').checked;
 
-    if (paymentMethod === 'dinheiro' && received < total) {
-        alert('Para vendas em DINHEIRO, o valor recebido deve ser igual ou maior que o total da venda!');
-        document.getElementById('pdv-amount-received').focus();
-        return;
+    let paymentMethodLabel = '';
+    let received = 0;
+
+    if (isSplit) {
+        // === SPLIT PAYMENT ===
+        const method1 = document.getElementById('pdv-split-method-1').value;
+        const method2 = document.getElementById('pdv-split-method-2').value;
+        const val1 = parseFloat(document.getElementById('pdv-split-value-1').value) || 0;
+        const val2 = parseFloat(document.getElementById('pdv-split-value-2').value) || 0;
+
+        if (val1 <= 0) {
+            alert('Informe o valor da 1ª forma de pagamento!');
+            document.getElementById('pdv-split-value-1').focus();
+            return;
+        }
+
+        const totalPaid = val1 + val2;
+        if (totalPaid < total - 0.01) {
+            alert('A soma dos pagamentos (R$ ' + totalPaid.toFixed(2) + ') é menor que o total da venda (R$ ' + total.toFixed(2) + ')!');
+            return;
+        }
+
+        const methodNames = {
+            'dinheiro': 'Dinheiro',
+            'cartao_credito': 'Crédito',
+            'cartao_debito': 'Débito',
+            'pix': 'PIX'
+        };
+        paymentMethodLabel = 'PDV - ' + (methodNames[method1] || method1) + ' (R$' + val1.toFixed(2) + ') / ' + (methodNames[method2] || method2) + ' (R$' + val2.toFixed(2) + ')';
+        received = totalPaid;
+
+    } else {
+        // === SINGLE PAYMENT ===
+        const paymentMethod = document.getElementById('pdv-payment-method').value;
+        received = parseFloat(document.getElementById('pdv-amount-received').value) || 0;
+
+        if (paymentMethod === 'dinheiro' && received < total) {
+            alert('Para vendas em DINHEIRO, o valor recebido deve ser igual ou maior que o total da venda!');
+            document.getElementById('pdv-amount-received').focus();
+            return;
+        }
+
+        paymentMethodLabel = 'PDV - ' + paymentMethod;
     }
 
     try {
@@ -583,7 +699,7 @@ async function finishSale() {
             addition_amount: additionAmount,
             status: 'entregue',
             status_label: 'Entregue',
-            payment_method: 'PDV - ' + paymentMethod,
+            payment_method: paymentMethodLabel,
             items: pdvItems.map(i => ({
                 id: i.id,
                 name: i.name,
@@ -628,6 +744,7 @@ function clearPDV() {
     document.getElementById('pdv-global-addition').value = '0.00';
     document.getElementById('pdv-amount-received').value = '';
     document.getElementById('pdv-cust-search').value = '';
+    resetSplitPayment();
     renderItems();
 }
 
