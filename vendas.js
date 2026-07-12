@@ -146,6 +146,12 @@ function setupEventListeners() {
     document.getElementById('pdv-discount-type').addEventListener('change', renderTotals);
     document.getElementById('pdv-global-addition').addEventListener('input', renderTotals);
 
+    // Split payment toggle — listener programático (garante funcionamento)
+    const splitToggle = document.getElementById('pdv-split-toggle');
+    if (splitToggle) {
+        splitToggle.addEventListener('change', toggleSplitPayment);
+    }
+
     // Customer search
     document.getElementById('pdv-cust-search').addEventListener('input', (e) => searchCustomer(e.target.value));
 }
@@ -751,3 +757,18 @@ function clearPDV() {
 function fmt(v) {
     return 'R$ ' + (isNaN(v) ? '0.00' : parseFloat(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 }
+
+// ============================================================
+// EXPOSIÇÃO GLOBAL — garante que funções inline (onclick/onchange) funcionem
+// ============================================================
+window.toggleSplitPayment = toggleSplitPayment;
+window.updateSplitValues = updateSplitValues;
+window.resetSplitPayment = resetSplitPayment;
+window.openCheckoutModal = openCheckoutModal;
+window.closeCheckoutModal = closeCheckoutModal;
+window.finishSale = finishSale;
+window.removeItem = removeItem;
+window.openNewCustModal = openNewCustModal;
+window.closeNewCustModal = closeNewCustModal;
+window.saveNewCustomer = saveNewCustomer;
+window.clearPDV = clearPDV;
