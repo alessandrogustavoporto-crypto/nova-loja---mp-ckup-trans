@@ -93,33 +93,42 @@ window.adminLogout = function () { AdminAuth.logout(); };
 
 // ---- Helper: Parse Split Payment ----
 // Retorna array de {method, value} para cada forma de pagamento do pedido.
-// Para pagamentos únicos: [{method: 'dinheiro', value: total}]
-// Para pagamentos divididos PDV-SPLIT: [{method:'dinheiro', value:50}, {method:'cartao_credito', value:49}]
+// Suporta: formato JSON novo (PDV-SPLIT:), formato legado textual, e pagamento único.
+// Totalmente case-insensitive para lidar com dados históricos variados.
 function parseSplitPayment(order) {
     const raw = String(order.payment_method || '');
     const total = parseFloat(order.total || 0);
 
-    // --- Formato novo: PDV-SPLIT:{"m1":"dinheiro","v1":50,"m2":"cartao_credito","v2":49} ---
+    // --- Formato JSON: PDV-SPLIT:{...} (chaves podem ser m1/M1/v1/V1) ---
     if (raw.startsWith('PDV-SPLIT:')) {
         try {
             const data = JSON.parse(raw.slice('PDV-SPLIT:'.length));
-            return [
-                { method: data.m1, value: parseFloat(data.v1 || 0) },
-                { method: data.m2, value: parseFloat(data.v2 || 0) }
-            ].filter(p => p.value > 0);
-        } catch (e) { /* fallback */ }
+            // Suporta chaves em qualquer case: m1, M1, etc.
+            const m1 = String(data.m1 || data.M1 || '').toLowerCase();
+            const m2 = String(data.m2 || data.M2 || '').toLowerCase();
+            const v1 = parseFloat(data.v1 ?? data.V1 ?? 0);
+            const v2 = parseFloat(data.v2 ?? data.V2 ?? 0);
+            if (m1 && (v1 > 0 || v2 > 0)) {
+                return [
+                    { method: m1, value: v1 },
+                    { method: m2, value: v2 }
+                ].filter(p => p.value > 0);
+            }
+        } catch (e) { console.warn('[parseSplitPayment] JSON inválido:', e); }
     }
 
-    // --- Formato legado: "PDV - Dinheiro (R$50.00) / Crédito (R$49.00)" ---
-    // Regex: captura "Nome (R$valor) / Nome (R$valor)"
-    const legacySplitRegex = /(.+?)\s*\(R\$\s*([\d.,]+)\)\s*\/\s*(.+?)\s*\(R\$\s*([\d.,]+)\)/;
-    const legacyMatch = raw.replace(/^PDV\s*-\s*/, '').match(legacySplitRegex);
+    // --- Formato legado textual: "PDV - Dinheiro (R$50.00) / Crédito (R$49.00)" ---
+    // Também captura variações sem "PDV - " prefixo e valores com vírgula/ponto
+    const legacySplitRegex = /(.+?)\s*\(R\$\s*([\d.,]+)\)\s*\/\s*(.+?)\s*\(R\$\s*([\d.,]+)\)/i;
+    const stripped = raw.replace(/^PDV\s*[-–]\s*/i, '').trim();
+    const legacyMatch = stripped.match(legacySplitRegex);
     if (legacyMatch) {
-        // Mapeia nome legível → chave interna
         const nameToKey = {
             'dinheiro': 'dinheiro',
             'crédito': 'cartao_credito', 'credito': 'cartao_credito',
+            'cartao_credito': 'cartao_credito', 'cartão crédito': 'cartao_credito',
             'débito': 'cartao_debito',   'debito': 'cartao_debito',
+            'cartao_debito': 'cartao_debito', 'cartão débito': 'cartao_debito',
             'pix': 'pix'
         };
         const k1 = nameToKey[legacyMatch[1].trim().toLowerCase()] || legacyMatch[1].trim().toLowerCase();
@@ -133,11 +142,12 @@ function parseSplitPayment(order) {
     }
 
     // --- Pagamento único ---
-    return [{ method: raw.replace(/^PDV\s*-\s*/, '').trim(), value: total }];
+    const singleMethod = raw.replace(/^PDV\s*[-–]\s*/i, '').trim();
+    return [{ method: singleMethod.toLowerCase(), value: total }];
 }
 
 
-// Retorna label legível do método para exibição
+// Retorna label legível do método para exibição (case-insensitive)
 function methodLabel(key) {
     const names = {
         'dinheiro': 'Dinheiro',
@@ -145,23 +155,27 @@ function methodLabel(key) {
         'cartao_debito': 'Cartão de Débito',
         'pix': 'PIX'
     };
-    return names[key.toLowerCase()] || key;
+    return names[String(key || '').toLowerCase()] || key;
 }
 
-// Formata payment_method para exibição legível (detecta PDV-SPLIT)
+// Formata payment_method para exibição legível (detecta PDV-SPLIT e formato legado)
 function formatPaymentLabel(raw) {
     if (!raw) return '—';
+    const n = { 'dinheiro': 'Dinheiro', 'cartao_credito': 'Crédito', 'cartao_debito': 'Débito', 'pix': 'PIX' };
+    const fmtVal = v => 'R$' + parseFloat(v).toFixed(2).replace('.', ',');
+
     if (raw.startsWith('PDV-SPLIT:')) {
         try {
             const data = JSON.parse(raw.slice('PDV-SPLIT:'.length));
-            const n = {
-                'dinheiro': 'Dinheiro', 'cartao_credito': 'Crédito',
-                'cartao_debito': 'Débito', 'pix': 'PIX'
-            };
-            return `${n[data.m1] || data.m1} (R$${parseFloat(data.v1).toFixed(2).replace('.', ',')}) + ${n[data.m2] || data.m2} (R$${parseFloat(data.v2).toFixed(2).replace('.', ',')})`;
+            const m1 = String(data.m1 || data.M1 || '').toLowerCase();
+            const m2 = String(data.m2 || data.M2 || '').toLowerCase();
+            const v1 = data.v1 ?? data.V1 ?? 0;
+            const v2 = data.v2 ?? data.V2 ?? 0;
+            return `${n[m1] || m1} (${fmtVal(v1)}) + ${n[m2] || m2} (${fmtVal(v2)})`;
         } catch (e) { /* fallback */ }
     }
-    return raw.replace('PDV - ', '').replace('PDV-', '');
+    // Formato legado textual — retorna sem o prefixo PDV
+    return raw.replace(/^PDV\s*[-–]\s*/i, '').trim();
 }
 
 
