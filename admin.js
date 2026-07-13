@@ -91,7 +91,57 @@ const AdminAuth = {
 
 window.adminLogout = function () { AdminAuth.logout(); };
 
-// ---- Data Store ----
+// ---- Helper: Parse Split Payment ----
+// Retorna array de {method, value} para cada forma de pagamento do pedido.
+// Para pagamentos únicos: [{method: 'dinheiro', value: total}]
+// Para pagamentos divididos PDV-SPLIT: [{method:'dinheiro', value:50}, {method:'cartao_credito', value:49}]
+function parseSplitPayment(order) {
+    const raw = String(order.payment_method || '');
+    const total = parseFloat(order.total || 0);
+
+    if (raw.startsWith('PDV-SPLIT:')) {
+        try {
+            const data = JSON.parse(raw.slice('PDV-SPLIT:'.length));
+            return [
+                { method: data.m1, value: parseFloat(data.v1 || 0) },
+                { method: data.m2, value: parseFloat(data.v2 || 0) }
+            ].filter(p => p.value > 0);
+        } catch (e) {
+            // fallback se JSON inválido
+        }
+    }
+    // Pagamento único
+    return [{ method: raw.replace('PDV - ', '').trim(), value: total }];
+}
+
+// Retorna label legível do método para exibição
+function methodLabel(key) {
+    const names = {
+        'dinheiro': 'Dinheiro',
+        'cartao_credito': 'Cartão de Crédito',
+        'cartao_debito': 'Cartão de Débito',
+        'pix': 'PIX'
+    };
+    return names[key.toLowerCase()] || key;
+}
+
+// Formata payment_method para exibição legível (detecta PDV-SPLIT)
+function formatPaymentLabel(raw) {
+    if (!raw) return '—';
+    if (raw.startsWith('PDV-SPLIT:')) {
+        try {
+            const data = JSON.parse(raw.slice('PDV-SPLIT:'.length));
+            const n = {
+                'dinheiro': 'Dinheiro', 'cartao_credito': 'Crédito',
+                'cartao_debito': 'Débito', 'pix': 'PIX'
+            };
+            return `${n[data.m1] || data.m1} (R$${parseFloat(data.v1).toFixed(2).replace('.', ',')}) + ${n[data.m2] || data.m2} (R$${parseFloat(data.v2).toFixed(2).replace('.', ',')})`;
+        } catch (e) { /* fallback */ }
+    }
+    return raw.replace('PDV - ', '').replace('PDV-', '');
+}
+
+
 const AdminData = {
     async getOrders() {
         const { data } = await supabase
@@ -1279,7 +1329,7 @@ window.viewOrder = function (id) {
         '<h4><i class="fas fa-user"></i> Dados do Cliente</h4>' +
         '<p><strong>Nome:</strong> ' + (o.clientName || '—') + '</p>' +
         '<p><strong>E-mail:</strong> ' + (o.clientEmail || '—') + '</p>' +
-        '<p><strong>Pagamento:</strong> ' + (o.payment_method || '—') + '</p>' +
+        '<p><strong>Pagamento:</strong> ' + formatPaymentLabel(o.payment_method) + '</p>' +
         '<p><strong>WhatsApp:</strong> ' + (o.clientPhone ? '<a href="https://wa.me/55' + o.clientPhone.replace(/\D/g, '') + '" target="_blank" style="color:#25D366"><i class="fab fa-whatsapp"></i> ' + o.clientPhone + '</a>' : '—') + '</p>' +
         '</div>' +
         '<div class="order-detail-section">' +
@@ -1409,7 +1459,7 @@ window.printOrder = async function () {
                     ${o.discount_amount > 0 ? `<p>DESCONTO CONCEDIDO: <strong style="color:red">- ${fmt(o.discount_amount)}</strong></p>` : ''}
                     ${o.addition_amount > 0 ? `<p>ACRÉSCIMO APLICADO: <strong style="color:#8e44ad">+ ${fmt(o.addition_amount)}</strong></p>` : ''}
                     <h2 style="margin-top:10px;">TOTAL LÍQUIDO: ${fmt(o.total)}</h2>
-                    <p style="margin-top:10px; font-size:12px; font-style:italic;">Forma de Pagamento: ${o.payment_method || '—'}</p>
+                    <p style="margin-top:10px; font-size:12px; font-style:italic;">Forma de Pagamento: ${formatPaymentLabel(o.payment_method)}</p>
                 </div>
                 <div class="danfe-obs">
                     <p><strong>Observações:</strong> Documento sem valor fiscal. Agradecemos a preferência!</p>
@@ -2090,8 +2140,11 @@ window.applyCustomFilter = function(tab) {
 function initOverviewCharts(orders, period = '7days', startDate, endDate) {
     const payments = {};
     orders.forEach(o => {
-        const method = o.payment_method || 'Outros';
-        payments[method] = (payments[method] || 0) + 1;
+        // Desdobra pagamentos divididos em entradas individuais
+        parseSplitPayment(o).forEach(p => {
+            const label = methodLabel(p.method);
+            payments[label] = (payments[label] || 0) + 1;
+        });
     });
 
     renderChart('chart-payment-methods', 'pie', {
@@ -2265,12 +2318,13 @@ function loadProductsFinance(orders, products) {
         }
     }
 
-    // Relatório de Pagamentos
+    // Relatório de Pagamentos — desdobra split payments por método
     const payments = {};
     orders.forEach(o => {
-        const rawMethod = o.payment_method || 'Outros';
-        const method = rawMethod.replace('PDV - ', '');
-        payments[method] = (payments[method] || 0) + parseFloat(o.total || 0);
+        parseSplitPayment(o).forEach(p => {
+            const label = methodLabel(p.method);
+            payments[label] = (payments[label] || 0) + p.value;
+        });
     });
 
     const reportBody = document.getElementById('fin-payments-report');
@@ -2822,10 +2876,10 @@ async function renderCaixaAbertoState() {
     let totalSalesCash = 0;
     if (!salesErr && sales) {
         sales.forEach(o => {
-            const payMethod = String(o.payment_method || '').toLowerCase();
-            if (payMethod.includes('dinheiro')) {
-                totalSalesCash += parseFloat(o.total || 0);
-            }
+            // Usa parseSplitPayment para contabilizar apenas a parcela em dinheiro
+            parseSplitPayment(o).forEach(p => {
+                if (p.method === 'dinheiro') totalSalesCash += p.value;
+            });
         });
     }
 
@@ -3436,10 +3490,10 @@ async function checkAndAutoCloseCaixa(session) {
             let totalSalesCash = 0;
             if (sales) {
                 sales.forEach(o => {
-                    const payMethod = String(o.payment_method || '').toLowerCase();
-                    if (payMethod.includes('dinheiro')) {
-                        totalSalesCash += parseFloat(o.total || 0);
-                    }
+                    // Usa parseSplitPayment para contabilizar apenas a parcela em dinheiro
+                    parseSplitPayment(o).forEach(p => {
+                        if (p.method === 'dinheiro') totalSalesCash += p.value;
+                    });
                 });
             }
 

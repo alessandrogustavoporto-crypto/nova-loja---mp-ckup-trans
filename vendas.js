@@ -678,7 +678,12 @@ async function finishSale() {
             'cartao_debito': 'Débito',
             'pix': 'PIX'
         };
-        paymentMethodLabel = 'PDV - ' + (methodNames[method1] || method1) + ' (R$' + val1.toFixed(2) + ') / ' + (methodNames[method2] || method2) + ' (R$' + val2.toFixed(2) + ')';
+        // Salva em formato estruturado para o relatório financeiro separar por método
+        // Formato: PDV-SPLIT:{"m1":"dinheiro","v1":50.00,"m2":"cartao_credito","v2":49.00}
+        paymentMethodLabel = 'PDV-SPLIT:' + JSON.stringify({
+            m1: method1, v1: parseFloat(val1.toFixed(2)),
+            m2: method2, v2: parseFloat(val2.toFixed(2))
+        });
         received = totalPaid;
 
     } else {
