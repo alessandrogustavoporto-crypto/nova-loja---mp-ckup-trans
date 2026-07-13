@@ -99,6 +99,7 @@ function parseSplitPayment(order) {
     const raw = String(order.payment_method || '');
     const total = parseFloat(order.total || 0);
 
+    // --- Formato novo: PDV-SPLIT:{"m1":"dinheiro","v1":50,"m2":"cartao_credito","v2":49} ---
     if (raw.startsWith('PDV-SPLIT:')) {
         try {
             const data = JSON.parse(raw.slice('PDV-SPLIT:'.length));
@@ -106,13 +107,35 @@ function parseSplitPayment(order) {
                 { method: data.m1, value: parseFloat(data.v1 || 0) },
                 { method: data.m2, value: parseFloat(data.v2 || 0) }
             ].filter(p => p.value > 0);
-        } catch (e) {
-            // fallback se JSON inválido
-        }
+        } catch (e) { /* fallback */ }
     }
-    // Pagamento único
-    return [{ method: raw.replace('PDV - ', '').trim(), value: total }];
+
+    // --- Formato legado: "PDV - Dinheiro (R$50.00) / Crédito (R$49.00)" ---
+    // Regex: captura "Nome (R$valor) / Nome (R$valor)"
+    const legacySplitRegex = /(.+?)\s*\(R\$\s*([\d.,]+)\)\s*\/\s*(.+?)\s*\(R\$\s*([\d.,]+)\)/;
+    const legacyMatch = raw.replace(/^PDV\s*-\s*/, '').match(legacySplitRegex);
+    if (legacyMatch) {
+        // Mapeia nome legível → chave interna
+        const nameToKey = {
+            'dinheiro': 'dinheiro',
+            'crédito': 'cartao_credito', 'credito': 'cartao_credito',
+            'débito': 'cartao_debito',   'debito': 'cartao_debito',
+            'pix': 'pix'
+        };
+        const k1 = nameToKey[legacyMatch[1].trim().toLowerCase()] || legacyMatch[1].trim().toLowerCase();
+        const k2 = nameToKey[legacyMatch[3].trim().toLowerCase()] || legacyMatch[3].trim().toLowerCase();
+        const v1 = parseFloat(legacyMatch[2].replace(',', '.')) || 0;
+        const v2 = parseFloat(legacyMatch[4].replace(',', '.')) || 0;
+        return [
+            { method: k1, value: v1 },
+            { method: k2, value: v2 }
+        ].filter(p => p.value > 0);
+    }
+
+    // --- Pagamento único ---
+    return [{ method: raw.replace(/^PDV\s*-\s*/, '').trim(), value: total }];
 }
+
 
 // Retorna label legível do método para exibição
 function methodLabel(key) {
