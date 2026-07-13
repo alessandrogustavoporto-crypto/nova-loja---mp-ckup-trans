@@ -549,24 +549,39 @@ function updateChange() {
 // ============================================================
 
 function toggleSplitPayment() {
-    const isChecked = document.getElementById('pdv-split-toggle').checked;
-    const singleSection = document.getElementById('single-payment-section');
-    const splitSection = document.getElementById('split-payment-section');
+    try {
+        const toggle = document.getElementById('pdv-split-toggle');
+        const singleSection = document.getElementById('single-payment-section');
+        const splitSection = document.getElementById('split-payment-section');
 
-    if (isChecked) {
-        singleSection.classList.add('hidden');
-        splitSection.classList.remove('hidden');
-        // Pre-fill first value with half
-        const { total } = calculateTotal();
-        document.getElementById('pdv-split-value-1').value = '';
-        document.getElementById('pdv-split-value-2').value = total.toFixed(2);
-        updateSplitValues();
-        document.getElementById('pdv-split-value-1').focus();
-    } else {
-        singleSection.classList.remove('hidden');
-        splitSection.classList.add('hidden');
+        if (!toggle || !singleSection || !splitSection) {
+            console.error('[PDV] toggleSplitPayment: elementos não encontrados', { toggle, singleSection, splitSection });
+            return;
+        }
+
+        const isChecked = toggle.checked;
+        console.log('[PDV] toggleSplitPayment chamado, isChecked=', isChecked);
+
+        if (isChecked) {
+            singleSection.classList.add('hidden');
+            splitSection.classList.remove('hidden');
+            // Pre-fill segundo campo com o total restante
+            const { total } = calculateTotal();
+            const val1El = document.getElementById('pdv-split-value-1');
+            const val2El = document.getElementById('pdv-split-value-2');
+            if (val1El) val1El.value = '';
+            if (val2El) val2El.value = total.toFixed(2);
+            updateSplitValues();
+            if (val1El) val1El.focus();
+        } else {
+            singleSection.classList.remove('hidden');
+            splitSection.classList.add('hidden');
+        }
+    } catch (err) {
+        console.error('[PDV] Erro em toggleSplitPayment:', err);
     }
 }
+
 
 function updateSplitValues() {
     const { total } = calculateTotal();
