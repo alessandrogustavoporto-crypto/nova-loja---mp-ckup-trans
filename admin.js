@@ -108,13 +108,15 @@ function parseSplitPayment(order) {
             const m2 = String(data.m2 || data.M2 || '').toLowerCase();
             const v1 = parseFloat(data.v1 ?? data.V1 ?? 0);
             const v2 = parseFloat(data.v2 ?? data.V2 ?? 0);
-            if (m1 && (v1 > 0 || v2 > 0)) {
-                return [
-                    { method: m1, value: v1 },
-                    { method: m2, value: v2 }
-                ].filter(p => p.value > 0);
-            }
+            // Sempre retorna entradas válidas para PDV-SPLIT, evitando fallback com string JSON bruta
+            const entries = [
+                m1 ? { method: m1, value: v1 > 0 ? v1 : total } : null,
+                m2 && v2 > 0 ? { method: m2, value: v2 } : null
+            ].filter(Boolean);
+            if (entries.length > 0) return entries;
         } catch (e) { console.warn('[parseSplitPayment] JSON inválido:', e); }
+        // JSON inválido mas era PDV-SPLIT: retorna total como dinheiro em vez de string bruta
+        return [{ method: 'dinheiro', value: total }];
     }
 
     // --- Formato legado textual: "PDV - Dinheiro (R$50.00) / Crédito (R$49.00)" ---
@@ -155,7 +157,10 @@ function methodLabel(key) {
         'cartao_debito': 'Cartão de Débito',
         'pix': 'PIX'
     };
-    return names[String(key || '').toLowerCase()] || key;
+    const k = String(key || '').toLowerCase();
+    // Proteção: nunca exibir string JSON bruta no gráfico
+    if (k.startsWith('pdv-split:') || k.startsWith('{')) return 'Misto';
+    return names[k] || (key ? String(key) : 'Outro');
 }
 
 // Formata payment_method para exibição legível (detecta PDV-SPLIT e formato legado)
