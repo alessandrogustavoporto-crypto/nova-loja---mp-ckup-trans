@@ -2,7 +2,7 @@
 // SERVICE WORKER — OTMake10 PWA
 // Versão do cache: incrementar aqui força atualização em todos os clientes
 // ============================================================
-const CACHE_VERSION = 'otmake10-v2';
+const CACHE_VERSION = 'otmake10-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
