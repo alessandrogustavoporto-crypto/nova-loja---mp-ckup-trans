@@ -884,7 +884,7 @@ function resetSplitPayment() {
 // CHECKOUT & SYNC
 // ============================================================
 
-function openCheckoutModal() {
+async function openCheckoutModal() {
     if (pdvItems.length === 0) {
         alert('Adicione pelo menos um item para finalizar!');
         return;
@@ -895,10 +895,41 @@ function openCheckoutModal() {
         return;
     }
 
-    // REGRA: Caixa deve estar aberto para finalizar venda
+    // REGRA: Verifica estado REAL do caixa no Supabase (não apenas variável local)
+    // Isso garante que fechamentos feitos pelo Admin sejam detectados imediatamente.
+    try {
+        const { data: activeSession, error } = await supabase
+            .from('cash_sessions')
+            .select('id, status, initial_amount, opened_at')
+            .eq('status', 'aberto')
+            .limit(1)
+            .maybeSingle();
+
+        if (error) {
+            console.warn('[PDV] Erro ao verificar caixa:', error);
+            // Em caso de falha de rede, usa estado local como fallback
+        } else if (activeSession) {
+            // Caixa aberto no Supabase — atualiza estado local
+            caixaAberto = true;
+            caixaFundo = parseFloat(activeSession.initial_amount || 0);
+            caixaAbertoEm = activeSession.opened_at || null;
+            currentCashSessionId = activeSession.id;
+            atualizarIndicadorCaixa();
+        } else {
+            // Caixa FECHADO no Supabase (pode ter sido fechado pelo Admin)
+            caixaAberto = false;
+            caixaFundo = 0;
+            caixaAbertoEm = null;
+            currentCashSessionId = null;
+            atualizarIndicadorCaixa();
+        }
+    } catch (e) {
+        console.warn('[PDV] Exceção ao verificar caixa:', e);
+    }
+
     if (!caixaAberto) {
+        showToast('⚠️ O caixa está fechado. Abra o caixa para finalizar a venda.', 'warning');
         abrirModalAberturaCaixa(() => {
-            // Após abrir o caixa, continua para finalizar
             _doOpenCheckoutModal();
         });
         return;
@@ -917,6 +948,7 @@ function _doOpenCheckoutModal() {
     document.getElementById('modal-checkout').classList.remove('hidden');
     document.getElementById('pdv-amount-received').focus();
 }
+
 
 function closeCheckoutModal() {
     document.getElementById('modal-checkout').classList.add('hidden');
