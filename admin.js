@@ -4380,31 +4380,31 @@ async function initUsuariosSection() {
             const roleColors = { master: '#9b59b6', pro: '#2980b9', basic: '#27ae60' };
             return `
             <tr id="user-row-${u.id}">
-                <td>${idx + 1}</td>
-                <td>
+                <td style="text-align: center; vertical-align: middle;">${idx + 1}</td>
+                <td style="vertical-align: middle;">
                     <strong>${escapeHtml(u.name)}</strong>
                     ${isSelf ? '<span style="margin-left:6px;background:#f0f0f0;border-radius:10px;padding:2px 8px;font-size:11px;color:#666;">Você</span>' : ''}
                 </td>
-                <td style="color:var(--text-muted);">${escapeHtml(u.email)}</td>
-                <td>
+                <td style="color:var(--text-muted); vertical-align: middle;">${escapeHtml(u.email)}</td>
+                <td style="text-align: center; vertical-align: middle;">
                     <select id="role-select-${u.id}" class="admin-select"
-                        style="height:32px;font-size:13px;border-color:${roleColors[role]};color:${roleColors[role]};font-weight:700;"
+                        style="height:36px; width: 140px; min-width: 140px; padding: 4px 8px; font-size: 13px; border-color:${roleColors[role]}; color:${roleColors[role]}; font-weight:700; border-radius:6px; text-align-last: center;"
                         onchange="previewRoleChange('${u.id}', this.value)">
                         <option value="master" ${role==='master'?'selected':''}>👑 Master</option>
                         <option value="pro"    ${role==='pro'   ?'selected':''}>⭐ Pro</option>
                         <option value="basic"  ${role==='basic' ?'selected':''}>👤 Basic</option>
                     </select>
                 </td>
-                <td>
-                    <div style="display:flex;gap:6px;align-items:center;">
+                <td style="text-align: center; vertical-align: middle;">
+                    <div style="display:flex;gap:6px;align-items:center;justify-content:center;">
                         <button class="btn-sm btn-primary" id="save-role-${u.id}"
                             onclick="salvarRoleUsuario('${u.id}')"
-                            style="display:none;padding:4px 10px;font-size:12px;">
+                            style="display:none;padding:6px 12px;font-size:12px;border-radius:6px;">
                             <i class="fas fa-save"></i> Salvar
                         </button>
                         ${!isSelf ? `
                         <button class="btn-sm btn-danger" onclick="excluirUsuario('${u.id}','${escapeHtml(u.name).replace(/'/g,"\\'")}')"
-                            style="padding:4px 10px;font-size:12px;background:#e74c3c;color:white;border:none;border-radius:6px;cursor:pointer;">
+                            style="padding:6px 12px;font-size:12px;background:#e74c3c;color:white;border:none;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;">
                             <i class="fas fa-trash"></i>
                         </button>` : ''}
                     </div>
