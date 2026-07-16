@@ -79,14 +79,22 @@ const AdminAuth = {
             return false;
         }
         if (data) {
-            sessionStorage.setItem(this._sessionKey, JSON.stringify({ email: data.email, name: data.name }));
+            sessionStorage.setItem(this._sessionKey, JSON.stringify({
+                email: data.email,
+                name: data.name,
+                role: data.role || 'master'  // Salva o nível de acesso
+            }));
             return true;
         }
         return false;
     },
 
     logout() { sessionStorage.removeItem(this._sessionKey); window.location.href = 'admin-login.html'; },
-    getAdmin() { return JSON.parse(sessionStorage.getItem(this._sessionKey) || 'null'); }
+    getAdmin() { return JSON.parse(sessionStorage.getItem(this._sessionKey) || 'null'); },
+    getRole() {
+        const admin = this.getAdmin();
+        return (admin && admin.role) ? admin.role : 'master';
+    }
 };
 
 window.adminLogout = function () { AdminAuth.logout(); };
@@ -434,12 +442,21 @@ async function initAdminDashboard() {
         if (sectionId === 'entradas') {
             initEntradasModule();
         }
+        if (sectionId === 'usuarios') {
+            initUsuariosSection();
+        }
+        if (sectionId === 'permissoes') {
+            initPermissoesSection();
+        }
 
         // No mobile, fecha a sidebar automaticamente ao clicar em uma seção
         if (window.innerWidth <= 768) {
             window.toggleSidebar();
         }
     }));
+
+    // Aplicar restrições de acesso baseadas no role do usuário logado
+    applyRoleRestrictions(AdminAuth.getRole());
 
     // Finance Tabs Navigation
     const fTabBtns = document.querySelectorAll('.f-tab-btn');
@@ -4282,3 +4299,310 @@ CREATE POLICY "Permitir insercao de entradas" ON public.stock_entries FOR INSERT
     alert('SQL de Entradas copiado para a área de transferência!');
 };
 
+// ============================================================
+// MÓDULO: USUÁRIOS E PERMISSÕES
+// ============================================================
+
+// Lista de todas as seções disponíveis no admin
+const ADMIN_SECTIONS = [
+    { id: 'dashboard',  label: 'Dashboard',          icon: 'fa-chart-line' },
+    { id: 'produtos',   label: 'Produtos',            icon: 'fa-box-open' },
+    { id: 'categorias', label: 'Categorias',          icon: 'fa-tags' },
+    { id: 'marcas',     label: 'Marcas',              icon: 'fa-copyright' },
+    { id: 'clientes',   label: 'Clientes',            icon: 'fa-users' },
+    { id: 'pedidos',    label: 'Pedidos',             icon: 'fa-file-invoice' },
+    { id: 'financeiro', label: 'Financeiro',          icon: 'fa-chart-pie' },
+    { id: 'caixa',      label: 'Caixa',               icon: 'fa-cash-register' },
+    { id: 'estoque',    label: 'Estoque',             icon: 'fa-boxes' },
+    { id: 'entradas',   label: 'Entrada de Estoque',  icon: 'fa-dolly' },
+    { id: 'empresa',    label: 'Dados da Empresa',    icon: 'fa-building' },
+    { id: 'banners',    label: 'Banners',             icon: 'fa-image' },
+    { id: 'usuarios',   label: 'Usuários',            icon: 'fa-user-shield' },
+    { id: 'permissoes', label: 'Permissões',          icon: 'fa-lock' },
+];
+
+// Permissões padrão por role
+const DEFAULT_PERMISSIONS = {
+    master:  ADMIN_SECTIONS.map(s => s.id),
+    pro:     ['dashboard','produtos','categorias','marcas','clientes','pedidos','financeiro','caixa','estoque','entradas','banners'],
+    basic:   ['dashboard','produtos','clientes','pedidos','caixa','estoque','entradas']
+};
+
+const PERM_STORAGE_KEY = 'admin_role_permissions';
+
+function getPermissions() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(PERM_STORAGE_KEY) || 'null');
+        if (saved) return saved;
+    } catch(e) {}
+    return JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS));
+}
+
+function savePermissionsToStorage(perms) {
+    localStorage.setItem(PERM_STORAGE_KEY, JSON.stringify(perms));
+}
+
+// ---- SEÇÃO: USUÁRIOS ----
+
+async function initUsuariosSection() {
+    const loadingEl  = document.getElementById('usuarios-loading');
+    const tableWrap  = document.getElementById('usuarios-table-wrap');
+    const tbody      = document.getElementById('usuarios-table-body');
+    const countBadge = document.getElementById('usuarios-count-badge');
+    const sqlAlert   = document.getElementById('usuarios-sql-alert');
+
+    if (loadingEl)  { loadingEl.style.display = 'block'; loadingEl.innerHTML = '<i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Carregando usuários...</p>'; }
+    if (tableWrap)  tableWrap.style.display = 'none';
+
+    try {
+        const { data: admins, error } = await supabase
+            .from('admins')
+            .select('id, name, email, role')
+            .order('id', { ascending: true });
+
+        if (error) {
+            if (error.message && error.message.toLowerCase().includes('role')) {
+                if (sqlAlert) sqlAlert.style.display = 'block';
+                if (loadingEl) loadingEl.style.display = 'none';
+                return;
+            }
+            throw error;
+        }
+
+        if (sqlAlert) sqlAlert.style.display = 'none';
+        if (countBadge) countBadge.textContent = `${admins.length} usuário${admins.length !== 1 ? 's' : ''}`;
+
+        const currentAdminEmail = AdminAuth.getAdmin()?.email;
+
+        tbody.innerHTML = admins.map((u, idx) => {
+            const isSelf    = u.email === currentAdminEmail;
+            const role      = u.role || 'master';
+            const roleColors = { master: '#9b59b6', pro: '#2980b9', basic: '#27ae60' };
+            return `
+            <tr id="user-row-${u.id}">
+                <td>${idx + 1}</td>
+                <td>
+                    <strong>${escapeHtml(u.name)}</strong>
+                    ${isSelf ? '<span style="margin-left:6px;background:#f0f0f0;border-radius:10px;padding:2px 8px;font-size:11px;color:#666;">Você</span>' : ''}
+                </td>
+                <td style="color:var(--text-muted);">${escapeHtml(u.email)}</td>
+                <td>
+                    <select id="role-select-${u.id}" class="admin-select"
+                        style="height:32px;font-size:13px;border-color:${roleColors[role]};color:${roleColors[role]};font-weight:700;"
+                        onchange="previewRoleChange('${u.id}', this.value)">
+                        <option value="master" ${role==='master'?'selected':''}>👑 Master</option>
+                        <option value="pro"    ${role==='pro'   ?'selected':''}>⭐ Pro</option>
+                        <option value="basic"  ${role==='basic' ?'selected':''}>👤 Basic</option>
+                    </select>
+                </td>
+                <td>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <button class="btn-sm btn-primary" id="save-role-${u.id}"
+                            onclick="salvarRoleUsuario('${u.id}')"
+                            style="display:none;padding:4px 10px;font-size:12px;">
+                            <i class="fas fa-save"></i> Salvar
+                        </button>
+                        ${!isSelf ? `
+                        <button class="btn-sm btn-danger" onclick="excluirUsuario('${u.id}','${escapeHtml(u.name).replace(/'/g,"\\'")}')"
+                            style="padding:4px 10px;font-size:12px;background:#e74c3c;color:white;border:none;border-radius:6px;cursor:pointer;">
+                            <i class="fas fa-trash"></i>
+                        </button>` : ''}
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (tableWrap) tableWrap.style.display = 'table';
+
+    } catch(e) {
+        console.error('[Usuários] Erro:', e);
+        if (loadingEl) loadingEl.innerHTML = `<p style="color:#c0392b;padding:20px;"><i class="fas fa-exclamation-triangle"></i> Erro: ${e.message}</p>`;
+    }
+}
+
+function escapeHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+window.previewRoleChange = function(userId, newRole) {
+    const saveBtn = document.getElementById(`save-role-${userId}`);
+    const sel     = document.getElementById(`role-select-${userId}`);
+    const roleColors = { master: '#9b59b6', pro: '#2980b9', basic: '#27ae60' };
+    if (saveBtn) saveBtn.style.display = 'inline-flex';
+    if (sel) { sel.style.borderColor = roleColors[newRole]; sel.style.color = roleColors[newRole]; }
+};
+
+window.salvarRoleUsuario = async function(userId) {
+    const sel     = document.getElementById(`role-select-${userId}`);
+    const saveBtn = document.getElementById(`save-role-${userId}`);
+    if (!sel) return;
+    const newRole = sel.value;
+
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+
+    try {
+        const { error } = await supabase.from('admins').update({ role: newRole }).eq('id', userId);
+        if (error) throw error;
+        if (saveBtn) { saveBtn.style.display = 'none'; saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save"></i> Salvar'; }
+        showAdminToast(`Permissão atualizada para ${newRole}!`, 'success');
+    } catch(e) {
+        alert('Erro ao salvar permissão: ' + e.message);
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save"></i> Salvar'; }
+    }
+};
+
+window.excluirUsuario = async function(userId, userName) {
+    if (!confirm(`Deseja realmente excluir o usuário "${userName}"?\n\nEsta ação não pode ser desfeita.`)) return;
+    try {
+        const { error } = await supabase.from('admins').delete().eq('id', userId);
+        if (error) throw error;
+        const row = document.getElementById(`user-row-${userId}`);
+        if (row) row.remove();
+        showAdminToast(`Usuário "${userName}" excluído.`, 'info');
+        await initUsuariosSection();
+    } catch(e) {
+        alert('Erro ao excluir usuário: ' + e.message);
+    }
+};
+
+window.openNovoUsuarioModal = function() {
+    ['nu-nome','nu-email','nu-senha'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('nu-role').value = 'master';
+    document.getElementById('modal-novo-usuario').classList.remove('hidden');
+    document.getElementById('nu-nome').focus();
+};
+
+window.closeNovoUsuarioModal = function() {
+    document.getElementById('modal-novo-usuario').classList.add('hidden');
+};
+
+window.salvarNovoUsuario = async function() {
+    const nome  = document.getElementById('nu-nome').value.trim();
+    const email = document.getElementById('nu-email').value.trim();
+    const senha = document.getElementById('nu-senha').value.trim();
+    const role  = document.getElementById('nu-role').value;
+    const btn   = document.getElementById('btn-salvar-novo-usuario');
+
+    if (!nome)  { alert('Informe o nome do usuário.'); return; }
+    if (!email) { alert('Informe o e-mail.'); return; }
+    if (!senha || senha.length < 6) { alert('A senha deve ter pelo menos 6 caracteres.'); return; }
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando...'; }
+
+    try {
+        const { error } = await supabase.from('admins').insert([{ name: nome, email, password: senha, role }]);
+        if (error) throw error;
+        showAdminToast(`Usuário "${nome}" criado com sucesso!`, 'success');
+        closeNovoUsuarioModal();
+        await initUsuariosSection();
+    } catch(e) {
+        alert('Erro ao criar usuário: ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Criar Usuário'; }
+    }
+};
+
+window.copiarSQLUsuarios = function() {
+    const sql = `ALTER TABLE public.admins ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'master';\nUPDATE public.admins SET role = 'master' WHERE role IS NULL OR role = '';`;
+    navigator.clipboard.writeText(sql).then(() => showAdminToast('SQL copiado para a área de transferência!', 'success'));
+};
+
+// ---- SEÇÃO: PERMISSÕES ----
+
+function initPermissoesSection() {
+    const perms = getPermissions();
+
+    ['master', 'pro', 'basic'].forEach(role => {
+        const container = document.getElementById(`perm-list-${role}`);
+        if (!container) return;
+        const isMaster = role === 'master';
+
+        container.innerHTML = ADMIN_SECTIONS.map(section => {
+            const isChecked = isMaster ? true : perms[role].includes(section.id);
+            return `
+            <label class="perm-item${isMaster ? ' perm-item-locked' : ''}">
+                <input type="checkbox" class="perm-checkbox"
+                    data-role="${role}" data-section="${section.id}"
+                    ${isChecked ? 'checked' : ''}
+                    ${isMaster ? 'disabled' : ''}>
+                <i class="fas ${section.icon}" style="width:16px;text-align:center;opacity:0.7;"></i>
+                <span>${section.label}</span>
+                ${isMaster ? '<i class="fas fa-lock" style="margin-left:auto;opacity:0.3;font-size:11px;"></i>' : ''}
+            </label>`;
+        }).join('');
+    });
+}
+
+window.salvarPermissoes = function() {
+    const perms = getPermissions();
+    ['pro', 'basic'].forEach(role => {
+        const cbs = document.querySelectorAll(`.perm-checkbox[data-role="${role}"]`);
+        perms[role] = [];
+        cbs.forEach(cb => { if (cb.checked) perms[role].push(cb.dataset.section); });
+    });
+    perms.master = ADMIN_SECTIONS.map(s => s.id); // Master sempre full
+    savePermissionsToStorage(perms);
+    showAdminToast('✅ Permissões salvas com sucesso!', 'success');
+    applyRoleRestrictions(AdminAuth.getRole());
+};
+
+// ---- APLICAR RESTRIÇÕES DE ACESSO ----
+
+function applyRoleRestrictions(role) {
+    if (!role || role === 'master') return; // Master vê tudo
+
+    const perms = getPermissions();
+    const allowed = perms[role] || [];
+
+    // Ocultar/mostrar botões da sidebar conforme permissões
+    document.querySelectorAll('.sidebar-btn[data-section]').forEach(btn => {
+        btn.style.display = allowed.includes(btn.dataset.section) ? '' : 'none';
+    });
+
+    // Atualizar badge de role na topbar
+    const adminBadge = document.querySelector('.admin-badge');
+    if (adminBadge) {
+        const roleLabels = { master: '👑 Master', pro: '⭐ Pro', basic: '👤 Basic' };
+        adminBadge.innerHTML = `<i class="fas fa-shield-alt"></i> ${roleLabels[role] || role}`;
+    }
+
+    // Se seção atual for proibida, volta para Dashboard
+    const currentActive = document.querySelector('.admin-section.active');
+    if (currentActive) {
+        const sectionId = currentActive.id.replace('section-', '');
+        if (!allowed.includes(sectionId) && sectionId !== 'dashboard') {
+            document.querySelector('[data-section="dashboard"]')?.click();
+        }
+    }
+}
+
+// ---- TOAST ADMIN ----
+function showAdminToast(msg, type = 'info') {
+    let toast = document.getElementById('admin-toast-global');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'admin-toast-global';
+        toast.style.cssText = `position:fixed;bottom:28px;right:28px;z-index:99999;
+            padding:14px 22px;border-radius:10px;font-size:14px;font-weight:700;
+            color:white;box-shadow:0 6px 24px rgba(0,0,0,0.2);
+            transition:opacity 0.3s ease;display:none;`;
+        document.body.appendChild(toast);
+    }
+    const colors = { success:'#27ae60', info:'#2980b9', warning:'#f39c12', error:'#e74c3c' };
+    toast.style.background = colors[type] || colors.info;
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    toast.style.opacity = '1';
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => { toast.style.display = 'none'; }, 300);
+    }, 3000);
+}
+
+window.initUsuariosSection  = initUsuariosSection;
+window.initPermissoesSection = initPermissoesSection;
+window.salvarPermissoes      = salvarPermissoes;
+window.applyRoleRestrictions = applyRoleRestrictions;
+window.showAdminToast        = showAdminToast;
