@@ -393,8 +393,9 @@
                         style="padding-left:44px; font-size:22px; font-weight:800; height:56px;"
                         onkeydown="if(event.key==='Enter') confirmarAberturaCaixa()"
                     >
+                    <span id="caixa-fundo-loading" style="display:none; position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--pdv-primary);"><i class="fas fa-spinner fa-spin"></i></span>
                 </div>
-                <small style="color:#888; margin-top:6px; display:block;"><i class="fas fa-info-circle"></i> Informe o valor em dinheiro que está no caixa ao abrir. Pode ser R$ 0,00.</small>
+                <small style="color:#888; margin-top:6px; display:block;"><i class="fas fa-info-circle"></i> Valor sugerido com base no último fechamento. Pode ser alterado.</small>
             </div>
 
             <!-- Botões -->
@@ -402,7 +403,7 @@
                 <button class="btn-pdv btn-cancel" onclick="cancelarAberturaCaixa()" style="flex:1;">
                     <i class="fas fa-times"></i> CANCELAR
                 </button>
-                <button class="btn-pdv btn-finish" onclick="confirmarAberturaCaixa()" style="flex:2;">
+                <button id="btn-confirmar-abertura" class="btn-pdv btn-finish" onclick="confirmarAberturaCaixa()" style="flex:2;">
                     <i class="fas fa-cash-register"></i> ABRIR CAIXA
                 </button>
             </div>

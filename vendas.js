@@ -13,36 +13,47 @@ let selectedCustomer = null;
 let editingItemIndex = null;
 
 // ============================================================
-// CONTROLE DE CAIXA
+// CONTROLE DE CAIXA — vinculado ao Supabase (cash_sessions)
 // ============================================================
 let caixaAberto = false;
 let caixaFundo = 0;
 let caixaAbertoEm = null;
+let currentCashSessionId = null; // ID da sessão aberta no Supabase
 
-function carregarEstadoCaixa() {
-    const estado = JSON.parse(sessionStorage.getItem('pdv_caixa') || 'null');
-    if (estado && estado.aberto) {
-        caixaAberto = true;
-        caixaFundo = estado.fundo || 0;
-        caixaAbertoEm = estado.aberto_em || null;
-    } else {
-        caixaAberto = false;
-        caixaFundo = 0;
-        caixaAbertoEm = null;
+/**
+ * Carrega o estado do caixa direto do Supabase.
+ * Busca se há sessão com status='aberto'.
+ */
+async function carregarEstadoCaixa() {
+    try {
+        const { data: activeSession, error } = await supabase
+            .from('cash_sessions')
+            .select('*')
+            .eq('status', 'aberto')
+            .limit(1)
+            .maybeSingle();
+
+        if (error) {
+            console.warn('[PDV-Caixa] Erro ao buscar sessão:', error);
+            atualizarIndicadorCaixa();
+            return;
+        }
+
+        if (activeSession) {
+            caixaAberto = true;
+            caixaFundo = parseFloat(activeSession.initial_amount || 0);
+            caixaAbertoEm = activeSession.opened_at || null;
+            currentCashSessionId = activeSession.id;
+        } else {
+            caixaAberto = false;
+            caixaFundo = 0;
+            caixaAbertoEm = null;
+            currentCashSessionId = null;
+        }
+    } catch (e) {
+        console.warn('[PDV-Caixa] Exceção ao carregar estado:', e);
     }
     atualizarIndicadorCaixa();
-}
-
-function salvarEstadoCaixa() {
-    if (caixaAberto) {
-        sessionStorage.setItem('pdv_caixa', JSON.stringify({
-            aberto: true,
-            fundo: caixaFundo,
-            aberto_em: caixaAbertoEm
-        }));
-    } else {
-        sessionStorage.removeItem('pdv_caixa');
-    }
 }
 
 function atualizarIndicadorCaixa() {
@@ -62,44 +73,145 @@ function atualizarIndicadorCaixa() {
     }
 }
 
-function abrirModalAberturaCaixa(callback) {
+/**
+ * Abre o modal de abertura de caixa e pré-preenche com o fundo
+ * sugerido (final_amount da última sessão fechada no Supabase).
+ */
+async function abrirModalAberturaCaixa(callback) {
     window._caixaCallback = callback || null;
     document.getElementById('modal-abertura-caixa').classList.remove('hidden');
-    const fundoInput = document.getElementById('caixa-fundo-input');
-    if (fundoInput) {
-        fundoInput.value = '';
-        fundoInput.focus();
-    }
+
     // Popula operador e hora
     const vendedorEl = document.getElementById('caixa-modal-vendedor');
     const horaEl = document.getElementById('caixa-modal-hora');
     if (vendedorEl) vendedorEl.textContent = loggedAdmin ? loggedAdmin.name : '—';
     if (horaEl) horaEl.textContent = new Date().toLocaleTimeString('pt-BR');
+
+    // Busca fundo sugerido = final_amount do último fechamento
+    const fundoInput = document.getElementById('caixa-fundo-input');
+    const fundoLoading = document.getElementById('caixa-fundo-loading');
+    if (fundoInput) fundoInput.value = '';
+    if (fundoLoading) fundoLoading.style.display = 'inline';
+
+    try {
+        const { data: lastSession } = await supabase
+            .from('cash_sessions')
+            .select('final_amount')
+            .eq('status', 'fechado')
+            .order('id', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (fundoInput) {
+            if (lastSession && lastSession.final_amount !== null) {
+                fundoInput.value = parseFloat(lastSession.final_amount).toFixed(2);
+            } else {
+                fundoInput.value = '0.00';
+            }
+        }
+    } catch (e) {
+        console.warn('[PDV-Caixa] Erro ao buscar último fechamento:', e);
+        if (fundoInput) fundoInput.value = '0.00';
+    } finally {
+        if (fundoLoading) fundoLoading.style.display = 'none';
+        if (fundoInput) fundoInput.focus();
+    }
 }
 
-window.confirmarAberturaCaixa = function() {
+/**
+ * Confirma abertura de caixa: insere nova sessão no Supabase.
+ */
+window.confirmarAberturaCaixa = async function() {
     const fundoInput = document.getElementById('caixa-fundo-input');
-    const fundoVal = parseFloat(fundoInput ? fundoInput.value : '0') || 0;
+    const fundoVal = parseFloat(fundoInput ? fundoInput.value : '0');
 
     if (isNaN(fundoVal) || fundoVal < 0) {
         alert('Informe um fundo de caixa válido (pode ser R$ 0,00).');
         return;
     }
 
-    caixaAberto = true;
-    caixaFundo = fundoVal;
-    caixaAbertoEm = new Date().toISOString();
-    salvarEstadoCaixa();
-    atualizarIndicadorCaixa();
+    const btn = document.getElementById('btn-confirmar-abertura');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abrindo...'; }
 
-    document.getElementById('modal-abertura-caixa').classList.add('hidden');
+    try {
+        const operator = loggedAdmin ? loggedAdmin.name : 'PDV';
 
-    const horaStr = new Date().toLocaleTimeString('pt-BR');
-    showToast(`✅ Caixa aberto às ${horaStr} — Fundo: ${fmt(caixaFundo)}`, 'success');
+        // Buscar último fechamento para comparar e lançar ajuste se necessário
+        let lastClosedAmount = null;
+        try {
+            const { data: lastSession } = await supabase
+                .from('cash_sessions')
+                .select('final_amount')
+                .eq('status', 'fechado')
+                .order('id', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            if (lastSession && lastSession.final_amount !== null) {
+                lastClosedAmount = parseFloat(lastSession.final_amount);
+            }
+        } catch (e) { /* ignora */ }
 
-    if (typeof window._caixaCallback === 'function') {
-        window._caixaCallback();
-        window._caixaCallback = null;
+        let sessionInitialAmount = fundoVal;
+        let autoTransaction = null;
+
+        if (lastClosedAmount !== null) {
+            const diff = fundoVal - lastClosedAmount;
+            if (Math.abs(diff) > 0.009) {
+                sessionInitialAmount = lastClosedAmount;
+                autoTransaction = {
+                    type: diff < 0 ? 'sangria' : 'suprimento',
+                    amount: Math.abs(diff),
+                    description: diff < 0
+                        ? `Diferença de abertura (PDV): menor que o fechamento anterior (Esperado: R$ ${lastClosedAmount.toFixed(2)} | Informado: R$ ${fundoVal.toFixed(2)})`
+                        : `Diferença de abertura (PDV): maior que o fechamento anterior (Esperado: R$ ${lastClosedAmount.toFixed(2)} | Informado: R$ ${fundoVal.toFixed(2)})`
+                };
+            }
+        }
+
+        // Inserir nova sessão no Supabase
+        const { data: newSession, error } = await supabase
+            .from('cash_sessions')
+            .insert([{
+                initial_amount: sessionInitialAmount,
+                opened_by: operator,
+                status: 'aberto'
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Se houver diferença, inserir transação automática de ajuste
+        if (autoTransaction) {
+            await supabase.from('cash_transactions').insert([{
+                session_id: newSession.id,
+                type: autoTransaction.type,
+                amount: autoTransaction.amount,
+                description: autoTransaction.description
+            }]);
+        }
+
+        // Atualizar estado local
+        caixaAberto = true;
+        caixaFundo = fundoVal;
+        caixaAbertoEm = newSession.opened_at || new Date().toISOString();
+        currentCashSessionId = newSession.id;
+        atualizarIndicadorCaixa();
+
+        document.getElementById('modal-abertura-caixa').classList.add('hidden');
+
+        const horaStr = new Date().toLocaleTimeString('pt-BR');
+        showToast(`✅ Caixa aberto às ${horaStr} — Fundo: ${fmt(fundoVal)}`, 'success');
+
+        if (typeof window._caixaCallback === 'function') {
+            window._caixaCallback();
+            window._caixaCallback = null;
+        }
+    } catch (e) {
+        console.error('[PDV-Caixa] Erro ao abrir caixa:', e);
+        alert('Erro ao abrir o caixa: ' + (e.message || 'Verifique a conexão.'));
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-cash-register"></i> ABRIR CAIXA'; }
     }
 };
 
@@ -113,13 +225,10 @@ window.fecharCaixa = function() {
         showToast('O caixa já está fechado.', 'warning');
         return;
     }
-    if (!confirm('Deseja realmente FECHAR o caixa? Esta ação encerrará a sessão do caixa.')) return;
-    caixaAberto = false;
-    caixaFundo = 0;
-    caixaAbertoEm = null;
-    salvarEstadoCaixa();
-    atualizarIndicadorCaixa();
-    showToast('🔒 Caixa fechado com sucesso.', 'info');
+    // Redirecionar para o painel admin na aba Caixa para fechar formalmente
+    if (confirm('Para fechar o caixa use o Painel Administrativo → Caixa.\n\nDeseja abrir o painel admin agora?')) {
+        window.open('admin.html#caixa', '_blank');
+    }
 };
 
 function showToast(msg, type = 'info') {
@@ -144,6 +253,7 @@ function showToast(msg, type = 'info') {
     clearTimeout(toast._timer);
     toast._timer = setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
+
 
 // Barcode scanner detection
 let barcodeBuffer = '';
