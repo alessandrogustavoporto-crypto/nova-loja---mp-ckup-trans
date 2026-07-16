@@ -12,6 +12,139 @@ let allCustomers = [];
 let selectedCustomer = null;
 let editingItemIndex = null;
 
+// ============================================================
+// CONTROLE DE CAIXA
+// ============================================================
+let caixaAberto = false;
+let caixaFundo = 0;
+let caixaAbertoEm = null;
+
+function carregarEstadoCaixa() {
+    const estado = JSON.parse(sessionStorage.getItem('pdv_caixa') || 'null');
+    if (estado && estado.aberto) {
+        caixaAberto = true;
+        caixaFundo = estado.fundo || 0;
+        caixaAbertoEm = estado.aberto_em || null;
+    } else {
+        caixaAberto = false;
+        caixaFundo = 0;
+        caixaAbertoEm = null;
+    }
+    atualizarIndicadorCaixa();
+}
+
+function salvarEstadoCaixa() {
+    if (caixaAberto) {
+        sessionStorage.setItem('pdv_caixa', JSON.stringify({
+            aberto: true,
+            fundo: caixaFundo,
+            aberto_em: caixaAbertoEm
+        }));
+    } else {
+        sessionStorage.removeItem('pdv_caixa');
+    }
+}
+
+function atualizarIndicadorCaixa() {
+    const badge = document.getElementById('pdv-caixa-badge');
+    const icon = document.getElementById('pdv-caixa-icon');
+    const texto = document.getElementById('pdv-caixa-texto');
+    if (!badge) return;
+
+    if (caixaAberto) {
+        badge.className = 'pdv-caixa-badge caixa-aberto';
+        if (icon) icon.className = 'fas fa-lock-open';
+        if (texto) texto.textContent = 'Caixa Aberto';
+    } else {
+        badge.className = 'pdv-caixa-badge caixa-fechado';
+        if (icon) icon.className = 'fas fa-lock';
+        if (texto) texto.textContent = 'Caixa Fechado';
+    }
+}
+
+function abrirModalAberturaCaixa(callback) {
+    window._caixaCallback = callback || null;
+    document.getElementById('modal-abertura-caixa').classList.remove('hidden');
+    const fundoInput = document.getElementById('caixa-fundo-input');
+    if (fundoInput) {
+        fundoInput.value = '';
+        fundoInput.focus();
+    }
+    // Popula operador e hora
+    const vendedorEl = document.getElementById('caixa-modal-vendedor');
+    const horaEl = document.getElementById('caixa-modal-hora');
+    if (vendedorEl) vendedorEl.textContent = loggedAdmin ? loggedAdmin.name : '—';
+    if (horaEl) horaEl.textContent = new Date().toLocaleTimeString('pt-BR');
+}
+
+window.confirmarAberturaCaixa = function() {
+    const fundoInput = document.getElementById('caixa-fundo-input');
+    const fundoVal = parseFloat(fundoInput ? fundoInput.value : '0') || 0;
+
+    if (isNaN(fundoVal) || fundoVal < 0) {
+        alert('Informe um fundo de caixa válido (pode ser R$ 0,00).');
+        return;
+    }
+
+    caixaAberto = true;
+    caixaFundo = fundoVal;
+    caixaAbertoEm = new Date().toISOString();
+    salvarEstadoCaixa();
+    atualizarIndicadorCaixa();
+
+    document.getElementById('modal-abertura-caixa').classList.add('hidden');
+
+    const horaStr = new Date().toLocaleTimeString('pt-BR');
+    showToast(`✅ Caixa aberto às ${horaStr} — Fundo: ${fmt(caixaFundo)}`, 'success');
+
+    if (typeof window._caixaCallback === 'function') {
+        window._caixaCallback();
+        window._caixaCallback = null;
+    }
+};
+
+window.cancelarAberturaCaixa = function() {
+    document.getElementById('modal-abertura-caixa').classList.add('hidden');
+    window._caixaCallback = null;
+};
+
+window.fecharCaixa = function() {
+    if (!caixaAberto) {
+        showToast('O caixa já está fechado.', 'warning');
+        return;
+    }
+    if (!confirm('Deseja realmente FECHAR o caixa? Esta ação encerrará a sessão do caixa.')) return;
+    caixaAberto = false;
+    caixaFundo = 0;
+    caixaAbertoEm = null;
+    salvarEstadoCaixa();
+    atualizarIndicadorCaixa();
+    showToast('🔒 Caixa fechado com sucesso.', 'info');
+};
+
+function showToast(msg, type = 'info') {
+    let toast = document.getElementById('pdv-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'pdv-toast';
+        document.body.appendChild(toast);
+    }
+    const colors = { success: '#27ae60', warning: '#f39c12', info: '#2980b9', error: '#e74c3c' };
+    toast.style.cssText = `
+        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+        background: ${colors[type] || colors.info}; color: white;
+        padding: 14px 28px; border-radius: 10px; font-size: 14px; font-weight: 700;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.25); z-index: 9999;
+        display: flex; align-items: center; gap: 10px;
+        animation: slideUpFadeIn 0.3s ease;
+        max-width: 480px; text-align: center;
+    `;
+    toast.textContent = msg;
+    toast.style.display = 'flex';
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => { toast.style.display = 'none'; }, 3000);
+}
+
 // Barcode scanner detection
 let barcodeBuffer = '';
 let barcodeLastKeyTime = 0;
@@ -28,9 +161,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateClock();
     setInterval(updateClock, 1000);
     
+    carregarEstadoCaixa();
     await loadInitialData();
     setupEventListeners();
     setupShortcuts();
+
+    // Se caixa estiver fechado ao carregar a página, já abre o modal
+    if (!caixaAberto) {
+        setTimeout(() => abrirModalAberturaCaixa(null), 600);
+    }
 });
 
 function updateClock() {
@@ -645,6 +784,20 @@ function openCheckoutModal() {
         document.getElementById('pdv-cust-search').focus();
         return;
     }
+
+    // REGRA: Caixa deve estar aberto para finalizar venda
+    if (!caixaAberto) {
+        abrirModalAberturaCaixa(() => {
+            // Após abrir o caixa, continua para finalizar
+            _doOpenCheckoutModal();
+        });
+        return;
+    }
+
+    _doOpenCheckoutModal();
+}
+
+function _doOpenCheckoutModal() {
     // Reset split payment state
     resetSplitPayment();
     document.getElementById('pdv-amount-received').value = '';
@@ -792,3 +945,4 @@ window.openNewCustModal = openNewCustModal;
 window.closeNewCustModal = closeNewCustModal;
 window.saveNewCustomer = saveNewCustomer;
 window.clearPDV = clearPDV;
+window.abrirModalAberturaCaixa = abrirModalAberturaCaixa;

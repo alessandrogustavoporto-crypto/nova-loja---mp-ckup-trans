@@ -346,3 +346,120 @@ body { background: var(--pdv-bg); color: var(--pdv-text); height: 100vh; overflo
         grid-template-columns: 1fr;
     }
 }
+
+/* ============================================================
+   BADGE DE STATUS DO CAIXA
+   ============================================================ */
+.pdv-caixa-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+}
+.pdv-caixa-badge.caixa-aberto {
+    background: linear-gradient(135deg, #27ae60, #1e8449);
+    color: white;
+    box-shadow: 0 0 0 0 rgba(39,174,96,0.5);
+    animation: pulse-caixa-aberto 2.5s ease-in-out infinite;
+}
+.pdv-caixa-badge.caixa-fechado {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    box-shadow: 0 0 0 0 rgba(231,76,60,0.5);
+    animation: pulse-caixa-fechado 2s ease-in-out infinite;
+}
+.pdv-caixa-badge:hover {
+    transform: scale(1.06);
+    animation: none;
+    filter: brightness(1.1);
+}
+@keyframes pulse-caixa-aberto {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(39,174,96,0.5); }
+    50%       { box-shadow: 0 0 0 7px rgba(39,174,96,0); }
+}
+@keyframes pulse-caixa-fechado {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(231,76,60,0.5); }
+    50%       { box-shadow: 0 0 0 7px rgba(231,76,60,0); }
+}
+
+/* ============================================================
+   MODAL DE ABERTURA DE CAIXA
+   ============================================================ */
+.modal-caixa {
+    border-top: 4px solid var(--pdv-primary);
+    animation: slideDownFadeIn 0.35s ease;
+}
+@keyframes slideDownFadeIn {
+    from { opacity: 0; transform: translateY(-30px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes slideUpFadeIn {
+    from { opacity: 0; transform: translate(-50%, 20px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.caixa-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 0;
+}
+.caixa-modal-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--pdv-primary), #7c6dd4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(159,144,234,0.35);
+}
+.caixa-divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--pdv-border), transparent);
+    margin: 20px 0;
+}
+.caixa-info-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+.caixa-info-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f8f9fa;
+    border: 1px solid var(--pdv-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+.caixa-info-item i {
+    font-size: 18px;
+    color: var(--pdv-primary);
+    width: 22px;
+    text-align: center;
+}
+.caixa-info-item small {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: #aaa;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+.caixa-info-item strong {
+    font-size: 14px;
+    color: var(--pdv-secondary);
+}

@@ -56,6 +56,11 @@
         <div class="header-info">
             <span id="pdv-vendedor"><i class="fas fa-user-tie"></i> Vendedor: <strong id="vendedor-nome">Admin</strong></span>
             <span id="pdv-clock"><i class="far fa-clock"></i> <strong id="current-time">00:00:00</strong></span>
+            <!-- Badge de status do caixa -->
+            <button id="pdv-caixa-badge" class="pdv-caixa-badge caixa-fechado" onclick="caixaAberto ? fecharCaixa() : abrirModalAberturaCaixa(null)" title="Clique para abrir ou fechar o caixa">
+                <i id="pdv-caixa-icon" class="fas fa-lock"></i>
+                <span id="pdv-caixa-texto">Caixa Fechado</span>
+            </button>
             <!-- Botão de Instalação PWA (aparece automaticamente se não instalado) -->
             <button id="pdv-pwa-install-btn" title="Instalar o PDV como aplicativo">
                 <i class="fas fa-download"></i> Instalar App
@@ -333,6 +338,73 @@
             <div style="display:flex; gap:10px;">
                 <button class="btn-pdv btn-cancel" onclick="closeNewCustModal()" style="flex:1;">CANCELAR</button>
                 <button class="btn-pdv btn-finish" onclick="saveNewCustomer()" style="flex:2;">SALVAR E SELECIONAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ABERTURA DE CAIXA -->
+    <div id="modal-abertura-caixa" class="modal-overlay hidden">
+        <div class="modal-content modal-caixa" style="width:460px; max-width:95vw;">
+            <!-- Cabeçalho -->
+            <div class="caixa-modal-header">
+                <div class="caixa-modal-icon">
+                    <i class="fas fa-cash-register"></i>
+                </div>
+                <div>
+                    <h2 style="color:var(--pdv-secondary); margin:0;">Abertura de Caixa</h2>
+                    <p style="color:#888; font-size:13px; margin:4px 0 0;">Para finalizar vendas, o caixa precisa estar aberto.</p>
+                </div>
+            </div>
+
+            <div class="caixa-divider"></div>
+
+            <!-- Vendedor e Hora -->
+            <div class="caixa-info-row">
+                <div class="caixa-info-item">
+                    <i class="fas fa-user-tie"></i>
+                    <div>
+                        <small>Operador</small>
+                        <strong id="caixa-modal-vendedor">—</strong>
+                    </div>
+                </div>
+                <div class="caixa-info-item">
+                    <i class="far fa-clock"></i>
+                    <div>
+                        <small>Hora da Abertura</small>
+                        <strong id="caixa-modal-hora">—</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fundo de Caixa -->
+            <div class="form-group" style="margin: 20px 0 24px;">
+                <label style="font-size:13px; font-weight:800; color:var(--pdv-secondary); text-transform:uppercase; letter-spacing:.5px;">
+                    <i class="fas fa-money-bill-wave" style="color:var(--pdv-primary);"></i>&nbsp; Fundo de Caixa (R$)
+                </label>
+                <div style="position:relative; margin-top:8px;">
+                    <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-weight:800; color:#aaa; font-size:16px;">R$</span>
+                    <input
+                        type="number"
+                        id="caixa-fundo-input"
+                        class="pdv-input"
+                        placeholder="0,00"
+                        step="0.01"
+                        min="0"
+                        style="padding-left:44px; font-size:22px; font-weight:800; height:56px;"
+                        onkeydown="if(event.key==='Enter') confirmarAberturaCaixa()"
+                    >
+                </div>
+                <small style="color:#888; margin-top:6px; display:block;"><i class="fas fa-info-circle"></i> Informe o valor em dinheiro que está no caixa ao abrir. Pode ser R$ 0,00.</small>
+            </div>
+
+            <!-- Botões -->
+            <div style="display:flex; gap:10px;">
+                <button class="btn-pdv btn-cancel" onclick="cancelarAberturaCaixa()" style="flex:1;">
+                    <i class="fas fa-times"></i> CANCELAR
+                </button>
+                <button class="btn-pdv btn-finish" onclick="confirmarAberturaCaixa()" style="flex:2;">
+                    <i class="fas fa-cash-register"></i> ABRIR CAIXA
+                </button>
             </div>
         </div>
     </div>
