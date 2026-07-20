@@ -48,7 +48,7 @@ const ProductStore = {
 
         const { data, error } = await supabase
             .from('products')
-            .select('id, name, category, brand, price, promo_price, promo_active, old_price, image, stock, variations, barcode, description')
+            .select('id, name, category, brand, price, promo_price, promo_active, old_price, image, stock, variations, barcode, description, is_kit, kit_items')
             .order('id', { ascending: false });
 
         if (!error && data && data.length > 0) {

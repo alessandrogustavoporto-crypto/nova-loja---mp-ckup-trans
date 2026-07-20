@@ -214,7 +214,7 @@ const AdminData = {
     async getProducts() {
         const { data } = await supabase
             .from('products')
-            .select('id, name, category, brand, price, promo_price, promo_active, old_price, image, stock, variations, barcode, description, cost')
+            .select('id, name, category, brand, price, promo_price, promo_active, old_price, image, stock, variations, barcode, description, cost, is_kit, kit_items')
             .order('id', { ascending: false });
         return (data || []).map(p => ({
             ...p,
@@ -611,14 +611,17 @@ async function loadProducts(filter, preloadedProds) {
         prods.map(p =>
             '<tr>' +
             '<td><img src="' + (p.image || '') + '" class="product-thumb-sm" alt=""></td>' +
-            '<td><strong>' + p.name + '</strong></td>' +
+            '<td><strong>' + p.name + '</strong>' + (p.is_kit ? ' <span style="background:linear-gradient(135deg,#8e44ad,#6c3483);color:#fff;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700;vertical-align:middle;">📦 Kit</span>' : '') + '</td>' +
             '<td>' + (p.category || '—') + '</td>' +
             '<td>' + (p.brand || '—') + '</td>' +
             '<td>' + fmt(p.price) + '</td>' +
             '<td>' + (p.stock || 0) + ' un</td>' +
             '<td><span class="badge ' + (p.promoActive ? 'badge-ativo' : '') + '">' + (p.promoActive ? 'Ativa' : '—') + '</span></td>' +
             '<td>' +
-            '<button class="btn-icon btn-icon-edit" onclick="openProductModal(' + p.id + ')" title="Editar"><i class="fas fa-edit"></i></button> ' +
+            (p.is_kit
+                ? '<button class="btn-icon btn-icon-edit" onclick="openKitModal(' + p.id + ')" title="Editar Kit" style="background:#f4f0fc;"><i class="fas fa-boxes"></i></button> '
+                : '<button class="btn-icon btn-icon-edit" onclick="openProductModal(' + p.id + ')" title="Editar"><i class="fas fa-edit"></i></button> '
+            ) +
             '<button class="btn-icon btn-icon-delete" onclick="deleteProduct(' + p.id + ')" title="Excluir"><i class="fas fa-trash"></i></button>' +
             '</td></tr>'
         ).join('');
@@ -755,7 +758,233 @@ window.saveProduct = async function () {
     await loadProducts();
 };
 
-// ---- Tenta criar o bucket 'product-images' automaticamente caso não exista ----
+// ============================================================
+// KIT DE PRODUTOS
+// ============================================================
+
+let kitItemsData = []; // [{id, name, qty, image}]
+
+window.openKitModal = async function (id) {
+    kitItemsData = [];
+    const modal = document.getElementById('kit-modal');
+    modal.classList.remove('hidden');
+    await populateCategorySelect('kit-category');
+
+    // Reset
+    ['kit-id', 'kit-name', 'kit-image-url', 'kit-desc'].forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
+    ['kit-price', 'kit-promo-price'].forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
+    document.getElementById('kit-stock').value = '999';
+    document.getElementById('kit-promo-active').checked = false;
+    const preview = document.getElementById('kit-img-preview');
+    if (preview) { preview.src = ''; preview.style.display = 'none'; }
+    const fileInput = document.getElementById('kit-image-file');
+    if (fileInput) fileInput.value = '';
+
+    if (!id) {
+        document.getElementById('kit-modal-title').innerHTML = '<i class="fas fa-boxes"></i> Novo Kit de Produtos';
+        renderKitItems();
+        initKitSearch();
+        return;
+    }
+
+    // Editar kit existente
+    document.getElementById('kit-modal-title').innerHTML = '<i class="fas fa-boxes"></i> Editar Kit';
+    const prods = await AdminData.getProducts();
+    const kit = prods.find(p => p.id === id);
+    if (!kit) return;
+
+    document.getElementById('kit-id').value = kit.id;
+    document.getElementById('kit-name').value = kit.name || '';
+    document.getElementById('kit-price').value = kit.price || '';
+    document.getElementById('kit-promo-price').value = kit.promoPrice || kit.promo_price || '';
+    document.getElementById('kit-stock').value = kit.stock || 999;
+    document.getElementById('kit-image-url').value = kit.image || '';
+    document.getElementById('kit-desc').value = kit.description || '';
+    document.getElementById('kit-category').value = kit.category || '';
+    document.getElementById('kit-promo-active').checked = !!kit.promoActive;
+    if (kit.image && preview) { preview.src = kit.image; preview.style.display = 'block'; }
+
+    // Carregar itens do kit
+    const kitItemsRaw = kit.kit_items || [];
+    kitItemsData = await Promise.all(kitItemsRaw.map(async item => {
+        const prod = prods.find(p => p.id == item.id);
+        return { id: item.id, name: prod ? prod.name : ('Produto #' + item.id), qty: item.qty || 1, image: prod ? prod.image : '' };
+    }));
+    renderKitItems();
+    initKitSearch();
+};
+
+window.closeKitModal = function () {
+    document.getElementById('kit-modal').classList.add('hidden');
+    kitItemsData = [];
+};
+
+function renderKitItems() {
+    const list = document.getElementById('kit-items-list');
+    const empty = document.getElementById('kit-items-empty');
+    if (!list) return;
+    list.innerHTML = '';
+    if (kitItemsData.length === 0) {
+        if (empty) empty.style.display = 'block';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+    kitItemsData.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.style = 'display:flex;align-items:center;gap:10px;background:#fff;padding:10px 12px;border-radius:8px;border:1px solid #c9b8f0;';
+        div.innerHTML = `
+            ${item.image ? `<img src="${item.image}" style="width:38px;height:38px;object-fit:cover;border-radius:6px;flex-shrink:0;">` : '<div style="width:38px;height:38px;background:#ede;border-radius:6px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="color:#8e44ad;"></i></div>'}
+            <span style="flex:1;font-size:13px;font-weight:600;color:#333;">${item.name}</span>
+            <label style="font-size:12px;color:#666;white-space:nowrap;">Qtd no kit:</label>
+            <input type="number" min="1" value="${item.qty}" data-kit-idx="${idx}"
+                style="width:60px;padding:5px;border:1px solid #c9b8f0;border-radius:4px;font-size:13px;text-align:center;"
+                onchange="kitItemsData[${idx}].qty = parseInt(this.value) || 1">
+            <button type="button" onclick="removeKitItem(${idx})" style="background:none;border:none;color:#e74c3c;cursor:pointer;padding:4px;font-size:15px;" title="Remover">
+                <i class="fas fa-times-circle"></i>
+            </button>
+        `;
+        list.appendChild(div);
+    });
+}
+
+window.removeKitItem = function (idx) {
+    kitItemsData.splice(idx, 1);
+    renderKitItems();
+};
+
+function initKitSearch() {
+    const input = document.getElementById('kit-prod-search');
+    const suggestions = document.getElementById('kit-prod-suggestions');
+    if (!input || !suggestions || input._kitBound) return;
+    input._kitBound = true;
+
+    input.addEventListener('input', async () => {
+        const q = input.value.trim().toLowerCase();
+        if (q.length < 2) { suggestions.style.display = 'none'; return; }
+        const prods = await AdminData.getProducts();
+        const matches = prods.filter(p => !p.is_kit && p.name.toLowerCase().includes(q)).slice(0, 8);
+        if (matches.length === 0) { suggestions.style.display = 'none'; return; }
+        suggestions.innerHTML = matches.map(p =>
+            `<div class="kit-suggest-item" onclick="addKitItem(${p.id})" 
+                style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;">
+                ${p.image ? `<img src="${p.image}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;">` : ''}
+                <div>
+                    <div style="font-size:13px;font-weight:600;">${p.name}</div>
+                    <div style="font-size:11px;color:#888;">Estoque: ${p.stock || 0} | R$ ${(p.price || 0).toFixed(2).replace('.', ',')}</div>
+                </div>
+            </div>`
+        ).join('');
+        suggestions.style.display = 'block';
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+            suggestions.style.display = 'none';
+        }
+    });
+
+    // Hover style
+    suggestions.addEventListener('mouseover', e => {
+        const item = e.target.closest('.kit-suggest-item');
+        if (item) item.style.background = '#f4f0fc';
+    });
+    suggestions.addEventListener('mouseout', e => {
+        const item = e.target.closest('.kit-suggest-item');
+        if (item) item.style.background = '';
+    });
+}
+
+window.addKitItem = async function (productId) {
+    const prods = await AdminData.getProducts();
+    const prod = prods.find(p => p.id === productId);
+    if (!prod) return;
+
+    // Evitar duplicata
+    if (kitItemsData.find(i => i.id === productId)) {
+        adminToast('Este produto já está no kit.', 'error');
+        document.getElementById('kit-prod-suggestions').style.display = 'none';
+        document.getElementById('kit-prod-search').value = '';
+        return;
+    }
+
+    kitItemsData.push({ id: prod.id, name: prod.name, qty: 1, image: prod.image || '' });
+    renderKitItems();
+    document.getElementById('kit-prod-suggestions').style.display = 'none';
+    document.getElementById('kit-prod-search').value = '';
+};
+
+window.saveKit = async function () {
+    const id = document.getElementById('kit-id').value;
+    const name = document.getElementById('kit-name').value.trim();
+    const price = parseFloat(document.getElementById('kit-price').value);
+    if (!name || isNaN(price)) { adminToast('Preencha nome e preço do kit.', 'error'); return; }
+    if (kitItemsData.length === 0) { adminToast('Adicione pelo menos 1 produto ao kit.', 'error'); return; }
+
+    const kit = {
+        name,
+        price,
+        promo_price: parseFloat(document.getElementById('kit-promo-price').value) || null,
+        stock: parseInt(document.getElementById('kit-stock').value) || 999,
+        image: document.getElementById('kit-image-url').value || '',
+        description: document.getElementById('kit-desc').value || '',
+        category: document.getElementById('kit-category').value || '',
+        promo_active: document.getElementById('kit-promo-active').checked,
+        is_kit: true,
+        kit_items: kitItemsData.map(i => ({ id: i.id, qty: i.qty }))
+    };
+
+    let error;
+    if (id) {
+        const res = await supabase.from('products').update(kit).eq('id', id);
+        error = res.error;
+    } else {
+        const res = await supabase.from('products').insert([kit]);
+        error = res.error;
+    }
+
+    if (error) { adminToast('Erro ao salvar kit: ' + error.message, 'error'); console.error('saveKit error:', error); return; }
+
+    closeKitModal();
+    adminToast('✅ Kit salvo com sucesso!');
+    cachedAdminData.products = null; // força reload do cache
+    await loadProducts();
+};
+
+// Upload de imagem do kit
+document.addEventListener('change', e => {
+    if (e.target.id === 'kit-image-file') {
+        const file = e.target.files[0];
+        if (!file) return;
+        uploadKitImage(file);
+    }
+});
+
+async function uploadKitImage(file) {
+    const statusEl = document.getElementById('kit-upload-status');
+    const statusText = document.getElementById('kit-upload-status-text');
+    const preview = document.getElementById('kit-img-preview');
+    if (statusEl) { statusEl.style.display = 'flex'; }
+    if (statusText) statusText.textContent = 'Enviando imagem...';
+    await tryCreateBucket();
+    try {
+        const safeName = file.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const fileName = `kits/${Date.now()}_${safeName}`;
+        const { error: uploadError } = await supabase.storage
+            .from('product-images').upload(fileName, file, { upsert: true, contentType: file.type });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(fileName);
+        const publicUrl = urlData.publicUrl;
+        document.getElementById('kit-image-url').value = publicUrl;
+        if (preview) { preview.src = publicUrl; preview.style.display = 'block'; }
+        if (statusText) statusText.textContent = '✓ Imagem enviada!';
+        setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 2500);
+    } catch (err) {
+        if (statusText) statusText.textContent = '✗ Erro: ' + (err.message || 'verifique o Storage');
+        adminToast('Erro ao enviar imagem do kit: ' + (err.message || ''), 'error');
+    }
+}
+
+
 async function tryCreateBucket() {
     try {
         const { error } = await supabase.storage.createBucket('product-images', { public: true });
@@ -1078,8 +1307,9 @@ async function loadCategories(preloadedCats, preloadedProds) {
     }).join('');
 }
 
-async function populateCategorySelect() {
-    const sel = document.getElementById('prod-category');
+async function populateCategorySelect(selectId) {
+    const targetId = selectId || 'prod-category';
+    const sel = document.getElementById(targetId);
     if (!sel) return;
     const cats = await AdminData.getCategories();
     sel.innerHTML = cats.map(c => '<option value="' + c.name + '">' + c.name + '</option>').join('');
@@ -1317,7 +1547,7 @@ window.updateOrderStatus = async function (id, newStatus) {
             try {
                 const { data: prod, error: prodFetchErr } = await supabase
                     .from('products')
-                    .select('id, name, stock')
+                    .select('id, name, stock, is_kit, kit_items')
                     .eq('id', item.id)
                     .single();
 
@@ -1334,6 +1564,16 @@ window.updateOrderStatus = async function (id, newStatus) {
                         adminToast('⚠️ Falha ao restaurar estoque de "' + (prod.name || item.id) + '": ' + stockUpdateErr.message, 'error');
                     } else {
                         restoredCount++;
+                        // Se é kit: restaura estoque dos produtos-filhos também
+                        if (prod.is_kit && prod.kit_items && prod.kit_items.length > 0) {
+                            for (const kitItem of prod.kit_items) {
+                                if (!kitItem.id || !kitItem.qty) continue;
+                                const { data: childProd } = await supabase.from('products').select('stock').eq('id', kitItem.id).single();
+                                if (childProd) {
+                                    await supabase.from('products').update({ stock: (childProd.stock || 0) + (kitItem.qty * item.qty) }).eq('id', kitItem.id);
+                                }
+                            }
+                        }
                     }
                 }
             } catch (e) {
@@ -1354,16 +1594,28 @@ window.updateOrderStatus = async function (id, newStatus) {
             try {
                 const { data: prod, error: prodFetchErr } = await supabase
                     .from('products')
-                    .select('stock')
+                    .select('stock, is_kit, kit_items')
                     .eq('id', item.id)
                     .single();
                 if (prodFetchErr) { console.error('Erro ao buscar produto id=' + item.id + ':', prodFetchErr); continue; }
                 if (prod) {
+                    // Debita estoque do próprio produto/kit
                     const { error: stockUpdateErr } = await supabase
                         .from('products')
                         .update({ stock: Math.max(0, (prod.stock || 0) - item.qty) })
                         .eq('id', item.id);
                     if (stockUpdateErr) console.error('Erro ao debitar estoque produto id=' + item.id + ':', stockUpdateErr);
+
+                    // Se é kit: debita estoque dos produtos-filhos também
+                    if (prod.is_kit && prod.kit_items && prod.kit_items.length > 0) {
+                        for (const kitItem of prod.kit_items) {
+                            if (!kitItem.id || !kitItem.qty) continue;
+                            const { data: childProd } = await supabase.from('products').select('stock').eq('id', kitItem.id).single();
+                            if (childProd) {
+                                await supabase.from('products').update({ stock: Math.max(0, (childProd.stock || 0) - (kitItem.qty * item.qty)) }).eq('id', kitItem.id);
+                            }
+                        }
+                    }
                 }
             } catch (e) {
                 console.error('Exceção ao debitar estoque produto id=' + item.id + ':', e);
