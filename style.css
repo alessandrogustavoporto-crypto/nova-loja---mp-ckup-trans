@@ -343,6 +343,8 @@ ul {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    /* TEMPORÁRIO: botão oculto - remover a linha abaixo quando quiser reativar */
+    display: none !important;
 }
 
 .btn-buy:hover {
