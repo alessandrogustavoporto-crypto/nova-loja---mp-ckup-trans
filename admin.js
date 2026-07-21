@@ -1623,6 +1623,34 @@ window.updateOrderStatus = async function (id, newStatus) {
         }
         adminToast('Status atualizado: ' + statusInfo[newStatus].label + ' (estoque debitado)');
 
+    } else if (newStatus === 'entregue' && previousStatus !== 'entregue') {
+        // Ao marcar como entregue: debita filhos de kits (o estoque do kit já foi debitado na venda/PDV)
+        for (const item of items) {
+            if (!item.id || !item.qty) continue;
+            try {
+                const { data: prod } = await supabase
+                    .from('products')
+                    .select('stock, is_kit, kit_items')
+                    .eq('id', item.id)
+                    .single();
+
+                if (prod && prod.is_kit && prod.kit_items && prod.kit_items.length > 0) {
+                    for (const kitItem of prod.kit_items) {
+                        if (!kitItem.id || !kitItem.qty) continue;
+                        const { data: childProd } = await supabase.from('products').select('stock').eq('id', kitItem.id).single();
+                        if (childProd) {
+                            await supabase.from('products')
+                                .update({ stock: Math.max(0, (childProd.stock || 0) - (kitItem.qty * item.qty)) })
+                                .eq('id', kitItem.id);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Exceção ao debitar filhos do kit id=' + item.id + ':', e);
+            }
+        }
+        adminToast('Status atualizado: ' + statusInfo[newStatus].label);
+
     } else {
         adminToast('Status atualizado: ' + statusInfo[newStatus].label);
     }

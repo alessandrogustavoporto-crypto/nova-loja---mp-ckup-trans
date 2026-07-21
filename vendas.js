@@ -1043,6 +1043,23 @@ async function finishSale() {
             if (prod) {
                 const newStock = (prod.stock || 0) - item.qty;
                 await supabase.from('products').update({ stock: newStock }).eq('id', item.id);
+
+                // Se o item é um kit, debita estoque de cada produto-filho
+                if (prod.is_kit && prod.kit_items && prod.kit_items.length > 0) {
+                    for (const kitItem of prod.kit_items) {
+                        if (!kitItem.id || !kitItem.qty) continue;
+                        const childProd = allProducts.find(p => p.id === kitItem.id);
+                        if (childProd) {
+                            const childNewStock = (childProd.stock || 0) - (kitItem.qty * item.qty);
+                            await supabase.from('products').update({ stock: childNewStock }).eq('id', kitItem.id);
+                            // Atualiza cache local para consistência
+                            childProd.stock = childNewStock;
+                        }
+                    }
+                }
+
+                // Atualiza cache local
+                prod.stock = newStock;
             }
         }
 
